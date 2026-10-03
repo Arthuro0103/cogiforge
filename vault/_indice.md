@@ -3,9 +3,9 @@
 Ponto de partida do vault. Toda nota nova precisa de pelo menos um link, de entrada ou de saída;
 captura rápida vai em `inbox/`, que é isenta.
 
-- [[como-ligar-uma-nota]] (aprendizado)
-- [[um-script-so-vale-com-teste]] (tecnologia)
-- [[uma-nota-por-ideia]] (vida)
+- [[notas/aprendizado/como-ligar-uma-nota|como-ligar-uma-nota]] (aprendizado)
+- [[notas/tecnologia/um-script-so-vale-com-teste|um-script-so-vale-com-teste]] (tecnologia)
+- [[notas/vida/uma-nota-por-ideia|uma-nota-por-ideia]] (vida)
 
 ## A bancada
 
