@@ -105,7 +105,24 @@ PECAS = {
         ("selftest não planta órfã", r'esc("solta.md", "nenhum link aqui\n")', r'esc("solta.md", "ligada a [[a]]\n")'),
         ("--stage ignorado no CLI", 'return gate(args.vault, so_stage=args.stage)', 'return gate(args.vault)'),
     ]),
-    "hook": dict(arquivo=".githooks/pre-commit", suite=["tests/test_hook_e2e.py"], textos=[]),
+    "hook": dict(arquivo=".githooks/pre-commit", suite=["tests/test_hook_e2e.py"], textos=[
+        ("anel não roda", 'python3 nucleo/anel.py --vault vault --gate --stage', 'true'),
+        ("anel olha o vault inteiro", '--gate --stage', '--gate'),
+        ("filtro .md some", "grep -q '\\.md$'", "grep -q 'ZZZ'"),
+        ("anel não bloqueia", "head -20\n        bloqueado=1\n    elif", "head -20\n    elif"),
+        ("aviso do anel some", "elif grep -q '^AVISO' \"$saida\"; then", "elif false; then"),
+        ("vazamento não roda", 'python3 nucleo/vazamento.py --staged', 'true'),
+        ("vazamento não bloqueia", "    bloqueado=1\nelif", "elif"),
+        ("NAO_VERIFICADO some", "elif grep -q 'NAO_VERIFICADO' \"$saida\"; then", "elif false; then"),
+        ("saída sempre 0", '[ "$bloqueado" -eq 0 ] || {', 'true || {'),
+        ("instalação incompleta passa", 'if [ ! -f "$f" ]; then', 'if false; then'),
+    ]),
+    "instalar": dict(arquivo="instalar.sh", suite=["tests/test_hook_e2e.py"], textos=[
+        ("não ativa o hooksPath", 'git config core.hooksPath .githooks || falha', 'true || falha'),
+        ("python antigo passa", '    || falha "Python 3.10 ou mais novo é necessário; achei $(python3 -V 2>&1)."', '    || true'),
+        ("selftest quebrado passa", '    || { python3 nucleo/anel.py --selftest >&2; falha "o selftest do anel falhou: o gate não pega órfã."; }', '    || true'),
+        ("fora de repo git passa", "    || falha \"isto não é um repositório git. Use 'git clone', não o zip, ou rode 'git init' aqui.\"", '    || true'),
+    ]),
 }
 
 

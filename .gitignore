@@ -5,3 +5,7 @@ __pycache__/
 .pytest_cache/
 *.pyc
 .DS_Store
+
+# o Obsidian grava estado da janela aqui; só app.json é versionado
+vault/.obsidian/*
+!vault/.obsidian/app.json
