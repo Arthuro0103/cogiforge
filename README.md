@@ -66,7 +66,7 @@ dated failure, and each one has a test that fails without it: see [POR-QUE.md](P
 
 - Tests: `python3 -m pytest -q` gave **191 passed, 2 skipped** on 03/10.
 - Mutation: `python3 tests/mutar.py` breaks every check one at a time and gave **105 of 105 mutants killed, 0 alive** on 03/10.
-- CI: **8 of 8 jobs green** on 03/10 (commit `0e5b8d2`), on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. Each job starts from a clean checkout, runs `instalar.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end.
+- CI: **8 of 8 jobs green** on 03/10 (commit `3734e39`), on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. Each job starts from a clean checkout, runs `instalar.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end.
 - Two tests compare this link checker with the author's private vault, which is not in this repo. They are **skipped** (reported as skipped, not as passed).
 - **Nobody other than the author has used it yet.** If you are the first, tell us where you got stuck: that is the most useful thing you can send.
 
