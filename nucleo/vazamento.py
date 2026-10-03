@@ -29,11 +29,14 @@ from pathlib import Path
 NEGRA_PADRAO = Path.home() / ".config" / "scarbrain" / "negra.txt"
 NOME_NEGRA = "negra.txt"
 ARQUIVO_IGNORE = ".vazamentoignore"
-PULAR_DIRS = {".git", "__pycache__", ".pytest_cache", "node_modules", ".venv", "venv"}
+PULAR_DIRS = {".git", "__pycache__", ".pytest_cache"}  # só o que nunca é conteúdo: venv/node_modules SÃO varridos
 
 CAMINHO_RE = re.compile(r"(?:/|\\)Users(?:/|\\)[A-Za-z0-9._-]+", re.IGNORECASE)  # inclui o estilo Windows
+# example.com/org/net (RFC 2606) só vale INTEIRO: qualquer sufixo depois de example.com já é um domínio de verdade
 EMAIL_RE = re.compile(
-    r"(?<![\w.+-])[\w.+-]+@(?!example\.(?:com|org|net)\b)[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}\b(?!:)")
+    r"(?<![\w.+-])([\w.+-]+)@(?!example\.(?:com|org|net)(?![\w-]|\.\w))"
+    r"[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}\b")
+SCP_USUARIOS = {"git", "ssh", "hg"}  # `git@host:org/repo` é endereço scp, não e-mail
 TELEFONE_RE = re.compile(
     r"(?<![\d(])(?:\+55\s?\(?\d{2}\)?\s?9?\d{4}-?\d{4}|\(\d{2}\)\s?9?\d{4}-?\d{4}|\d{2}\s9?\d{4}[-\s]\d{4})(?!\d)")
 CPF_RE = re.compile(r"(?<![\d.])\d{3}\.\d{3}\.\d{3}-\d{2}(?!\d)")
@@ -49,7 +52,11 @@ def chk_caminho(linha):
 
 
 def chk_email(linha):
-    return ["email"] if EMAIL_RE.search(linha) else []
+    for m in EMAIL_RE.finditer(linha):
+        if m.group(1) in SCP_USUARIOS and linha[m.end():m.end() + 1] == ":":
+            continue
+        return ["email"]
+    return []
 
 
 def chk_telefone(linha):
@@ -66,13 +73,14 @@ def chk_lista(linha, termos):
 
 
 def ler_negra(caminho):
-    """Termos em minúsculas, ou None se a lista não existe (≠ lista vazia)."""
+    """Termos em minúsculas, ou None se a lista não existe ou não tem nenhum termo."""
     try:
-        texto = Path(caminho).read_text(encoding="utf-8")
+        texto = Path(caminho).read_text(encoding="utf-8", errors="replace")
     except OSError:
         return None
-    return [normalizar(t).strip().casefold() for t in texto.splitlines()
-            if t.strip() and not t.lstrip().startswith("#")]
+    termos = [normalizar(t).strip().casefold() for t in texto.splitlines()
+              if t.strip() and not t.lstrip().startswith("#")]
+    return termos or None  # lista vazia não verificou nada: é ausência, não "limpo"
 
 
 def achados_do_texto(texto, termos):
@@ -115,6 +123,14 @@ def decodificar(dados):
     return dados.decode("utf-8", errors="replace")
 
 
+def rastreados():
+    """Arquivos versionados no git daqui (vazio se não for repo git)."""
+    r = subprocess.run(["git", "ls-files", "-z"], capture_output=True)
+    if r.returncode != 0:
+        return set()
+    return {os.path.normpath(c) for c in r.stdout.decode("utf-8", "replace").split("\0") if c}
+
+
 def no_stage():
     r = subprocess.run(["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"],
                        capture_output=True, check=True)
@@ -148,6 +164,10 @@ def main(argv=None):
                 except OSError:
                     ilegiveis.append(c)
         else:
+            inexistentes = [c for c in args.caminhos if not os.path.exists(c)]
+            if inexistentes:
+                print(f"ERRO: caminho inexistente, nada foi varrido: {', '.join(inexistentes)}", file=sys.stderr)
+                return 2
             for p in arquivos_de(args.caminhos or ["."]):
                 try:
                     fontes.append((os.path.normpath(p), decodificar(p.read_bytes())))
@@ -157,14 +177,19 @@ def main(argv=None):
         print(f"ERRO: não deu pra listar o stage do git ({e})", file=sys.stderr)
         return 2
 
-    total, com_achado = 0, 0
+    total, com_achado, isentos = 0, 0, []
+    versionados = set() if args.staged else rastreados()
     for nome, texto in fontes:
-        if args.staged and Path(nome).name == NOME_NEGRA:
-            print(f"{nome}:0: negra-no-stage")  # a lista privada nunca pode entrar num commit
+        if Path(nome).name == NOME_NEGRA and (args.staged or os.path.normpath(nome) in versionados):
+            # a lista privada nunca pode estar num commit; só a cópia local, fora do git, é ignorada
+            print(f"{nome}:0: {'negra-no-stage' if args.staged else 'negra-no-repo'}")
             total += 1
             com_achado += 1
             continue
-        if texto is None or Path(nome).name == NOME_NEGRA or os.path.normpath(nome) in ignorados:
+        if texto is None or Path(nome).name == NOME_NEGRA:
+            continue
+        if os.path.normpath(nome) in ignorados:
+            isentos.append(nome)
             continue
         achados = achados_do_texto(texto, termos or [])
         for n, tipo in achados:
@@ -172,6 +197,8 @@ def main(argv=None):
         total += len(achados)
         com_achado += bool(achados)
 
+    for nome in isentos:
+        print(f"isento ({ARQUIVO_IGNORE}): {nome}")
     print(f"{total} achado(s) em {com_achado} arquivo(s), de {len(fontes)} varrido(s)")
     for nome in ilegiveis:
         print(f"{nome}: ilegivel")

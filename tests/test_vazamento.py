@@ -230,3 +230,67 @@ def test_negra_txt_no_stage_bloqueia_o_commit(tmp_path):
     assert git("add", "-f", "negra.txt").returncode == 0
     r = rodar(["--staged"], tmp_path)
     assert r.returncode == 1 and "negra-no-stage" in r.stdout
+
+
+# ---- allowlists e fail-open (2ª revisão de segurança) ------------------------
+
+def test_isencao_example_nao_cobre_dominio_real_que_comeca_com_example():
+    assert v.chk_email("fulano" + "@" + "example.com.br")
+    assert v.chk_email("fulano" + "@" + "example.com-corp.io")
+    assert v.chk_email("escreva para fulano@example.com.") == []
+    assert v.chk_email("lista: a@example.com, b@example.org;") == []
+
+
+def test_email_seguido_de_dois_pontos_ainda_vaza_mas_scp_do_git_nao():
+    assert v.chk_email("contato " + EMAIL + ": telefone abaixo")
+    assert v.chk_email("git clone git@github.com:org/repo.git") == []
+    assert v.chk_email("ssh@servidor.dev:/srv") == []
+
+
+def test_lista_negra_vazia_ou_so_comentario_e_nao_verificado(tmp_path):
+    (tmp_path / "bom.md").write_text("limpo\n", encoding="utf-8")
+    for conteudo in ("", "\n\n", "# só comentário\n"):
+        negra = tmp_path / "vazia.txt"
+        negra.write_text(conteudo, encoding="utf-8")
+        r = rodar([".", "--exigir-lista"], tmp_path, negra=negra)
+        assert "NAO_VERIFICADO" in r.stdout and r.returncode == 3, conteudo
+
+
+def test_lista_negra_com_byte_invalido_nao_derruba_nem_some(tmp_path):
+    negra = tmp_path / "fora.txt"
+    negra.write_bytes(b"zeta-quux\n\xff\xfe quebrado\n")
+    (tmp_path / "x.md").write_text("zeta-quux\n", encoding="utf-8")
+    assert rodar(["x.md"], tmp_path, negra=negra).returncode == 1
+
+
+def test_caminho_inexistente_nao_e_limpo(tmp_path):
+    r = rodar(["nao-existe"], tmp_path)
+    assert r.returncode == 2 and "nao-existe" in (r.stdout + r.stderr)
+
+
+def test_pasta_venv_e_node_modules_nao_sao_isentas(tmp_path):
+    for d in ("venv", "node_modules", "sub/venv"):
+        (tmp_path / d).mkdir(parents=True)
+        (tmp_path / d / "x.md").write_text(EMAIL + "\n", encoding="utf-8")
+    r = rodar(["."], tmp_path)
+    assert r.returncode == 1 and len([l for l in r.stdout.splitlines() if ": email" in l]) == 3
+
+
+def test_negra_txt_versionado_e_achado_no_scan_de_repo(tmp_path):
+    def git(*a):
+        return subprocess.run(["git", *a], cwd=tmp_path, capture_output=True, text=True)
+    git("init", "-q")
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "negra.txt").write_text("termo\n", encoding="utf-8")
+    (tmp_path / "negra.txt").write_text("termo\n", encoding="utf-8")
+    git("add", "-f", "docs/negra.txt")
+    r = rodar(["."], tmp_path)
+    assert r.returncode == 1 and "docs/negra.txt:0: negra-no-repo" in r.stdout
+    assert "\nnegra.txt:" not in "\n" + r.stdout  # o não versionado segue ignorado
+
+
+def test_isencao_do_vazamentoignore_aparece_na_saida(tmp_path):
+    (tmp_path / "plantado.md").write_text(f"vaza {CAMINHO}\n", encoding="utf-8")
+    (tmp_path / ".vazamentoignore").write_text("plantado.md\n", encoding="utf-8")
+    r = rodar(["."], tmp_path)
+    assert r.returncode == 0 and "isento" in r.stdout and "plantado.md" in r.stdout
