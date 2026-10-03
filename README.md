@@ -60,10 +60,10 @@ dated failure, and each one has a test that fails without it: see [POR-QUE.md](P
 
 ## What is verified, and what is not
 
-- `Tests: `python3 -m pytest -q` gave **186 passed, 2 skipped** on 03/10.`
-- `Mutation: `python3 tests/mutar.py` breaks every check one at a time and gave **102 of 102 mutants killed, 0 alive** on 03/10.`
-- `CI: the workflow is in the repo and its first run on this repo is still pending. Until it is green, "works on a clean clone" was checked by hand only (clone, `sh instalar.sh`, an orphan note blocked at commit) on macOS.`
-- Two tests compare this portão with the author's private vault, which is not in this repo. They are **skipped** (reported as skipped, not as passed).
+- Tests: `python3 -m pytest -q` gave **186 passed, 2 skipped** on 03/10.
+- Mutation: `python3 tests/mutar.py` breaks every check one at a time and gave **102 of 102 mutants killed, 0 alive** on 03/10.
+- CI: **8 of 8 jobs green** on 03/10 (commit `0e5b8d2`), on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. Each job starts from a clean checkout, runs `instalar.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end.
+- Two tests compare this link checker with the author's private vault, which is not in this repo. They are **skipped** (reported as skipped, not as passed).
 - **Nobody other than the author has used it yet.** If you are the first, tell us where you got stuck: that is the most useful thing you can send.
 
 ## Roadmap

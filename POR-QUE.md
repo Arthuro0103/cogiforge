@@ -40,7 +40,7 @@ vermelho.
 **A regra.** Todo check tem que ter um teste que falha quando ele é quebrado.
 
 **Quem pega.** `tests/mutar.py`, que roda no CI como portão: mutante vivo reprova.
-**O teste.** O próprio `mutar.py`. Resultado hoje: `**102 de 102 mutantes mortos, 0 vivos** (03/10).`
+**O teste.** O próprio `mutar.py`. Resultado hoje: **102 de 102 mutantes mortos, 0 vivos** (03/10).
 
 ### 3. Um verificador que não tocou em nada e disse OK (11/09)
 

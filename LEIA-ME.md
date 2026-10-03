@@ -95,9 +95,9 @@ Mande o que achou do jeito que for mais fácil: uma mensagem pra quem te passou,
 
 ## O que está verificado, e o que não está
 
-- `Testes: `python3 -m pytest -q` deu **186 passaram, 2 pulados** em 03/10.`
-- `Mutação: `python3 tests/mutar.py` quebra cada check, um de cada vez, e deu **102 de 102 mutantes mortos, 0 vivos** em 03/10.`
-- `CI: o workflow está no repo e a primeira execução dele aqui ainda está pendente. Até ficar verde, "funciona num clone limpo" foi conferido só à mão (clone, `sh instalar.sh`, nota órfã bloqueada no commit) no macOS.`
+- Testes: `python3 -m pytest -q` deu **186 passaram, 2 pulados** em 03/10.
+- Mutação: `python3 tests/mutar.py` quebra cada check, um de cada vez, e deu **102 de 102 mutantes mortos, 0 vivos** em 03/10.
+- CI: **8 de 8 jobs verdes** em 03/10 (commit `0e5b8d2`), em ubuntu e macOS com Python 3.10, 3.11, 3.12 e 3.13. Cada job parte de um checkout limpo, roda o `instalar.sh`, os testes, a mutação e a varredura de vazamento, e prova o portão das órfãs de ponta a ponta.
 - Dois testes comparam este portão com o vault privado do autor, que não está neste repo. Eles são **pulados** (saem como pulados, não como passados).
 - **Ninguém além do autor usou ainda.**
 
