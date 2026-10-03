@@ -6,3 +6,12 @@ captura rápida vai em `inbox/`, que é isenta.
 - [[como-ligar-uma-nota]] (aprendizado)
 - [[um-script-so-vale-com-teste]] (tecnologia)
 - [[uma-nota-por-ideia]] (vida)
+
+## A bancada
+
+Os arquivos que organizam o trabalho aqui:
+
+- [[CLAUDE]], como a bancada opera
+- [[_perguntas_sobre_mim]], o questionário de onboarding
+- [[memoria/perfil]], [[memoria/padroes]] e [[memoria/decisoes]], a memória, só com as suas palavras
+- [[memoria/ideias/_dores]], a fila de dores
