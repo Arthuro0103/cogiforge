@@ -29,12 +29,12 @@ aconteceu. Fechar com método é transformar a sessão em quatro coisas: diário
 ### 1. Levantar o que aconteceu (você, o Claude)
 
 ```bash
-git log --since=midnight --oneline --stat | head -40
+git log --since=midnight --oneline --stat 2>/dev/null | head -40 || true
 git status --short
 ls -t vault/tarefas/ | head -10
 ```
 
-Cruze com o que foi dito na conversa. Descubra o(s) projeto(s) tocado(s): cada um precisa ter
+Se `git log` não mostrar nada (repo sem commits), diga "não medi: sem commits" e siga pela conversa. Cruze com o que foi dito nela. Descubra o(s) projeto(s) tocado(s): cada um precisa ter
 `vault/projetos/<nome>/instrucoes.md`. Se não tiver, diga e pergunte qual é.
 
 ### 2. Escrever o briefing, um por sessão (você)
@@ -75,8 +75,9 @@ briefing, na seção *O que ficou de pé*. Se a citação não for literal, não
 
 ### 5. Abrir tarefa pro que ficou pendente (você)
 
-Uma pendência com próximo passo concreto vira `vault/tarefas/<ID>-<slug>.md`. ID: próximo número livre
-(`ls vault/tarefas/`). Pergunte a prioridade se não for óbvia.
+Uma pendência com próximo passo concreto vira `vault/tarefas/<ID>-<slug>.md`. ID: o prefixo e o próximo número livre dos arquivos que já estão em
+`vault/tarefas/` (`ls vault/tarefas/`); se a pasta está vazia, pergunte o prefixo e comece em 001.
+Pergunte a prioridade se não for óbvia.
 
 ```yaml
 ---

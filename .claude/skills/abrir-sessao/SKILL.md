@@ -60,7 +60,7 @@ Liste no máximo 5, `doing` primeiro, depois `priority: high`. Se passar de 5, d
 ### 5. Conferir contra o disco (você)
 
 ```bash
-git log --oneline -5 -- vault/projetos/<nome>
+git log --oneline -5 -- vault/projetos/<nome> 2>/dev/null   # vazio = sem commits ainda
 git status --short vault/projetos/<nome>
 ```
 
