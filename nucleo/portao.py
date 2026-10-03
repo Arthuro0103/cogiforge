@@ -327,7 +327,18 @@ def main(argv=None):
     if not vault.is_dir() or (args.check and set(args.check) - nomes):
         print(f"ERRO: vault inexistente ({vault}) ou check desconhecido (válidos: {', '.join(sorted(nomes))})", file=sys.stderr)
         return 2
-    alvos = [a if Path(a).exists() else vault / a for a in args.arquivos] or None
+    alvos = []
+    for a in args.arquivos:
+        arq = Path(a) if Path(a).exists() else vault / a
+        try:
+            arq.resolve().relative_to(vault.resolve())
+        except ValueError:
+            print(f"ERRO: {a} está fora de {vault}. O portão resolve link e área a partir do vault: dar OK a "
+                  f"um arquivo que ele não conferiu é pior que não rodar. Copie o arquivo pra dentro do vault.",
+                  file=sys.stderr)
+            return 2
+        alvos.append(arq)
+    alvos = alvos or None
     todos, achados = auditar(vault, alvos, checks=set(args.check or []))
     ileg = [f for f in achados if f.check == "ILEGIVEL"]
     falhas = [f for f in achados if f.check != "ILEGIVEL"]

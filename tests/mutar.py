@@ -52,6 +52,7 @@ PECAS = {
     ]),
     "portao": dict(arquivo="nucleo/portao.py", suite=["tests/test_portao.py", "tests/test_demo.py"], textos=[
         ("area: pasta ≠ area passa", 'if area != esperada:', 'if False:'),
+        ("arquivo de fora do vault passa", 'arq.resolve().relative_to(vault.resolve())', 'arq.resolve().relative_to(arq.resolve())'),
         ("area: fora da lista passa", 'if area not in areas.values():', 'if False:'),
         ("area: pasta desconhecida passa", 'if esperada is None:', 'if False:'),
         ("area: campo ausente passa", 'if area is None or not str(area).strip():', 'if False:'),

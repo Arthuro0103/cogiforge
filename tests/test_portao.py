@@ -198,6 +198,18 @@ def test_cli_vault_inexistente_sai_2(tmp_path):
     assert rodar("--vault", str(tmp_path / "nao-existe")).returncode == 2
 
 
+def test_arquivo_fora_do_vault_sai_2_nunca_limpo_e_sem_traceback(tmp_path):
+    """Um rascunho FORA do vault não pode ser dado como conferido: o portão resolve link e área
+    relativos ao vault, então conferir o que está fora dele seria um OK que não tocou em nada.
+    Achado em 03/10 ao escrever o README: o portão derrubava com traceback (rc 1, ValueError)."""
+    v = vault(tmp_path / "v", {"notas/vida/a.md": nota("vida", "[[b]]\n"), "notas/vida/b.md": nota("vida", "[[a]]\n")})
+    rascunho = tmp_path / "rascunho.md"  # irmão do vault, não dentro dele
+    rascunho.write_text("---\narea: nada-a-ver\n---\n# Rascunho\n\nTexto.\n")
+    r = rodar("--vault", str(v), str(rascunho))
+    assert r.returncode == 2
+    assert "fora" in r.stderr and "Traceback" not in r.stderr and "Traceback" not in r.stdout
+
+
 def test_cli_arquivo_ilegivel_sai_3_nunca_limpo(tmp_path):
     v = vault(tmp_path, {"a.md": "limpo\n"})
     (v / "a.md").chmod(0)

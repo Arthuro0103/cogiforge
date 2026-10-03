@@ -72,8 +72,9 @@ def no_stage(vault):
 
 
 ENSINA = """
-Como consertar: abra a nota e ligue ela a uma nota que EXISTE com um [[wikilink]] (uma seção
-"## De onde veio" ou "## Conexões" resolve), ou aponte pra ela a partir de uma nota existente.
+Como consertar: abra a nota e ligue ela a uma nota que EXISTE com um [[wikilink]] no meio do texto
+(onde a conexão é real; bloco de links no rodapé não é o jeito), ou aponte pra ela a partir de uma
+nota existente.
 Link pra arquivo que não existe não conta. Só captura rápida? Jogue em inbox/: é isento.
 Escape consciente: git commit --no-verify
 """

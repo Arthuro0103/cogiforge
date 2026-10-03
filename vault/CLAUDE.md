@@ -6,7 +6,7 @@ você roda na raiz do repo e lê e escreve **só dentro de `vault/`**.
 
 ## Primeira vez
 
-1. A pessoa responde `_perguntas_sobre_mim.md` (vazio no começo). Nada é inventado por você.
+1. Rode a skill `conhecer`: a pessoa responde `_perguntas_sobre_mim.md` (vazio no começo), uma pergunta por vez. Nada é inventado por você.
 2. Crie o projeto: copie `projetos/exemplo-meu-primeiro-projeto/` para `projetos/<nome>/`, edite o
    frontmatter (`tipo`, `status`, `alvo_declarado`) e acrescente a linha em `projetos/_index.md`.
 3. Rode `python3 ferramentas/hub.py` para o projeto listar seus arquivos.
@@ -61,12 +61,12 @@ bloco da raiz; nota em `notas/` só aparece lá pelo link no corpo.
 
 | skill | quando |
 |---|---|
-| `abrir-sessao` | ao começar: lê o estado, drena o inbox, mostra o que está aberto |
-| `fechar-sessao` | ao terminar: diário, briefing, dores colhidas, tarefas abertas |
-| `task-observer` | durante o trabalho: anota correções e padrões para a bancada melhorar |
-| `claude-corner` | quando você tiver uma proposta própria para a bancada |
-| `conhecer` | depois que a pessoa responde perguntas: propõe o que enxergou |
-| `adaptar-skill` | ao trazer skill de fora: veredito do que serviu e por quê |
+| `abrir-sessao` | ao começar o trabalho num projeto: diga o nome dele e ela lê a raiz, o diário e as tarefas abertas |
+| `fechar-sessao` | ao terminar o dia: diário, briefing, dores colhidas, tarefas abertas |
+| `task-observer` | durante o trabalho: vê o que se repete ou foi corrigido e **só propõe** melhorias |
+| `claude-corner` | quando a pessoa avisar que vai sair: o Claude relê, conecta e testa fora de `vault/`, e **só propõe** |
+| `conhecer` | na primeira vez e quando a pessoa quiser atualizar o perfil: uma pergunta por vez, a saída é a fala dela |
+| `adaptar-skill` | quando a pessoa quiser uma skill dela a partir de uma ficha de `fichas-de-skills/`; o Claude não escreve a skill sozinho |
 
 ## Nunca
 
