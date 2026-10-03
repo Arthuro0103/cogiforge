@@ -37,6 +37,26 @@ nasceu de arquivo solto, em 0 de 43. Por isso:
 - Arquivo novo que fala de um projeto leva um wikilink para a raiz dele.
 - Nada afirma coisa sobre a pessoa que ela não disse. Você **propõe** em `memoria/observacoes.md`; só entra em `memoria/` com o "sim" dela, com data e citação literal.
 
+## Primeira nota
+
+Modelo mínimo (a lista de `area:` é da pessoa; a pasta é `notas/<area>/`):
+
+```
+---
+tipo: nota
+area: estudos
+projeto: exemplo-meu-primeiro-projeto
+data: 2026-10-03
+---
+# Título que é uma afirmação de até dez palavras
+
+Corpo com o argumento. O link entra aqui, no meio:
+[[projetos/exemplo-meu-primeiro-projeto/instrucoes|o projeto]] muda por causa disto.
+```
+
+Depois de gravar, rode `python3 ferramentas/hub.py`: nota em `projetos/<nome>/` entra sozinha no
+bloco da raiz; nota em `notas/` só aparece lá pelo link no corpo.
+
 ## Quando usar cada skill
 
 | skill | quando |
