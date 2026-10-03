@@ -1,0 +1,81 @@
+name: prova
+
+# O CI é a prova pública: roda o ciclo inteiro num clone de estranho.
+# Cada etapa abaixo existe porque uma falha dela já aconteceu (ver POR-QUE.md, quando existir).
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 6 * * 1"   # toda segunda: pega o que apodreceu sem commit
+
+jobs:
+  prova:
+    name: ${{ matrix.os }} / py${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - run: python -m pip install pytest
+
+      - name: git identity (só para os commits de teste)
+        run: |
+          git config --global user.name "ci"
+          git config --global user.email "ci@example.com"
+
+      - name: instalar.sh num clone limpo — tem que ativar o hooksPath
+        run: |
+          test -z "$(git config --get core.hooksPath)" || { echo "hooksPath já vinha ativo: clone não está limpo"; exit 1; }
+          sh instalar.sh
+          test "$(git config --get core.hooksPath)" = ".githooks"
+
+      - name: contagem exata por check sobre demo/ (meta-asserção da fixture)
+        run: python tests/contagem.py
+
+      - name: pytest
+        run: python -m pytest -q -rs
+
+      - name: mutação — todo mutante tem que morrer
+        run: python tests/mutar.py
+
+      - name: vazamento.py no próprio repo
+        run: |
+          rc=0; python nucleo/vazamento.py . > vazamento.txt || rc=$?
+          cat vazamento.txt
+          echo "linhas de achado: $(grep -cE '^[^ ]+:[0-9]+: ' vazamento.txt || true)"
+          exit $rc
+
+      - name: ponta a ponta — órfã bloqueia, link libera, hooksPath removido deixa o teste vermelho
+        run: |
+          set -u
+          orfa=vault/notas/aprendizado/orfa-do-ci.md
+          printf -- '---\narea: aprendizado\n---\n# Nota sem aresta\n\nTexto sem link.\n' > "$orfa"
+          git add "$orfa"
+          if git commit -q -m "ci: orfa"; then echo "FALHOU: commit de órfã passou"; exit 1; fi
+          printf '\nVolta ao [[_indice]].\n' >> "$orfa"
+          git add "$orfa"
+          git commit -q -m "ci: com link"
+          git config --unset core.hooksPath
+          if python -m pytest -q tests/test_hook_ativo.py::test_hookspath_aponta_pro_githooks; then
+            echo "FALHOU: test_hook_ativo continuou verde sem hooksPath"; exit 1
+          fi
+          echo "ok: o teste ficou vermelho sem o hooksPath, como deveria"
+          git config core.hooksPath .githooks
+
+      - name: equivalência com o Brain
+        run: |
+          rc=0; python -m pytest -q -rs tests/test_equivalencia.py > equiv.txt || rc=$?
+          cat equiv.txt
+          if grep -q "SKIPPED" equiv.txt; then
+            echo "NAO_VERIFICADO: equivalência com o Brain não rodou (brain ausente neste ambiente)."
+          fi
+          exit $rc
