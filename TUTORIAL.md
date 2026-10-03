@@ -19,7 +19,8 @@ provam que funcionam do mesmo jeito na sua. Por isso o guia pede que você anote
 
 ## 0. Antes de começar
 
-Você precisa de `git`, Python 3.10 ou mais novo, [Obsidian](https://obsidian.md) e o Claude Code.
+Você precisa de `git`, Python 3.10 ou mais novo, [Obsidian](https://obsidian.md) e o Claude Code. Só pra
+rodar os testes do próprio repo (seção 14) você também precisa do `pytest`: `python3 -m pip install pytest`.
 Funciona em macOS e Linux; no Windows não foi testado. Clone com `git clone` (não baixe o zip: o hook
 depende do git).
 
@@ -385,7 +386,7 @@ conceitos mais ligados e as conexões que surpreendem) e `graph.json`. Para cons
 | procurar dado pessoal | `python3 nucleo/vazamento.py .` |
 | regravar a lista de arquivos de cada projeto | `python3 ferramentas/hub.py` |
 | conferir se o hub está em dia | `python3 ferramentas/hub.py --check` |
-| rodar os testes do repo | `python3 -m pytest -q` |
+| rodar os testes do repo (precisa do `pytest`; rode **depois** do `sh instalar.sh`, senão o teste do hook falha de propósito) | `python3 -m pytest -q` |
 | quebrar cada check e exigir teste vermelho | `python3 tests/mutar.py` |
 
 | Skill | Quando |

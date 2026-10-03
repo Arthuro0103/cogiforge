@@ -28,7 +28,7 @@ os comandos. Cada lei tem o erro que a originou em [POR-QUE.md](POR-QUE.md).
 | procurar dado pessoal | `python3 nucleo/vazamento.py .` |
 | regravar o bloco de arquivos de cada projeto | `python3 ferramentas/hub.py` |
 | mapa de conexões (opcional, precisa do graphify instalado) | `/graphify vault` na raiz do repo |
-| rodar os testes | `python3 -m pytest -q` |
+| rodar os testes (precisa do `pytest`; depois do `sh instalar.sh`) | `python3 -m pytest -q` |
 | quebrar cada check e exigir teste vermelho | `python3 tests/mutar.py` |
 
 O portão só confere o que está **dentro** de `vault/`: arquivo de fora sai com erro, nunca como OK.

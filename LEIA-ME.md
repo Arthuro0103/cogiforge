@@ -44,7 +44,8 @@ linha só entra no seu perfil com o seu "sim", com a data e a sua frase literal.
 ## Instalação
 
 Você precisa de `git`, Python 3.10 ou mais novo, Obsidian e Claude Code. Funciona em macOS e Linux; no
-Windows não foi testado.
+Windows não foi testado. Pra rodar os testes do próprio repo você também precisa do `pytest`
+(`python3 -m pip install pytest`); mais nada no repo usa ele.
 
 ```sh
 git clone https://github.com/Arthuro0103/cogiforge.git
@@ -97,7 +98,7 @@ Mande o que achou do jeito que for mais fácil: uma mensagem pra quem te passou,
 
 ## O que está verificado, e o que não está
 
-- Testes: `python3 -m pytest -q` deu **191 passaram, 2 pulados** em 03/10.
+- Testes: depois de `sh instalar.sh` e `python3 -m pip install pytest`, `python3 -m pytest -q` deu **191 passaram, 2 pulados** em 03/10. Rodado antes do `sh instalar.sh`, um teste falha de propósito: ele confere que o hook está ativo.
 - Mutação: `python3 tests/mutar.py` quebra cada check, um de cada vez, e deu **105 de 105 mutantes mortos, 0 vivos** em 03/10.
 - CI: **8 de 8 jobs verdes** em 03/10 (commit `3734e39`), em ubuntu e macOS com Python 3.10, 3.11, 3.12 e 3.13. Cada job parte de um checkout limpo, roda o `instalar.sh`, os testes, a mutação e a varredura de vazamento, e prova o portão das órfãs de ponta a ponta.
 - Dois testes comparam este portão com o vault privado do autor, que não está neste repo. Eles são **pulados** (saem como pulados, não como passados).
