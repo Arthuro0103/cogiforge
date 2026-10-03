@@ -32,7 +32,7 @@ nasceu de arquivo solto, em 0 de 43. Por isso:
 ## Regras de escrita
 
 - Título é uma afirmação de até 10 palavras, nunca uma categoria.
-- Link por caminho completo a partir de `vault/`: `[[projetos/x/instrucoes|x]]`. Só existe quando a conexão é real.
+- Link por caminho completo a partir de `vault/`: `[[projetos/exemplo-meu-primeiro-projeto/instrucoes|exemplo]]`. Só existe quando a conexão é real.
 - **Sem bloco `## Conexões` no rodapé.** O link entra no corpo, no meio do argumento.
 - Arquivo novo que fala de um projeto leva um wikilink para a raiz dele.
 - Nada afirma coisa sobre a pessoa que ela não disse. Você **propõe** em `memoria/observacoes.md`; só entra em `memoria/` com o "sim" dela, com data e citação literal.
