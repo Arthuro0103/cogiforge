@@ -39,12 +39,12 @@ nasceu de arquivo solto, em 0 de 43. Por isso:
 
 ## Primeira nota
 
-Modelo mínimo (a lista de `area:` é da pessoa; a pasta é `notas/<area>/`):
+Modelo mínimo (as áreas válidas estão em `areas.txt`; a pasta é `notas/<area>/` e tem o mesmo nome):
 
 ```
 ---
 tipo: nota
-area: estudos
+area: aprendizado
 projeto: exemplo-meu-primeiro-projeto
 data: 2026-10-03
 ---
