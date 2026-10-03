@@ -294,3 +294,7 @@ def test_isencao_do_vazamentoignore_aparece_na_saida(tmp_path):
     (tmp_path / ".vazamentoignore").write_text("plantado.md\n", encoding="utf-8")
     r = rodar(["."], tmp_path)
     assert r.returncode == 0 and "isento" in r.stdout and "plantado.md" in r.stdout
+
+
+def test_lista_negra_padrao_mora_fora_do_repo_em_config_cogiforge():
+    assert v.NEGRA_PADRAO == Path.home() / ".config" / "cogiforge" / "negra.txt"

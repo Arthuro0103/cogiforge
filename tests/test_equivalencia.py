@@ -4,7 +4,7 @@ O Brain fixa o VAULT pelo caminho do próprio script (`parent.parent`), então o
 copiado para <tmp>/scripts/ e o demo/ para <tmp>/. Sem o Brain (CI público), o teste é PULADO
 e o prova.yml imprime NAO_VERIFICADO: pular não é passar.
 
-    SCARBRAIN_BRAIN=/caminho/do/Brain pytest tests/test_equivalencia.py -rs
+    COGIFORGE_BRAIN=/caminho/do/Brain pytest tests/test_equivalencia.py -rs
 
 Checks em comum: frontmatter, area, link-morto, link-partido, alvo-morto. Ficam fora, de propósito:
 titulo, caminho-morto e sem-link-no-corpo (só existem no Brain). O que a comparação cobre é o que o
@@ -26,7 +26,7 @@ EM_COMUM = ["frontmatter", "area", "link-morto", "link-partido", "alvo-morto"]
 
 
 def brain():
-    b = os.environ.get("SCARBRAIN_BRAIN")
+    b = os.environ.get("COGIFORGE_BRAIN")
     if not b or not (Path(b) / "scripts" / "portao.py").is_file():
         pytest.skip("brain ausente")
     return Path(b)

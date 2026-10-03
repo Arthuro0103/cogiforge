@@ -8,7 +8,7 @@ todo termo da lista negra privada. Só stdlib.
     vazamento.py --staged          varre o que está no stage do git (usado pelo hook)
 
 A lista negra mora FORA do repo (um termo por linha, sem diferenciar caixa):
-    ~/.config/scarbrain/negra.txt        (troque com VAZAMENTO_NEGRA=/outro/caminho)
+    ~/.config/cogiforge/negra.txt        (troque com VAZAMENTO_NEGRA=/outro/caminho)
 Sem a lista, só os padrões genéricos rodam e a saída diz `NAO_VERIFICADO` — a parte privada
 não foi checada, e isso nunca vira "OK". `--exigir-lista` transforma isso em rc=3.
 
@@ -26,7 +26,7 @@ import sys
 import unicodedata
 from pathlib import Path
 
-NEGRA_PADRAO = Path.home() / ".config" / "scarbrain" / "negra.txt"
+NEGRA_PADRAO = Path.home() / ".config" / "cogiforge" / "negra.txt"
 NOME_NEGRA = "negra.txt"
 ARQUIVO_IGNORE = ".vazamentoignore"
 PULAR_DIRS = {".git", "__pycache__", ".pytest_cache"}  # só o que nunca é conteúdo: venv/node_modules SÃO varridos
