@@ -5,7 +5,7 @@ que guarda trabalho, escola e vida pessoal no mesmo lugar, **organiza seus proje
 te ajuda a escrever e planejar, e melhora junto com você** conforme você usa.
 
 > **Estado: alpha (v0.x).** Saiu do vault de trabalho do autor e, até agora, só o autor usou. Se você
-> é o primeiro de fora, o mais útil que pode mandar é onde travou. English: [README.md](README.md).
+> é o primeiro de fora, o mais útil que pode mandar é onde travou. English: [README.md](README.md). Passo a passo de cada parte: [TUTORIAL.md](TUTORIAL.md).
 
 ## Pra quem é
 
@@ -23,6 +23,8 @@ notas (o Obsidian abre) mais um Claude Code que sabe operar essa pasta.
 | `/fechar-sessao` | Fecha o dia: diário, um briefing por sessão, as **dores que você falou** num arquivo só, tarefas abertas pro que ficou pendente. Só commita se você mandar e nunca dá push. |
 | `/task-observer` | Olha como você trabalha e **só propõe** melhorias: uma skill que faltou, um passo repetido três vezes, uma correção que você fez duas. Quem decide é você. |
 | `/claude-corner` | Quando você avisa que vai sair, o Claude usa o tempo pra reler suas notas, achar conexões reais e testar ideias num lugar descartável. **Só propõe**, num arquivo. |
+| Tarefas (**TaskNotes**) | As tarefas são notas em `vault/tarefas/`, gerenciadas pelo plugin público [TaskNotes](https://github.com/callumalpass/tasknotes) do Obsidian (MIT). Ele **não vem no repo**: você instala pela loja de plugins da comunidade. `abrir-sessao` e `fechar-sessao` leem e escrevem o mesmo formato. |
+| Mapa de conexões (**graphify**, opcional) | O [graphify](https://github.com/Graphify-Labs/graphify) (Apache-2.0), público, transforma as suas notas num grafo que você consulta. Você instala; a pasta que ele gera fica no `.gitignore`. Veja o tutorial. |
 | `/adaptar-skill` | Te guia a fazer uma skill **sua** a partir de uma ficha em `vault/fichas-de-skills/`. Uma pergunta por vez; o Claude nunca escreve a skill por você, e "não serve pra mim" é resposta válida que fica registrada. |
 
 As fichas de `artigo`, `conselho`, `ideia-de-produto` e `consultar-notas` já estão em
@@ -95,15 +97,15 @@ Mande o que achou do jeito que for mais fácil: uma mensagem pra quem te passou,
 
 ## O que está verificado, e o que não está
 
-- Testes: `python3 -m pytest -q` deu **186 passaram, 2 pulados** em 03/10.
-- Mutação: `python3 tests/mutar.py` quebra cada check, um de cada vez, e deu **102 de 102 mutantes mortos, 0 vivos** em 03/10.
+- Testes: `python3 -m pytest -q` deu **191 passaram, 2 pulados** em 03/10.
+- Mutação: `python3 tests/mutar.py` quebra cada check, um de cada vez, e deu **105 de 105 mutantes mortos, 0 vivos** em 03/10.
 - CI: **8 de 8 jobs verdes** em 03/10 (commit `0e5b8d2`), em ubuntu e macOS com Python 3.10, 3.11, 3.12 e 3.13. Cada job parte de um checkout limpo, roda o `instalar.sh`, os testes, a mutação e a varredura de vazamento, e prova o portão das órfãs de ponta a ponta.
 - Dois testes comparam este portão com o vault privado do autor, que não está neste repo. Eles são **pulados** (saem como pulados, não como passados).
 - **Ninguém além do autor usou ainda.**
 
 ## Próximos passos
 
-`artigo`, `conselho`, `ideia-de-produto` e `consultar-notas` como skills de verdade (as fichas já existem); um comando pra listar tarefas; uma skill que transforma uma falha sua em regra mais teste.
+`artigo`, `conselho`, `ideia-de-produto` e `consultar-notas` como skills de verdade (as fichas já existem); uma skill que transforma uma falha sua em regra mais teste.
 
 ## Licença
 

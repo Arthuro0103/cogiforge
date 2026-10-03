@@ -6,7 +6,7 @@ and tasks, helps you write and plan, and gets better with you** as you use it.
 
 > **Status: alpha (v0.x).** Built from the author's own working vault and used, so far, only by the
 > author. Skills and notes are in **Portuguese** for now; this page is the English front door.
-> Português completo: [LEIA-ME.md](LEIA-ME.md).
+> Português completo: [LEIA-ME.md](LEIA-ME.md). Passo a passo de cada parte (em português): [TUTORIAL.md](TUTORIAL.md).
 
 ## What you get
 
@@ -18,6 +18,8 @@ and tasks, helps you write and plan, and gets better with you** as you use it.
 | `/fechar-sessao` | Ends the day: diary, a briefing per session, the **pains you voiced** collected in one file, tasks opened for what is pending. It commits only if you say so and never pushes. |
 | `/task-observer` | Watches how you work and **only proposes** improvements (a missing skill, a step you repeated three times, a correction you made twice). You decide. |
 | `/claude-corner` | When you say you are leaving, Claude uses that time to reread your notes, find real connections and test ideas in a throwaway place. It **only proposes**, in a file. |
+| Tasks (**TaskNotes**) | Tasks are notes in `vault/tarefas/`, managed by the public [TaskNotes](https://github.com/callumalpass/tasknotes) Obsidian plugin (MIT). Not bundled: you install it from Obsidian's community plugin store. `abrir-sessao` and `fechar-sessao` read and write the same format. |
+| Connection map (**graphify**, optional) | The public [graphify](https://github.com/Graphify-Labs/graphify) (Apache-2.0) maps your notes into a graph you can query. Install it yourself; its output folder is git-ignored. See the tutorial. |
 | `/adaptar-skill` | Helps you write **your own** skill from a worksheet in `vault/fichas-de-skills/`. One question at a time; Claude never writes it for you, and "this is not for me" is a valid answer that gets recorded. |
 
 ## How it improves with you
@@ -44,7 +46,9 @@ claude              # run Claude Code at the repo root
 
 Then, inside Claude Code, type `/conhecer`. Open `vault/` as a vault in Obsidian. When you have a
 project, `/abrir-sessao <name>` to start and `/fechar-sessao` to end the day. The example project
-`vault/projetos/exemplo-meu-primeiro-projeto/` shows the shape.
+`vault/projetos/exemplo-meu-primeiro-projeto/` shows the shape. Tasks need the public TaskNotes plugin
+(install it from Obsidian's community plugins), and the optional connection map needs graphify: both are
+in the [tutorial](TUTORIAL.md).
 
 ## What keeps it healthy
 
@@ -60,15 +64,15 @@ dated failure, and each one has a test that fails without it: see [POR-QUE.md](P
 
 ## What is verified, and what is not
 
-- Tests: `python3 -m pytest -q` gave **186 passed, 2 skipped** on 03/10.
-- Mutation: `python3 tests/mutar.py` breaks every check one at a time and gave **102 of 102 mutants killed, 0 alive** on 03/10.
+- Tests: `python3 -m pytest -q` gave **191 passed, 2 skipped** on 03/10.
+- Mutation: `python3 tests/mutar.py` breaks every check one at a time and gave **105 of 105 mutants killed, 0 alive** on 03/10.
 - CI: **8 of 8 jobs green** on 03/10 (commit `0e5b8d2`), on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. Each job starts from a clean checkout, runs `instalar.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end.
 - Two tests compare this link checker with the author's private vault, which is not in this repo. They are **skipped** (reported as skipped, not as passed).
 - **Nobody other than the author has used it yet.** If you are the first, tell us where you got stuck: that is the most useful thing you can send.
 
 ## Roadmap
 
-`artigo`, `conselho`, `ideia-de-produto` and `consultar-notas` as real skills (their worksheets are in `vault/fichas-de-skills/` today); a command to list tasks; a skill that turns one of your own failures into a rule plus a test.
+`artigo`, `conselho`, `ideia-de-produto` and `consultar-notas` as real skills (their worksheets are in `vault/fichas-de-skills/` today); a skill that turns one of your own failures into a rule plus a test.
 
 ## License
 

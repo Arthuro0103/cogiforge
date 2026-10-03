@@ -40,7 +40,7 @@ vermelho.
 **A regra.** Todo check tem que ter um teste que falha quando ele é quebrado.
 
 **Quem pega.** `tests/mutar.py`, que roda no CI como portão: mutante vivo reprova.
-**O teste.** O próprio `mutar.py`. Resultado hoje: **102 de 102 mutantes mortos, 0 vivos** (03/10).
+**O teste.** O próprio `mutar.py`. Resultado hoje: **105 de 105 mutantes mortos, 0 vivos** (03/10).
 
 ### 3. Um verificador que não tocou em nada e disse OK (11/09)
 
@@ -128,6 +128,24 @@ de quem escreve o laço.
 **Quem pega.** `.githooks/pre-commit`.
 **O teste.** `tests/test_hook_e2e.py::test_orfa_bloqueia_o_commit_e_ensina` (o commit sai com erro e o
 HEAD não anda). O CI repete isso num clone limpo.
+
+### 10. O plugin que escreve o que o verificador não entende, e a tarefa que nasce sem link (03/10)
+
+**O que quebrou.** Ao integrar o plugin de tarefas, medimos duas tarefas no formato dele. Uma igual ao
+exemplo da documentação passou. A outra, com **tempo registrado** (`timeEntries`, uma lista de mapas: YAML
+válido), **reprovou no portão** como "yaml fora do subconjunto". E uma tarefa **sem projeto**, do tipo que a
+interface cria sem pedir link, era **órfã**: o hook barraria o commit. **Ressalva:** o formato dessas duas
+foi montado a partir da documentação do plugin, não de uma saída real dele (o Obsidian não foi rodado aqui).
+
+**A regra.** O que o plugin escreve em `tarefas/` é do plugin: o portão não julga o YAML dali e a pasta é
+isenta de órfã (como o `inbox/`). Link morto dentro da tarefa continua reprovando.
+
+**Quem pega.** `nucleo/portao.py` (pasta `tarefas/`) e `nucleo/anel.py` (`DEPOSITOS`).
+**Os testes.** `tests/test_portao.py::test_frontmatter_de_tarefa_do_plugin_nao_e_julgado_pelo_subconjunto`,
+`test_o_mesmo_yaml_fora_de_tarefas_continua_reprovando` e `test_link_morto_dentro_da_tarefa_ainda_reprova`;
+`tests/test_anel.py::test_tarefa_do_plugin_sem_projeto_e_isenta_mas_liga_o_que_aponta` e
+`test_so_tarefas_na_raiz_e_isenta_nao_um_nome_parecido`. Há três mutantes dedicados em `tests/mutar.py`.
+Os testes foram escritos antes do conserto e falharam.
 
 ## O que ainda não está coberto
 
