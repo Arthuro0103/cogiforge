@@ -210,6 +210,25 @@ def test_arquivo_fora_do_vault_sai_2_nunca_limpo_e_sem_traceback(tmp_path):
     assert "fora" in r.stderr and "Traceback" not in r.stderr and "Traceback" not in r.stdout
 
 
+TAREFA_COM_TEMPO = ("---\ntags:\n  - task\ntitle: Comprar pilhas\nstatus: open\ntimeEntries:\n"
+                    "  - startTime: 2026-10-03T10:00:00-03:00\n    endTime: 2026-10-03T10:20:00-03:00\n---\n")  # o que o TaskNotes grava quando se registra tempo
+
+
+def test_frontmatter_de_tarefa_do_plugin_nao_e_julgado_pelo_subconjunto(tmp_path):
+    """tarefas/ pertence ao plugin TaskNotes, cujo YAML (lista de mapas em timeEntries) é válido mas
+    fica fora do subconjunto do portão. Achado em 03/10 medindo uma tarefa com tempo registrado."""
+    assert checks_de(tmp_path, {"tarefas/t.md": TAREFA_COM_TEMPO}) == []
+
+
+def test_o_mesmo_yaml_fora_de_tarefas_continua_reprovando(tmp_path):
+    assert checks_de(tmp_path, {"notas/vida/t.md": TAREFA_COM_TEMPO}) == [("notas/vida/t.md", "frontmatter")]
+
+
+def test_link_morto_dentro_da_tarefa_ainda_reprova(tmp_path):
+    tarefa = "---\ntags:\n  - task\nprojects:\n  - \"[[projetos/nao-existe/instrucoes]]\"\n---\n"
+    assert checks_de(tmp_path, {"tarefas/t.md": tarefa}) == [("tarefas/t.md", "link-morto")]
+
+
 def test_cli_arquivo_ilegivel_sai_3_nunca_limpo(tmp_path):
     v = vault(tmp_path, {"a.md": "limpo\n"})
     (v / "a.md").chmod(0)

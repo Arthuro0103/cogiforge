@@ -9,8 +9,9 @@
 
 Aresta = wikilink `[[x]]` ou link `[t](x.md)` que RESOLVE para outra nota .md. Link morto, link
 pra si mesmo, link dentro de código e link pra imagem não contam.
-`inbox/` é isento de ser reprovada: a captura rápida não pode ser barrada, porque quem é barrado
-na captura desinstala. As notas do inbox ainda valem como ponta de aresta.
+`inbox/` e `tarefas/` são isentos de ser reprovadas: a captura rápida não pode ser barrada, porque
+quem é barrado na captura desinstala, e `tarefas/` é onde o plugin TaskNotes grava tarefas criadas na
+interface, sem pedir link. As notas dessas pastas ainda valem como ponta de aresta.
 rc: 0 ok · 1 reprova · 2 não deu pra verificar (vault inexistente, git indisponível)
 """
 import argparse
@@ -28,7 +29,7 @@ from urllib.parse import unquote
 
 from portao import Indice, mascarar, wikilinks
 
-DEPOSITOS = ("inbox",)
+DEPOSITOS = ("inbox", "tarefas")  # captura rápida e o plugin TaskNotes: barrar aqui faz desinstalar
 MDLINK = re.compile(r"(?<!!)\[[^\]\n]*\]\(([^)\s]+?\.md)(?:#[^)]*)?\)")
 
 
@@ -75,7 +76,7 @@ ENSINA = """
 Como consertar: abra a nota e ligue ela a uma nota que EXISTE com um [[wikilink]] no meio do texto
 (onde a conexão é real; bloco de links no rodapé não é o jeito), ou aponte pra ela a partir de uma
 nota existente.
-Link pra arquivo que não existe não conta. Só captura rápida? Jogue em inbox/: é isento.
+Link pra arquivo que não existe não conta. Só captura rápida? Jogue em inbox/ (ou crie a tarefa em tarefas/): são isentos.
 Escape consciente: git commit --no-verify
 """
 
@@ -176,7 +177,7 @@ def main(argv=None):
     else:
         for o in orfas:
             print(f"ORFA {o}")
-        print(f"{len(orfas)} órfã(s) de {len(notas)} nota(s); {len(isentas)} isenta(s) (inbox/)")
+        print(f"{len(orfas)} órfã(s) de {len(notas)} nota(s); {len(isentas)} isenta(s) (inbox/ e tarefas/)")
     return 0
 
 

@@ -68,6 +68,21 @@ def test_link_vindo_do_inbox_conta_como_aresta(tmp_path):
     assert orfas(tmp_path, {"destino.md": "x\n", "inbox/c.md": "vai [[destino]]\n"}) == []
 
 
+def test_tarefa_do_plugin_sem_projeto_e_isenta_mas_liga_o_que_aponta(tmp_path):
+    """O plugin TaskNotes cria a tarefa na interface, sem pedir link: barrar isso no commit faria a
+    pessoa desinstalar, como no inbox. Mas link que sai da tarefa ainda conta como aresta."""
+    assert orfas(tmp_path, {"tarefas/comprar-pilhas.md": "---\ntags:\n  - task\n---\n"}) == []
+    assert orfas(tmp_path, {"destino.md": "x\n", "tarefas/t.md": "---\nprojects:\n  - \"[[destino]]\"\n---\n"}) == []
+    v = vault(tmp_path / "x", {**PAR, "tarefas/comprar-pilhas.md": "---\ntags:\n  - task\n---\n"})
+    arqs, deg = anel.analisar(v)
+    assert deg["tarefas/comprar-pilhas.md"] == 0
+
+
+def test_so_tarefas_na_raiz_e_isenta_nao_um_nome_parecido(tmp_path):
+    assert orfas(tmp_path, {"notas/tarefas/x.md": "x\n", "tarefas-velhas/y.md": "y\n"}) == [
+        "notas/tarefas/x.md", "tarefas-velhas/y.md"]
+
+
 def test_fora_do_inbox_com_nome_parecido_nao_e_isento(tmp_path):
     assert orfas(tmp_path, {"inbox-velho/x.md": "x\n", "notas/inbox/y.md": "y\n"}) == [
         "inbox-velho/x.md", "notas/inbox/y.md"]

@@ -218,8 +218,11 @@ class Nota:
 
 # ---- os 5 checks --------------------------------------------------------------
 
+PASTAS_DO_PLUGIN = ("tarefas",)  # o YAML daqui é do TaskNotes (ex.: timeEntries, lista de mapas), não do subconjunto
+
+
 def chk_frontmatter(n, idx):
-    if not n.fm_erro:
+    if not n.fm_erro or Path(n.rel).parts[0] in PASTAS_DO_PLUGIN:
         return []
     return [Falha(n.rel, "frontmatter", f"yaml fora do subconjunto: {n.fm_erro[1]} (linha {n.fm_erro[0]})")]
 

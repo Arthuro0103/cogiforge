@@ -52,10 +52,13 @@ Se a pasta estiver vazia, é a primeira sessão: diga isso.
 ### 4. Contar as tarefas abertas (um comando)
 
 ```bash
-grep -l "^projeto: <nome>" vault/tarefas/*.md 2>/dev/null | xargs grep -l "^status: \(open\|doing\)" 2>/dev/null
+for f in vault/tarefas/*.md; do
+  grep -q "projetos/<nome>/instrucoes" "$f" 2>/dev/null && grep -q -E "^status: *(open|in-progress)" "$f" 2>/dev/null && echo "$f"
+done
 ```
 
-Liste no máximo 5, `doing` primeiro, depois `priority: high`. Se passar de 5, diga quantas ficaram de fora.
+Liste no máximo 5, `in-progress` primeiro, depois `priority: high`, mostrando o `title:` de cada uma. Se
+passar de 5, diga quantas ficaram de fora.
 
 ### 5. Conferir contra o disco (você)
 
@@ -71,7 +74,7 @@ Compare com o que a raiz afirma (status, datas). Divergência entra no briefing 
 ```
 Projeto: <nome>   status: <do arquivo>   alvo: <alvo_declarado, uma linha>
 Onde parou:   <1-2 linhas do diário mais recente, com a data>
-Ficou aberto: <até 5 tarefas, ID e título>
+Ficou aberto: <até 5 tarefas, título e status>
 Atenção:      <divergência do passo 5, em forma de pergunta; omita se não houver>
 Próximo passo possível: <uma sugestão, marcada como sugestão minha>
 ```

@@ -16,7 +16,7 @@ você roda na raiz do repo e lê e escreve **só dentro de `vault/`**.
 `inbox/` captura bruta · `notas/<area>/` notas processadas (a pasta é definida pelo `area:` da nota;
 as áreas são as que a pessoa configurar) · `projetos/<nome>/instrucoes.md` raiz de cada projeto ·
 `memoria/` o que a pessoa disse (`perfil`, `padroes`, `decisoes`, `ideias/_dores.md`) · `tarefas/`
-um arquivo por tarefa (`status: open|doing|done`, `priority`, `projeto`).
+uma nota por tarefa, no formato do plugin **TaskNotes** (ver *Tarefas* abaixo).
 
 ## O alvo vem antes
 
@@ -36,6 +36,21 @@ nasceu de arquivo solto, em 0 de 43. Por isso:
 - **Sem bloco `## Conexões` no rodapé.** O link entra no corpo, no meio do argumento.
 - Arquivo novo que fala de um projeto leva um wikilink para a raiz dele.
 - Nada afirma coisa sobre a pessoa que ela não disse. Você **propõe** em `memoria/observacoes.md`; só entra em `memoria/` com o "sim" dela, com data e citação literal.
+
+## Tarefas
+
+As tarefas são do plugin **TaskNotes** (público, MIT). Cada uma é uma nota em `tarefas/` com a tag `task`
+e este cabeçalho: `status: open | in-progress | done`, `priority: none | low | normal | high`,
+`projects:` com um link de caminho completo pra raiz do projeto. O plugin cria e lista tarefas na
+interface do Obsidian; você (Claude) também pode escrever o arquivo direto, no mesmo formato. `tarefas/`
+é isento do portão das órfãs e o portão não julga o YAML dali (o plugin acrescenta campos próprios), mas
+link morto dentro de uma tarefa ainda reprova.
+
+## Mapa de conexões (opcional)
+
+Se a pessoa instalou o **graphify** (público, Apache-2.0) e rodou `/graphify vault` na raiz do repo,
+existe `graphify-out/GRAPH_REPORT.md`: leia antes de procurar conexões entre notas. O grafo é gerado:
+não edite e não commite.
 
 ## Primeira nota
 

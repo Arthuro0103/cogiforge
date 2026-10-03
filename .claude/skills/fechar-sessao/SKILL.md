@@ -75,19 +75,25 @@ briefing, na seção *O que ficou de pé*. Se a citação não for literal, não
 
 ### 5. Abrir tarefa pro que ficou pendente (você)
 
-Uma pendência com próximo passo concreto vira `vault/tarefas/<ID>-<slug>.md`. ID: o prefixo e o próximo número livre dos arquivos que já estão em
-`vault/tarefas/` (`ls vault/tarefas/`); se a pasta está vazia, pergunte o prefixo e comece em 001.
-Pergunte a prioridade se não for óbvia.
+Uma pendência com próximo passo concreto vira uma tarefa no formato do plugin **TaskNotes**, em
+`vault/tarefas/<slug>.md` (o slug sai do título; se o arquivo já existe, acrescente `-2`). Sem ID no nome:
+o plugin reconhece tarefa pela tag `task`, não pelo nome do arquivo. `status` é `open`, `in-progress` ou
+`done`; `priority` é `none`, `low`, `normal` ou `high`. Pergunte a prioridade se não for óbvia.
 
 ```yaml
 ---
+tags:
+  - task
+title: <verbo no infinitivo + o que>
 status: open
 priority: normal
-projeto: <nome>
+projects:
+  - "[[projetos/<nome>/instrucoes|<nome>]]"
 ---
 ```
 
-Corpo: uma linha do que fazer e uma de "pronto quando".
+O link em `projects` é de **caminho completo** (o portão confere). Corpo: uma linha do que fazer e uma
+de "pronto quando".
 
 ### 6. Rodar os verificadores, se existirem (um comando cada)
 

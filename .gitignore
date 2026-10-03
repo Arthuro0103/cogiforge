@@ -6,6 +6,9 @@ __pycache__/
 *.pyc
 .DS_Store
 
+# o mapa do graphify é gerado a partir das notas da pessoa: não vai pro repo
+graphify-out/
+
 # o Obsidian grava estado da janela aqui; só app.json é versionado
 vault/.obsidian/*
 !vault/.obsidian/app.json

@@ -52,6 +52,7 @@ PECAS = {
     ]),
     "portao": dict(arquivo="nucleo/portao.py", suite=["tests/test_portao.py", "tests/test_demo.py"], textos=[
         ("area: pasta ≠ area passa", 'if area != esperada:', 'if False:'),
+        ("frontmatter de tarefas é julgado pelo subconjunto", ' or Path(n.rel).parts[0] in PASTAS_DO_PLUGIN', ''),
         ("arquivo de fora do vault passa", 'arq.resolve().relative_to(vault.resolve())', 'arq.resolve().relative_to(arq.resolve())'),
         ("area: fora da lista passa", 'if area not in areas.values():', 'if False:'),
         ("area: pasta desconhecida passa", 'if esperada is None:', 'if False:'),
@@ -88,7 +89,9 @@ PECAS = {
         ("link-partido conta o link inteiro", 'if "[[" in resto:', 'if "[[" in linha:'),
     ]),
     "anel": dict(arquivo="nucleo/anel.py", suite=["tests/test_anel.py", "tests/test_demo.py"], textos=[
-        ("inbox deixa de ser isento", 'DEPOSITOS = ("inbox",)', 'DEPOSITOS = ()'),
+        ("inbox e tarefas deixam de ser isentos", 'DEPOSITOS = ("inbox", "tarefas")', 'DEPOSITOS = ()'),
+        ("tarefas deixa de ser isento", 'DEPOSITOS = ("inbox", "tarefas")', 'DEPOSITOS = ("inbox",)'),
+        ("inbox deixa de ser isento", 'DEPOSITOS = ("inbox", "tarefas")', 'DEPOSITOS = ("tarefas",)'),
         ("inbox isento por prefixo", 'rel == d or rel.startswith(d + "/")', 'rel.startswith(d)'),
         ("autolink é aresta", 'if r and r != rel and r.endswith(".md"):', 'if r and r.endswith(".md"):'),
         ("link pra imagem é aresta", 'if r and r != rel and r.endswith(".md"):', 'if r and r != rel:'),

@@ -14,7 +14,9 @@ os comandos. Cada lei tem o erro que a originou em [POR-QUE.md](POR-QUE.md).
 6. **Não contorne o hook.** Se o commit foi bloqueado, a mensagem diz o arquivo e o motivo: conserte o arquivo. `--no-verify` só se a pessoa mandar.
 7. **Nunca dê `git push`, nem crie remote, nem torne nada público sem a pessoa mandar.**
 8. **Dado pessoal não entra no repo** (caminho de máquina, e-mail, telefone, CPF, nomes da lista privada). O hook barra; se barrar, tire o dado.
-9. **Verificação que não tocou em nada não é OK.** Se você não conseguiu conferir, diga `NAO_VERIFICADO` e por quê, em vez de dizer que está limpo.
+9. **Tarefa é nota do plugin TaskNotes** em `vault/tarefas/` (`status`: `open`, `in-progress`, `done`; link de caminho completo pro projeto em `projects:`). Detalhes em `vault/CLAUDE.md`.
+10. **Se existir `graphify-out/GRAPH_REPORT.md`, leia antes de procurar conexões entre notas.** Ele é gerado: não edite, não commite.
+11. **Verificação que não tocou em nada não é OK.** Se você não conseguiu conferir, diga `NAO_VERIFICADO` e por quê, em vez de dizer que está limpo.
 
 ## Comandos
 
@@ -25,6 +27,7 @@ os comandos. Cada lei tem o erro que a originou em [POR-QUE.md](POR-QUE.md).
 | listar notas órfãs | `python3 nucleo/anel.py` |
 | procurar dado pessoal | `python3 nucleo/vazamento.py .` |
 | regravar o bloco de arquivos de cada projeto | `python3 ferramentas/hub.py` |
+| mapa de conexões (opcional, precisa do graphify instalado) | `/graphify vault` na raiz do repo |
 | rodar os testes | `python3 -m pytest -q` |
 | quebrar cada check e exigir teste vermelho | `python3 tests/mutar.py` |
 
