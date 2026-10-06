@@ -1,89 +1,92 @@
 ---
-name: abrir-sessao
-description: Abre uma sessão de trabalho num projeto da bancada. Recebe o NOME de um projeto, lê a raiz dele (vault/projects/<nome>/instructions.md), as últimas entradas do diário e as tarefas abertas dele, e devolve em poucas linhas onde o projeto está e o que a última sessão deixou. Só relata o que está nos arquivos; quando o status do arquivo discorda do que o disco mostra, vira pergunta, nunca veredito. GATILHOS - "abrir sessão do <projeto>", "/abrir-sessao <projeto>", "onde parei no <projeto>", "retomar o <projeto>", "o que falta no <projeto>". NÃO dispare sem nome de projeto (pergunte qual, ou liste vault/projects/), nem para fechar o dia (isso é fechar-sessao), nem para conhecer a pessoa (isso é conhecer), nem para pergunta sobre código solta.
+name: open-session
+description: Opens a work session on one workbench project. Takes a project NAME, reads its root (vault/projects/<name>/instructions.md), the latest diary entries and its open tasks, and returns in a few lines where the project stands and what the last session left behind. Reports only what is in the files; when the file's status disagrees with what the disk shows, it becomes a question, never a verdict. TRIGGERS - "abrir sessão do <projeto>", "/open-session <project>", "onde parei no <projeto>", "resume <project>", "what is left on <project>". Do NOT trigger without a project name (ask which one, or list vault/projects/), nor to close the day (that is close-session), nor to get to know the user (that is onboard), nor for a loose code question.
 ---
 
-# abrir-sessao: começar sabendo onde parou
+# open-session: start by knowing where you stopped
 
-## Por que existe
+## Why it exists
 
-Sessão nova não lembra da anterior. Sem um ponto de partida, a pessoa gasta os primeiros dez minutos
-reconstruindo o contexto de cabeça, ou, pior, refaz o que já estava feito. O estado real do projeto está
-em arquivos; falta alguém que leia os certos, na ordem certa, e entregue **curto**.
+A new session does not remember the previous one. Without a starting point, the user spends the first ten
+minutes rebuilding context from memory or, worse, redoes what was already done. The real state of the
+project lives in files; someone has to read the right ones, in the right order, and hand it over **short**.
 
-## A lei
+## The rules
 
-1. **Sem nome de projeto, não roda.** Pergunte qual (liste as pastas de `vault/projects/`). Nunca adivinhe.
-2. **Só relata o que leu.** Cada linha do briefing aponta o arquivo de onde veio. Se não leu, não afirma.
-3. **Divergência vira pergunta.** Se `status:` do arquivo discorda do disco (ex.: marcado `pausado` com
-   commit de ontem), mostre os dois lados e pergunte. Status é decisão da pessoa, não minha.
-4. **Briefing curto.** Teto de 12 linhas no chat. Quem precisa ler o arquivo inteiro, abre.
-5. **Só leitura.** Esta skill não escreve nada em `vault/`.
-6. **Pare no bloco gerado.** Se a raiz tiver um bloco entre marcadores `<!-- hub:inicio` e
-   `<!-- hub:fim`, é só lista de links: não leia dali pra baixo.
+1. **No project name, no run.** Ask which one (list the folders in `vault/projects/`). Never guess.
+2. **Report only what you read.** Every line of the briefing points to the file it came from. If you did
+   not read it, you do not claim it.
+3. **Disagreement becomes a question.** If the file's `status:` disagrees with the disk (for example,
+   marked `paused` with a commit from yesterday), show both sides and ask. Status is the user's decision, not mine.
+4. **Short briefing.** Ceiling of 12 lines in the chat. Whoever needs the whole file opens it.
+5. **Read-only.** This skill writes nothing in `vault/`.
+6. **Stop at the generated block.** If the root has a block between the markers `<!-- hub:start` and
+   `<!-- hub:end`, it is only a list of links: do not read below it.
 
-## Os passos
+> Talk to the user and write prose (notes, briefings, profile lines) in the language the user writes in. Never translate a quote: verbatim quotes stay in the original language. Fixed tokens (frontmatter keys, status values, paths, enums) stay exactly as written.
 
-### 1. Achar o projeto (você, o Claude)
+## The steps
+
+### 1. Find the project (you, Claude)
 
 ```bash
 ls vault/projects/
-test -f vault/projects/<nome>/instructions.md && echo ok
+test -f vault/projects/<name>/instructions.md && echo ok
 ```
 
-Sem a raiz, diga isso e pare: *"não existe vault/projects/<nome>/instructions.md"*. Se o nome bate com
-mais de uma pasta, pergunte qual.
+Without the root, say so and stop: *"vault/projects/<name>/instructions.md does not exist"*. If the name
+matches more than one folder, ask which.
 
-### 2. Ler a raiz (você)
+### 2. Read the root (you)
 
-Abra `vault/projects/<nome>/instructions.md` até o marcador do hub. Anote do frontmatter: `tipo`, `status`,
-`declared_target`. O `declared_target` é o que a pessoa disse querer; o resto é contexto.
+Open `vault/projects/<name>/instructions.md` up to the hub marker. From the frontmatter note: `type`, `status`,
+`declared_target`. The `declared_target` is what the user said they want; the rest is context.
 
-### 3. Ler o diário (você)
+### 3. Read the diary (you)
 
 ```bash
-ls -t vault/memory/diario/*.md 2>/dev/null | head -3
+ls -t vault/memory/diary/*.md 2>/dev/null | head -3
 ```
 
-Abra as três mais recentes e procure só o que fala do projeto (`grep -i "<nome>"` ajuda). Se também
-existir briefing recente (`ls -t vault/memory/briefings/ | head`), veja o mais novo que cita o projeto.
-Se a pasta estiver vazia, é a primeira sessão: diga isso.
+Open the three most recent and look only for what talks about the project (`grep -i "<name>"` helps). If a
+recent briefing also exists (`ls -t vault/memory/briefings/ | head`), check the newest one that mentions the project.
+If the folder is empty, this is the first session: say so.
 
-### 4. Contar as tarefas abertas (um comando)
+### 4. Count the open tasks (one command)
 
 ```bash
 for f in vault/tasks/*.md; do
-  grep -q "projects/<nome>/instructions" "$f" 2>/dev/null && grep -q -E "^status: *(open|in-progress)" "$f" 2>/dev/null && echo "$f"
+  grep -q "projects/<name>/instructions" "$f" 2>/dev/null && grep -q -E "^status: *(open|in-progress)" "$f" 2>/dev/null && echo "$f"
 done
 ```
 
-Liste no máximo 5, `in-progress` primeiro, depois `priority: high`, mostrando o `title:` de cada uma. Se
-passar de 5, diga quantas ficaram de fora.
+List at most 5, `in-progress` first, then `priority: high`, showing the `title:` of each. If there
+are more than 5, say how many were left out.
 
-### 5. Conferir contra o disco (você)
+### 5. Check against the disk (you)
 
 ```bash
-git log --oneline -5 -- vault/projects/<nome> 2>/dev/null   # vazio = sem commits ainda
-git status --short vault/projects/<nome>
+git log --oneline -5 -- vault/projects/<name> 2>/dev/null   # empty = no commits yet
+git status --short vault/projects/<name>
 ```
 
-Compare com o que a raiz afirma (status, datas). Divergência entra no briefing como pergunta.
+Compare with what the root claims (status, dates). Any disagreement goes into the briefing as a question.
 
-### 6. Entregar (você)
+### 6. Deliver (you)
 
 ```
-Projeto: <nome>   status: <do arquivo>   alvo: <declared_target, uma linha>
-Onde parou:   <1-2 linhas do diário mais recente, com a data>
-Ficou aberto: <até 5 tarefas, título e status>
-Atenção:      <divergência do passo 5, em forma de pergunta; omita se não houver>
-Próximo passo possível: <uma sugestão, marcada como sugestão minha>
+Project: <name>   status: <from the file>   target: <declared_target, one line>
+Where it stopped:  <1-2 lines from the latest diary entry, with the date>
+Still open:        <up to 5 tasks, title and status>
+Attention:         <disagreement from step 5, as a question; omit if none>
+Possible next step: <one suggestion, marked as my suggestion>
 ```
 
-Termine perguntando por onde a pessoa quer começar.
+End by asking where the user wants to start.
 
-## Nunca
+## Never
 
-- Rodar sem nome de projeto, ou escolher o projeto por conta própria.
-- Mudar `status:` ou qualquer campo da raiz.
-- Inventar "onde parou" quando o diário está vazio.
-- Despejar o arquivo inteiro no chat.
+- Run without a project name, or pick the project on your own.
+- Change `status:` or any other field of the root.
+- Invent "where it stopped" when the diary is empty.
+- Dump the whole file into the chat.

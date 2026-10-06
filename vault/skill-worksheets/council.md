@@ -1,53 +1,53 @@
 ---
-tipo: ficha
-status: andando
+type: worksheet
+status: in-progress
 ---
 
-# Ficha: conselho, vários ângulos que discordam antes de decidir
+# Worksheet: council, several angles that disagree before deciding
 
-## O que faz
+## What it does
 
-Você tem uma decisão com custo e mais de um caminho ("faço A ou B?"). A skill passa a decisão por
-**ângulos independentes**, deixa cada um **revisar os outros sem saber quem escreveu**, faz um "advogado"
-atacar o vencedor e fecha num veredito com uma recomendação e um primeiro passo.
+You have a decision with a cost and more than one path ("do I do A or B?"). The skill runs the decision through
+**independent angles**, lets each one **review the others without knowing who wrote them**, has an "advocate"
+attack the winner and closes with a verdict, a recommendation and a first step.
 
-## A dor que ela resolve
+## The pain it solves
 
-Decidir sozinho, na cabeça, repete sempre o mesmo ponto cego. Quem já gastou uma semana num caminho que
-um segundo olhar teria derrubado em dez minutos conhece o custo. A skill existe pra o furo aparecer
-**antes** de gastar o tempo.
+Deciding alone, in your head, always repeats the same blind spot. Anyone who has spent a week on a path that
+a second look would have knocked down in ten minutes knows the cost. The skill exists so the hole shows up
+**before** the time is spent.
 
-## Por dentro (na ordem da anatomia)
+## Inside (in the order of the anatomy)
 
-- **Lentes que brigam entre si**, não cinco opiniões parecidas: uma que procura o furo, uma que
-  questiona se a pergunta é a certa, uma que pergunta "e se der mais certo que o esperado?", uma que não
-  conhece o projeto e só responde ao que está na frente dela, uma que diz o que fazer amanhã cedo.
-- **Um ângulo que decide como a própria pessoa decide**, lendo um texto onde ela descreve o critério dela.
-  Cada posição leva marca: ou cita a frase que a sustenta, ou diz que é palpite. Evita bajulação.
-- **Revisão cega**: cada análise lê as outras sem nomes, e só então se escolhe a mais forte.
-- **Resumo curto no chat, análise inteira num arquivo.** Texto longo na tela não é lido.
-- **Modelo por peça**: o maior onde afirma ou decide, o menor onde só lê ou confere.
+- **Lenses that fight each other**, not five similar opinions: one that looks for the hole, one that
+  questions whether the question is the right one, one that asks "what if it goes better than expected?", one that does not
+  know the project and only answers what is in front of it, one that says what to do tomorrow morning.
+- **One angle that decides the way the person themself decides**, reading a text where they describe their own criterion.
+  Each position carries a mark: it either cites the phrase that supports it, or says it is a guess. It prevents flattery.
+- **Blind review**: each analysis reads the others without names, and only then is the strongest chosen.
+- **Short summary in the chat, full analysis in a file.** Long text on screen does not get read.
+- **Model per piece**: the larger one where it states or decides, the smaller one where it only reads or checks.
 
-## O que é do autor, e o que é método
+## What belongs to the author, and what is method
 
-| é do autor (troque ou corte) | é método (leve) |
+| belongs to the author (swap or cut) | is method (take it) |
 |---|---|
-| o arquivo do ângulo "decide como eu", com o critério **dele** | ter um ângulo que decide como **você** decide, com marca em cada posição |
-| a pasta onde ele guarda o resultado | lentes que discordam, em vez de pontos de vista iguais |
-| o modo de resposta seca embutido | revisão cega, resumo curto e análise no arquivo |
-| a escolha das cinco lentes pro tipo de decisão dele | escolher as lentes pro que **você** decide |
+| the file of the "decides like me" angle, with **their** criterion | have an angle that decides the way **you** decide, with a mark on each position |
+| the folder where they keep the result | lenses that disagree, instead of identical points of view |
+| the built-in terse answer mode | blind review, short summary and analysis in the file |
+| the choice of five lenses for their type of decision | choose lenses for what **you** decide |
 
-## O que custa
+## What it costs
 
-Caro: são muitas peças por rodada (análises, revisões, advogado, fecho). Numa assinatura isso gasta
-cota. Uma adaptação pequena roda as lentes numa resposta só, em sequência, sem agentes.
+Expensive: many pieces per round (analyses, reviews, advocate, closing). On a subscription this uses up
+quota. A small adaptation runs the lenses in a single answer, in sequence, without agents.
 
-## Quando NÃO usar
+## When NOT to use
 
-Pergunta factual, tarefa já decidida, decisão que custa menos de uma hora de trabalho.
+A factual question, an already-decided task, a decision that costs less than an hour of work.
 
-## Perguntas pra decidir se serve pra você
+## Questions to decide whether it fits you
 
-1. Qual foi a última decisão em que você ficou parado entre dois jeitos? Quanto custou?
-2. Você tem escrito em algum lugar como costuma decidir? Sem isso o ângulo "você" fica fino.
-3. Quer lentes iguais a estas ou escolhidas pro que **você** decide?
+1. What was the last decision where you were stuck between two ways? What did it cost?
+2. Do you have it written somewhere how you usually decide? Without that, the "you" angle comes out thin.
+3. Do you want lenses like these or chosen for what **you** decide?

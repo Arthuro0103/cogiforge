@@ -1,56 +1,56 @@
 ---
-tipo: ficha
-status: andando
+type: worksheet
+status: in-progress
 ---
 
-# Ficha: product-idea, a dor vem primeiro e vem citada
+# Worksheet: product-idea, the pain comes first and comes quoted
 
-## O que faz
+## What it does
 
-Em vez de pedir uma ideia "do nada", varre o que você **já escreveu** (notas, diários, tarefas velhas,
-gambiarras) atrás de erro, retrabalho e coisa feita na mão, e devolve uma **lista ranqueada de ideias, cada
-uma com a frase que prova a dor**. Você escolhe uma; aí a skill vai até o fim com ela: pesquisa de fora e
-um veredito.
+Instead of asking for an idea "out of nowhere", it scans what you **already wrote** (notes, diaries, old tasks,
+workarounds) for errors, rework and things done by hand, and returns a **ranked list of ideas, each
+with the phrase that proves the pain**. You pick one; then the skill takes it to the end: outside research and
+a verdict.
 
-## A dor que ela resolve
+## The pain it solves
 
-Ideia plausível é a coisa mais fácil de gerar e a mais inútil. Quem já se apaixonou por uma ideia que
-ninguém pedia sabe. A dor citada, com data e arquivo, funciona como freio.
+A plausible idea is the easiest thing to generate and the most useless. Anyone who has fallen in love with an idea that
+nobody asked for knows. The quoted pain, with a date and a file, works as a brake.
 
-## Por dentro
+## Inside
 
-- **Dor sem citação não entra na fila**: data, arquivo e a frase que a prova. Dor deduzida é invenção com
-  cara de pesquisa.
-- **Régua diferente pra julgar coisa de fora.** Avaliar um produto alheio usa perguntas próprias; a regra
-  rígida da fila deixaria passar dores futuras e difíceis de perceber.
-- **Acervo antes de internet.** A pesquisa externa só roda depois de você escolher uma dor.
-- **"A categoria paga" não é "pagam por ESTE recorte".** Existir mercado não prova que o seu ângulo tem
-  cliente. Sem prova do recorte, o veredito escrito é **não provado**.
-- **Todo produto declara o trilho**: por onde o dinheiro entraria e o que falta pra isso existir.
-- **Rótulo de quem sente a dor**: sua ou de terceiro, sempre dito.
-- **Ideia não é projeto**: a saída é um arquivo de ideia, nunca uma pasta de projeto nova.
+- **A pain without a quote does not enter the queue**: date, file and the phrase that proves it. A deduced pain is an invention
+  dressed as research.
+- **A different yardstick for judging outside things.** Evaluating someone else's product uses its own questions; the
+  strict rule of the queue would let through future pains that are hard to notice.
+- **Collection before internet.** Outside research only runs after you pick a pain.
+- **"The category pays" is not "they pay for THIS slice".** A market existing does not prove your angle has a
+  customer. Without proof of the slice, the written verdict is **unproven**.
+- **Every product declares the rail**: where the money would come in and what is missing for that to exist.
+- **Label of who feels the pain**: yours or a third party's, always stated.
+- **An idea is not a project**: the output is an idea file, never a new project folder.
 
-## O que é do autor, e o que é método
+## What belongs to the author, and what is method
 
-| é do autor (troque ou corte) | é método (leve) |
+| belongs to the author (swap or cut) | is method (take it) |
 |---|---|
-| a fila de dores alimentada todo dia pela skill que fecha a sessão | dor com citação antes da ideia |
-| o acervo grande que ela varre | separar categoria de recorte |
-| restrições pessoais do autor sobre como receber dinheiro | declarar o trilho de dinheiro |
-| o que ele considera matar uma ideia | escrever, antes de se apaixonar, o que mataria a ideia |
+| the queue of pains fed every day by the skill that closes the session | a pain with a quote before the idea |
+| the large collection it scans | separate category from slice |
+| the author's personal restrictions on how to receive money | declare the money rail |
+| what they consider to kill an idea | write down, before falling in love, what would kill the idea |
 
-## O que custa
+## What it costs
 
-Depende de **ter material escrito pra varrer**. Com pouco escrito ela devolve pouco. Com um produto já
-escolhido, a varredura perde sentido: o que serve é o julgamento do recorte.
+It depends on **having written material to scan**. With little written, it returns little. With a product already
+chosen, the scan loses its point: what helps is judging the slice.
 
-## Quando NÃO usar
+## When NOT to use
 
-Quando você já decidiu o que construir, ou quando não há nada escrito ainda (comece colhendo dores com a
-`fechar-sessao`).
+When you have already decided what to build, or when there is nothing written yet (start by collecting pains with
+`close-session`).
 
-## Perguntas pra decidir se serve pra você
+## Questions to decide whether it fits you
 
-1. Você já tem um produto? Então "pagam por este ângulo?" serve mais que a varredura.
-2. Quanto você já escreveu? Tem o que varrer?
-3. Existe uma ideia sua parada que valeria ir até o fim com pesquisa de fora?
+1. Do you already have a product? Then "do they pay for this angle?" helps more than the scan.
+2. How much have you already written? Is there something to scan?
+3. Is there an idea of yours sitting idle that would be worth taking to the end with outside research?

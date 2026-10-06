@@ -1,55 +1,55 @@
 ---
-tipo: ficha
-status: andando
+type: worksheet
+status: in-progress
 ---
 
-# Ficha: artigo, tese e lacuna antes de qualquer prosa
+# Worksheet: article, thesis and gap before any prose
 
-## O que faz
+## What it does
 
-Leva uma ideia até um texto com fonte **sem referência inventada**. Primeiro nomeia a tese numa frase
-que alguém poderia contestar, depois levanta o que as suas notas já cobrem, lista **numeradas** as
-lacunas, só então pesquisa fora (dentro da lista), monta o esqueleto, põe as dúvidas numa lista pra você
-decidir e **só depois** escreve.
+Takes an idea to a text with sources **and no invented reference**. First it names the thesis in a sentence
+someone could contest, then it surveys what your notes already cover, lists the gaps in a **numbered** list, only then
+searches outside (within the list), builds the skeleton, puts the doubts in a list for you
+to decide and **only after that** writes.
 
-## A dor que ela resolve
+## The pain it solves
 
-Texto gerado sem esse trilho sai fluente e com uma citação falsa no meio. Como o leitor não sabe qual
-das citações conferir, uma só inventada contamina o texto inteiro. Quem escreve e já foi pego por uma
-referência que não existe conhece o custo.
+Text generated without this rail comes out fluent and with a false citation in the middle. Since the reader does not know which
+citation to check, a single invented one contaminates the whole text. Anyone who writes and has been caught by a
+reference that does not exist knows the cost.
 
-## Por dentro
+## Inside
 
-- **Tese antes de fonte.** Sem afirmação declarada, o artigo vira resumo, e resumo não é saída.
-- **Acervo antes de internet.** As suas notas são a fonte primária; a pesquisa de fora só remenda lacuna.
-- **Lacuna declarada antes de pesquisa**, pra a internet não decidir o argumento por você.
-- **Marca `[VERIFICAR]` em toda citação não conferida**, e a marca só sai quando a fonte foi aberta.
-- **Dúvida na mesa antes da prosa**: o que exige decisão sua vai numa lista, com a sugestão ao lado.
-- **Verificação final**: um contador de vícios de texto de IA (que marca, não decide) e um conferidor de
-  links e números. O conserto é **só nos trechos marcados**, não uma passada uniforme no texto todo.
+- **Thesis before source.** Without a declared claim, the article becomes a summary, and a summary is not an output.
+- **Collection before internet.** Your notes are the primary source; outside research only patches gaps.
+- **Gap declared before research**, so the internet does not decide the argument for you.
+- **A `[VERIFY]` mark on every unchecked citation**, and the mark only leaves when the source has been opened.
+- **Doubts on the table before prose**: whatever needs a decision from you goes in a list, with the suggestion next to it.
+- **Final check**: a counter of AI-text tics (it flags, it does not decide) and a checker of
+  links and numbers. The fix is **only in the flagged passages**, not a uniform pass over the whole text.
 
-## O que é do autor, e o que é método
+## What belongs to the author, and what is method
 
-| é do autor (troque ou corte) | é método (leve) |
+| belongs to the author (swap or cut) | is method (take it) |
 |---|---|
-| o acervo de notas, as áreas e os temas dele | tese contestável → lacunas numeradas → só então fora |
-| os scripts de conferência que ele construiu | marcar o não conferido e só tirar a marca com a fonte aberta |
-| o gosto de estilo e a lista de vícios dele | a lista de dúvidas antes do texto |
-| a pasta e o formato onde o artigo é guardado | reescrever só o que foi sinalizado |
+| the collection of notes, the areas and themes | contestable thesis -> numbered gaps -> only then outside |
+| the checking scripts they built | mark what is unchecked and only remove the mark with the source open |
+| their style taste and their list of tics | the list of doubts before the text |
+| the folder and format where the article is kept | rewrite only what was flagged |
 
-## O que custa
+## What it costs
 
-Mais lento que pedir "escreve um texto sobre X". Em troca, o esqueleto costuma ficar **maior** que o
-texto: é o sinal de que a pesquisa foi feita antes de a prosa existir. Depende de ter notas pra varrer; sem
-elas, quase tudo vira lacuna.
+Slower than asking "write a text about X". In exchange, the skeleton often ends up **bigger** than the
+text: it is the sign that the research was done before the prose existed. It depends on having notes to scan; without
+them, almost everything becomes a gap.
 
-## Quando NÃO usar
+## When NOT to use
 
-Texto curto sem fonte (e-mail, legenda, rascunho solto), ou quando você já tem a tese e o texto pronto e só
-quer revisão.
+Short text without sources (email, caption, loose draft), or when you already have the thesis and the finished text and only
+want a review.
 
-## Perguntas pra decidir se serve pra você
+## Questions to decide whether it fits you
 
-1. Qual foi o último texto seu em que uma fonte não se sustentou? O que custou?
-2. Você escreve com fonte (estudo, relatório, trabalho) ou mais opinião e relato?
-3. Tem notas suas sobre os temas que costuma escrever?
+1. What was the last text of yours where a source did not hold up? What did it cost?
+2. Do you write with sources (study, report, coursework) or more opinion and narrative?
+3. Do you have notes of your own on the themes you usually write about?

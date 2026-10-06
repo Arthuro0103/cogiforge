@@ -1,7 +1,7 @@
 ---
 area: learning
 ---
-# Uma nota ligada vale mais que uma nota solta
+# A linked note is worth more than a loose one
 
-Exemplo de nota. Escreva um `[[wikilink]]` para o que ela continua, e volte ao [[home]].
-Ideias com vizinhos se acham de novo; ideias soltas se perdem.
+Example note. Write a `[[wikilink]]` to what it continues, and go back to [[home]].
+Ideas with neighbors get found again; loose ideas get lost.

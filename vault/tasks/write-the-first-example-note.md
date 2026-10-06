@@ -1,11 +1,11 @@
 ---
 tags:
   - task
-title: Escrever a primeira nota ligada ao projeto exemplo
+title: Write the first note linked to the example project
 status: open
 priority: normal
 projects:
-  - "[[projects/example-my-first-project/instructions|exemplo]]"
+  - "[[projects/example-my-first-project/instructions|example]]"
 ---
 
-Pronto quando: existe uma nota em `notes/` que liga à raiz do projeto exemplo e o commit passou no hook.
+Done when: there is a note in `notes/` that links to the example project's root and the commit passed the hook.

@@ -1,6 +1,6 @@
 ---
 area: learning
 ---
-# Esta nota aponta para um destino que não existe
+# This note points to a destination that does not exist
 
-Falha plantada: um link vivo para [[control-a]] e um morto para [[nota-que-nao-existe]].
+Planted failure: a live link to [[control-a]] and a dead one to [[note-that-does-not-exist]].

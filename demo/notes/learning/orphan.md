@@ -1,6 +1,6 @@
 ---
 area: learning
 ---
-# Esta nota não tem nenhuma aresta
+# This note has no edges at all
 
-Falha plantada: ninguém aponta pra ela e ela não aponta pra ninguém. É órfã.
+Planted failure: nobody points to it and it points to nobody. It is an orphan.

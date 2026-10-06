@@ -1,7 +1,7 @@
-# Índice da demo
+# Demo index
 
-Mapa da fixture. Os controles abaixo têm que passar em todos os checks.
+Map of the fixture. The controls below must pass every check.
 
-- [[control-a]] e [[control-b]], em aprendizado
-- [[control-c]] e [[control-d]], em tecnologia
-- [[control-e]] e [[control-relative-link]], em vida
+- [[control-a]] and [[control-b]], in learning
+- [[control-c]] and [[control-d]], in technology
+- [[control-e]] and [[control-relative-link]], in life

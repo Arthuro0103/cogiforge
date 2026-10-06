@@ -1,10 +1,10 @@
 ---
 area: learning
 ---
-# Repetir espaçado fixa mais que reler
+# Spaced repetition beats rereading
 
-Controle: passa em todos os checks. Continua em [[control-b]] e volta ao [[home]].
+Control: passes every check. Continues in [[control-b]] and goes back to [[home]].
 
-## Seção
+## Section
 
-Um alvo de âncora para [[control-e]] apontar.
+An anchor target for [[control-e]] to point at.

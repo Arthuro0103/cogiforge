@@ -1,56 +1,56 @@
 ---
-tipo: ficha
-status: andando
+type: worksheet
+status: in-progress
 ---
 
-# Ficha: consult-notes, sem achar a nota, não responde
+# Worksheet: consult-notes, without finding the note, it does not answer
 
-## O que faz
+## What it does
 
-Responde uma pergunta prática do dia a dia **só com o que as suas notas dizem**, citando a nota de cada
-afirmação e o grau de evidência dela. Se as notas não cobrem, diz "suas notas não cobrem isso", e o senso
-comum que vier sai **rotulado** como senso comum. Registra cada consulta, pra dar pra medir quais notas
-serviram pra alguma coisa.
+Answers a practical day-to-day question **only with what your notes say**, citing the note behind each
+claim and its grade of evidence. If the notes do not cover it, it says "your notes do not cover this", and any common
+sense that comes along is **labeled** as common sense. It logs each consultation, so you can measure which notes
+were used for anything.
 
-## A dor que ela resolve
+## The pain it solves
 
-Quem anota muito e consulta pouco acumula notas que "não são usadas pra nada". Pior: quando o assistente
-responde de memória, mistura o que você anotou com o que ele acha, e você não sabe qual é qual.
+Whoever takes many notes and consults few accumulates notes that "are not used for anything". Worse: when the assistant
+answers from memory, it mixes what you wrote with what it thinks, and you do not know which is which.
 
-## Por dentro
+## Inside
 
-- **Cada afirmação aponta pra uma nota.** Número, mecanismo e recomendação vêm com o link ao lado.
-- **Não achou é resposta.** Nada de número, estudo ou fonte de memória.
-- **Grau de evidência junto.** Nota com campo de evidência diz o grau; nota sem o campo é dita
-  "não graduada". Subir de grau exige abrir a fonte.
-- **Moedas separadas**: saúde, tempo e energia, dinheiro, liberdade. Não se convertem uma na outra; a
-  escolha é de quem pergunta.
-- **Parada de segurança antes de tudo**: emergência real e risco de vida vão pro serviço de emergência
-  do seu país, antes de qualquer nota. Remédio e dose não são decididos por nota.
-- **Registro de consulta**: uma linha (data, pergunta, notas usadas, o que faltou). Lacuna que se repete
-  três vezes vira pauta de nota nova, e quem decide a pauta é você.
+- **Each claim points to a note.** Number, mechanism and recommendation come with the link beside them.
+- **Not finding is an answer.** No number, study or source from memory.
+- **Grade of evidence alongside.** A note with an evidence field states the grade; a note without the field is called
+  "ungraded". Raising a grade requires opening the source.
+- **Separate currencies**: health, time and energy, money, freedom. They are not converted into one another; the
+  choice belongs to whoever asks.
+- **Safety stop before anything else**: a real emergency and risk to life go to your country's emergency
+  service, before any note. Medication and dose are not decided by notes.
+- **Consultation log**: one line (date, question, notes used, what was missing). A gap that repeats
+  three times becomes an agenda item for a new note, and you decide the agenda.
 
-## O que é do autor, e o que é método
+## What belongs to the author, and what is method
 
-| é do autor (troque ou corte) | é método (leve) |
+| belongs to the author (swap or cut) | is method (take it) |
 |---|---|
-| as notas dele e as áreas que elas cobrem | afirmação só com nota ao lado |
-| os temas de saúde dele e o que ele toma | dizer "não cobre" em vez de inventar |
-| o formato exato do campo de evidência | rotular senso comum e grau de evidência |
-| a ordem de busca nas pastas dele | registrar a consulta e contar a lacuna |
+| their notes and the areas they cover | a claim only with a note beside it |
+| their health topics and what they take | say "does not cover" instead of inventing |
+| the exact format of the evidence field | label common sense and grade of evidence |
+| the search order across their folders | log the consultation and count the gap |
 
-## O que custa
+## What it costs
 
-Só vale com **notas suficientes sobre o assunto**. Com acervo pequeno, quase toda resposta será "não
-cobre", o que é honesto mas pouco útil: antes de adaptar, conte as notas sobre o tema.
+It is only worth it with **enough notes on the subject**. With a small collection, almost every answer will be "does not
+cover", which is honest but not very useful: before adapting, count the notes on the topic.
 
-## Quando NÃO usar
+## When NOT to use
 
-Decisão com vários caminhos e custo real (aí é caso de olhar de ângulos diferentes), texto pra publicar,
-ou pergunta sobre código e sobre a própria bancada.
+A decision with several paths and real cost (that is a case for looking from different angles), text to publish,
+or a question about code or about the workbench itself.
 
-## Perguntas pra decidir se serve pra você
+## Questions to decide whether it fits you
 
-1. Qual foi a última vez que você tinha uma nota sobre algo e decidiu sem consultá-la?
-2. Quantas notas suas cobrem os temas sobre os quais você costuma perguntar?
-3. Você prefere que a resposta venha só do acervo, ou aceita senso comum desde que rotulado?
+1. When was the last time you had a note about something and decided without consulting it?
+2. How many of your notes cover the topics you usually ask about?
+3. Do you prefer the answer to come only from the collection, or do you accept common sense as long as it is labeled?

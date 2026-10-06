@@ -1,6 +1,6 @@
 ---
 area: learning
 ---
-# Explicar em voz alta revela o que falta
+# Explaining out loud reveals what is missing
 
-Controle: passa em todos os checks. Parte do que [[control-a]] afirma.
+Control: passes every check. Part of what [[control-a]] claims.

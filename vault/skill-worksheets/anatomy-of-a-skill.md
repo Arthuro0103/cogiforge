@@ -1,51 +1,51 @@
 ---
-tipo: explicacao
-status: andando
+type: explanation
+status: in-progress
 ---
 
-# Uma skill tem sete partes e cada uma tem função
+# A skill has seven parts and each has a function
 
-Uma skill é uma **pasta com um arquivo `SKILL.md`** em `.claude/skills/<nome>/`. O Claude Code lê a
-`description` de **todas** as skills no começo de cada sessão e só abre o corpo da que casar com o pedido.
-Por isso duas coisas valem muito: a `description` decide **quando** a skill dispara, e cada linha dela
-**custa contexto em toda sessão**, mesmo nas que nunca disparam.
+A skill is a **folder with a `SKILL.md` file** in `.claude/skills/<name>/`. Claude Code reads the
+`description` of **every** skill at the start of each session and only opens the body of the one that matches the request.
+So two things matter a lot: the `description` decides **when** the skill triggers, and each line of it
+**costs context in every session**, even in the ones where it never triggers.
 
-Pra ver na prática, abra ao lado `.claude/skills/conhecer/SKILL.md` (a mais curta) e procure cada parte.
+To see it in practice, open `.claude/skills/onboard/SKILL.md` alongside (the shortest one) and find each part.
 
-## As sete partes
+## The seven parts
 
-| parte | pra que serve | onde achar no `conhecer` |
+| part | what it is for | where to find it in `onboard` |
 |---|---|---|
-| **1. `description`** | o gatilho: o que faz, as frases que a chamam (`GATILHOS`) e quando **não** disparar (`NÃO dispare`). Máximo de 1024 caracteres | o frontmatter |
-| **2. Por que existe** | a dor que originou a skill, de preferência com a frase de quem sentiu. Sem dor, a skill é enfeite | seção "Por que existe" |
-| **3. A lei** | poucas regras, cada uma **verificável**: dá pra dizer se foi seguida ou não | seção "A lei" |
-| **4. Os passos** | o que fazer, em ordem, com o comando de verdade, dizendo quem faz cada passo (a pessoa, o Claude, um script) | "Os passos" |
-| **5. A saída** | onde grava, em que formato, e como se confere | o passo que grava o perfil |
-| **6. O modelo de cada agente** | só se a skill abre agentes: quais só leem (modelo menor) e quais decidem (modelo maior) | o `conhecer` não tem: não abre agentes |
-| **7. Nunca** | o que a skill não faz. É a parte que mais evita estrago | seção "Nunca" |
+| **1. `description`** | the trigger: what it does, the phrases that call it (`TRIGGERS`) and when **not** to fire (`Do NOT trigger`). At most 1024 characters | the frontmatter |
+| **2. Why it exists** | the pain that originated the skill, preferably with the words of whoever felt it. Without pain, the skill is decoration | the "Why it exists" section |
+| **3. The rules** | a few rules, each **verifiable**: you can tell whether it was followed or not | the "The rules" section |
+| **4. The steps** | what to do, in order, with the real command, saying who does each step (the user, Claude, a script) | "The steps" |
+| **5. The output** | where it writes, in what format, and how it is checked | the step that writes the profile |
+| **6. The model of each agent** | only if the skill opens agents: which ones only read (smaller model) and which ones decide (larger model) | `onboard` has none: it opens no agents |
+| **7. Never** | what the skill does not do. It is the part that prevents the most damage | the "Never" section |
 
-## O que separa a skill que se usa da que ninguém chama
+## What separates the skill that gets used from the one nobody calls
 
-1. **A dor tem citação.** Pergunta-teste: *quando foi a última vez que você fez isso à mão?* A dor pode
-   ser passada ou **futura**, se você diz por que vai precisar. "Seria legal ter" não conta. Dizer "não
-   sei se tenho essa dor" também é resposta.
-2. **Foi testada num caso real.** Skill escrita e não rodada é hipótese. Rodar e olhar a saída é metade
-   do trabalho.
-3. **O gatilho é honesto.** `NÃO dispare` importa tanto quanto `GATILHOS`: skill que dispara à toa
-   irrita e gasta contexto.
-4. **Diz do que depende.** Se precisa de um arquivo, de uma pasta ou de um programa instalado, isso fica
-   no topo; senão quem copia leva uma skill que falha calada.
-5. **Pode ser apagada.** Skill que não serviu sai. "Não serviu" é uma resposta boa.
+1. **The pain has a quote.** Test question: *when was the last time you did this by hand?* The pain can be
+   past or **future**, if you say why you will need it. "It would be nice to have" does not count. Saying "I
+   do not know if I have this pain" is also an answer.
+2. **It was tested on a real case.** A skill written and not run is a hypothesis. Running it and looking at the output is half
+   the work.
+3. **The trigger is honest.** `Do NOT trigger` matters as much as `TRIGGERS`: a skill that fires for nothing
+   annoys people and wastes context.
+4. **It says what it depends on.** If it needs a file, a folder or an installed program, that goes
+   at the top; otherwise whoever copies it takes a skill that fails silently.
+5. **It can be deleted.** A skill that did not help goes away. "It did not help" is a good answer.
 
-## Adaptar não é copiar
+## Adapting is not copying
 
-Ao ler a skill de outra pessoa, separe duas camadas:
+When you read someone else's skill, separate two layers:
 
-- **O método**, que serve pra qualquer um: "a dor com citação vem antes da ideia"; "conferir o fato antes
-  de julgar"; "várias lentes que discordam entre si".
-- **O que é do autor**: as pastas dele, os projetos dele, o jeito dele de decidir, as ferramentas que ele
-  instalou. Isso você troca pelo seu ou corta.
+- **The method**, which works for anyone: "the pain with a quote comes before the idea"; "check the fact before
+  judging"; "several lenses that disagree with each other".
+- **What belongs to the author**: their folders, their projects, their way of deciding, the tools they
+  installed. You swap this for yours or cut it.
 
-A pergunta que faz a adaptação: *"o que nesta skill só funciona porque é o autor?"* Cada resposta vira um
-ponto de troca. Quem guia esse trabalho é o `/adaptar-skill`, e o que dá pra olhar está em
+The question that drives adaptation: *"what in this skill only works because it is the author?"* Each answer becomes a
+swap point. `/adapt-skill` guides this work, and what you can look at is in
 [[skill-worksheets/_catalog|_catalog]].

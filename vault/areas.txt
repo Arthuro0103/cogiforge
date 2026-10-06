@@ -1,5 +1,5 @@
-# áreas: uma por linha. `area` (the folder has the same name) or `folder: area`.
-# O portão exige que `area:` na nota case com a pasta dentro de notes/.
+# areas: one per line. `area` (the folder has the same name) or `folder: area`.
+# The gate requires that `area:` in the note matches the folder inside notes/.
 learning
 technology
 life

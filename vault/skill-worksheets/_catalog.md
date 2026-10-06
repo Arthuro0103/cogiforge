@@ -1,29 +1,30 @@
 ---
-tipo: explicacao
-status: andando
+type: explanation
+status: in-progress
 ---
 
-# O catálogo diz o que olhar, adaptar ou recusar
+# The catalog says what to look at, adapt or decline
 
-Cada linha tem uma **ficha** que explica a skill por dentro, sem o acervo do autor. Ler uma ficha leva uns
-10 minutos. O `/adaptar-skill` te guia por ela e por uma pergunta que decide tudo: **isso resolve uma dor
-sua?** Recusar é resposta legítima e fica registrada em `vault/memory/skills-avaliadas.md`.
+Each line has a **worksheet** that explains the skill from the inside, without the author's collection. Reading a
+worksheet takes about 10 minutes. `/adapt-skill` guides you through it and through one question that decides
+everything: **does this solve a pain of yours?** Declining is a legitimate answer and is recorded in
+`vault/memory/skills-reviewed.md`.
 
-Antes de tudo, leia [[skill-worksheets/anatomy-of-a-skill|a anatomia de uma skill]] (5 minutos).
+Before anything else, read [[skill-worksheets/anatomy-of-a-skill|the anatomy of a skill]] (5 minutes).
 
-| skill | o que faz, em uma linha | ficha | dá pra adaptar já? |
+| skill | what it does, in one line | worksheet | can it be adapted now? |
 |---|---|---|---|
-| `conselho` | passa uma decisão com custo por vários ângulos que discordam e fecha num veredito | [[skill-worksheets/council\|conselho]] | sim, é só método |
-| `artigo` | leva uma tese ao texto sem citação inventada: lacuna declarada, fonte marcada | [[skill-worksheets/article\|artigo]] | sim, se você escreve textos com fonte |
-| `product-idea` | acha dor real no que você já escreveu e devolve ideia, sempre com a citação da dor | [[skill-worksheets/product-idea\|product-idea]] | sim, se você tem material escrito pra varrer |
-| `consult-notes` | responde pergunta prática só com o que suas notas dizem, citando a nota de cada afirmação | [[skill-worksheets/consult-notes\|consult-notes]] | sim, se você tem notas sobre o assunto |
+| `council` | runs a costly decision through several angles that disagree and closes with a verdict | [[skill-worksheets/council\|council]] | yes, it is only method |
+| `article` | takes a thesis to text with no invented citation: gap declared, source marked | [[skill-worksheets/article\|article]] | yes, if you write texts with sources |
+| `product-idea` | finds real pain in what you already wrote and returns an idea, always with the quote of the pain | [[skill-worksheets/product-idea\|product-idea]] | yes, if you have written material to scan |
+| `consult-notes` | answers a practical question only with what your notes say, citing the note behind each claim | [[skill-worksheets/consult-notes\|consult-notes]] | yes, if you have notes on the subject |
 
-**Exemplos já escritos, de graça.** As skills `abrir-sessao`, `fechar-sessao`, `task-observer`,
-`claude-corner`, `adaptar-skill` e `conhecer` estão em `.claude/skills/`. Leia a `description` de uma e
-compare com a anatomia: é um exemplo de skill pronta e uma referência de formato.
+**Examples already written, for free.** The skills `open-session`, `close-session`, `task-observer`,
+`claude-corner`, `adapt-skill` and `onboard` are in `.claude/skills/`. Read the `description` of one and
+compare it with the anatomy: it is an example of a finished skill and a format reference.
 
-## Como usar
+## How to use
 
-Rode `/adaptar-skill`. Ela pergunta uma coisa por vez, começa pelo que você já contou sobre você, e
-termina com a skill escrita e testada por você, ou com um "não serve, porque…" registrado. Nos dois
-casos você aprendeu a parte que importa.
+Run `/adapt-skill`. It asks one thing at a time, starts from what you already told it about yourself, and
+ends with the skill written and tested by you, or with a "does not fit, because..." on record. In both
+cases you learned the part that matters.

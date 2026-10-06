@@ -1,104 +1,106 @@
 ---
-name: adaptar-skill
-description: Guia a pessoa a fazer uma skill SUA a partir de uma ficha do catálogo (vault/skill-worksheets/) - ler a ficha, separar o método do que é só do autor original, decidir se resolve uma dor dela, escrever com as respostas dela, testar num caso real e registrar o veredito em vault/memory/skills-avaliadas.md. Uma pergunta por mensagem. O Claude nunca escreve a skill sozinho, e "não serve pra mim" é resposta válida que fica registrada. GATILHOS - "/adaptar-skill", "quero uma skill parecida com essa", "essa skill serve pra mim?", "como eu faço uma skill", "o que tem no catálogo de skills". NÃO dispare para USAR uma skill que já existe, para criar skill sem ter olhado uma ficha, nem para o task-observer propor skill (ele só aponta pra cá).
+name: adapt-skill
+description: Guides the user to make a skill of THEIR OWN from a catalog worksheet (vault/skill-worksheets/) - read the worksheet, separate the method from what belongs only to the original author, decide whether it solves one of their pains, write it with their answers, test it on a real case and record the verdict in vault/memory/skills-reviewed.md. One question per message. Claude never writes the skill alone, and "does not fit me" is a valid answer that gets recorded. TRIGGERS - "/adapt-skill", "quero uma skill parecida com essa", "does this skill fit me?", "how do I make a skill", "what is in the skill catalog". Do NOT trigger to USE a skill that already exists, to create a skill without having looked at a worksheet, nor for task-observer to propose a skill (it only points here).
 ---
 
-# adaptar-skill: aprender a fazer a sua olhando a de outra pessoa
+# adapt-skill: learn to make your own by looking at someone else's
 
-## Por que existe
+## Why it exists
 
-Skill entregue pronta ensina a **usar**. Skill que a pessoa decide, escreve e testa ensina a **fazer**, e
-o que serve muda de uma pessoa pra outra: quem escreve muito e quem toca código brigam por coisas
-diferentes. Skill sem dor por trás vira enfeite que gasta contexto em toda sessão. Aqui, a ficha é o
-material e a **pessoa** é a autora.
+A skill handed over ready-made teaches how to **use** it. A skill the user decides on, writes and tests
+teaches how to **make** one, and what fits changes from person to person: someone who writes a lot and
+someone who writes code fight over different things. A skill with no pain behind it becomes decoration that
+spends context in every session. Here, the worksheet is the material and the **user** is the author.
 
-## A lei
+## The rules
 
-1. **Uma pergunta por mensagem.** Nunca uma lista. Diga em uma frase por que pergunta e ofereça 2 a 4
-   opções concretas (`AskUserQuestion`), sempre com espaço pra resposta livre.
-2. **O Claude não escreve a skill sozinho.** A dor, os gatilhos e o "quando NÃO" saem das respostas
-   dela. Eu organizo e formato. Se eu deduzi algo, pergunto.
-3. **Ensine enquanto faz.** Em cada passo, uma frase sobre o que aquela parte faz numa skill, com a
-   referência em `vault/skill-worksheets/anatomy-of-a-skill.md`.
-4. **"Não serve" é resposta boa.** Registro com o porquê.
-5. **Sem dor, sem skill.** Se ela não diz quando fez isso à mão (ou por que vai precisar), a resposta é
-   "não agora": registro e a conversa acaba bem.
-6. **Skill sem teste é hipótese.** Rodo num caso real antes de chamar de pronta.
-7. **Só no repo dela.** A skill nova vai em `.claude/skills/<nome>/` e nunca sobrescreve outra.
+1. **One question per message.** Never a list. Say in one sentence why you ask and offer 2 to 4
+   concrete options (`AskUserQuestion`), always with room for a free answer.
+2. **Claude does not write the skill alone.** The pain, the triggers and the "when NOT" come from the
+   user's answers. I organize and format. If I deduced something, I ask.
+3. **Teach while doing.** At each step, one sentence about what that part does in a skill, with the
+   reference in `vault/skill-worksheets/anatomy-of-a-skill.md`.
+4. **"Does not fit" is a good answer.** Record it with the why.
+5. **No pain, no skill.** If the user cannot say when they did this by hand (or why they will need it), the answer is
+   "not now": record it and the conversation ends well.
+6. **A skill without a test is a hypothesis.** I run it on a real case before calling it ready.
+7. **Only in the user's repo.** The new skill goes in `.claude/skills/<name>/` and never overwrites another one.
 
-## Os passos
+> Talk to the user and write prose (notes, briefings, profile lines) in the language the user writes in. Never translate a quote: verbatim quotes stay in the original language. Fixed tokens (frontmatter keys, status values, paths, enums) stay exactly as written.
 
-### 1. Antes de perguntar (você, o Claude)
+## The steps
+
+### 1. Before asking (you, Claude)
 
 ```bash
 cat vault/skill-worksheets/_catalog.md
-cat vault/memory/skills-avaliadas.md 2>/dev/null     # o que ela já olhou
-head -40 vault/memory/ideas/_pains.md 2>/dev/null   # dores já colhidas
+cat vault/memory/skills-reviewed.md 2>/dev/null     # what the user already looked at
+head -40 vault/memory/ideas/_pains.md 2>/dev/null   # pains already collected
 ```
 
-Se `skills-avaliadas.md` tem linhas, abra dizendo o que ela já avaliou.
+If `skills-reviewed.md` has lines, open by saying what the user already reviewed.
 
-### 2. Escolher qual ficha ler
+### 2. Choose which worksheet to read
 
-Mostre o catálogo em uma linha por skill. Pergunte se alguma chamou atenção. Se ela pedir sugestão,
-proponha **no máximo duas**, cada uma com a **frase dela** (de `_pains.md`, do perfil ou da conversa)
-que sustenta, e diga o que você não leu o bastante pra afirmar. Opção "nenhuma serve hoje": registre
-no passo 7 e pare.
+Show the catalog in one line per skill. Ask if any caught their eye. If they ask for a suggestion,
+propose **at most two**, each with the **user's phrase** (from `_pains.md`, the profile or the conversation)
+that supports it, and say what you have not read enough to claim. Option "none fits today": record it
+in step 7 and stop.
 
-### 3. Ler a ficha juntos
+### 3. Read the worksheet together
 
-Resuma a ficha em 5 linhas. Antes de mostrar a tabela, pergunte: *"nesta skill, o que você acha que é só
-do autor e o que é método que qualquer pessoa usaria?"* Depois mostre a tabela da ficha e diga onde ela
-acertou e onde faltou.
+Summarize the worksheet in 5 lines. Before showing the table, ask: *"in this skill, what do you think is only
+the author's and what is method anyone would use?"* Then show the worksheet's table and say where they
+got it right and where something was missing.
 
-### 4. A dor
+### 4. The pain
 
-Pergunte: **"quando foi a última vez que você fez isso à mão?"** Peça o caso concreto e anote a data.
-A dor pode ser futura se ela disser por quê; "seria legal ter" não conta. Sem dor, vá ao passo 7 com
-"não agora". Com dor, siga.
+Ask: **"when was the last time you did this by hand?"** Ask for the concrete case and note the date.
+The pain can be in the future if they say why; "it would be nice to have" does not count. With no pain, go to step 7 with
+"not now". With a pain, continue.
 
-### 5. Escrever, uma parte por mensagem
+### 5. Write, one part per message
 
-Sempre a pergunta primeiro, o texto depois, saído da resposta dela:
+Always the question first, the text after, taken from their answer:
 
-1. **Por que existe:** *"o que te irritou, em uma frase?"*
-2. **Gatilhos:** *"que frases você digitaria pra chamar isso?"* (3 a 5, com as palavras dela)
-3. **Quando NÃO disparar:** *"em que situação isso só atrapalharia?"*
-4. **Passos:** pra cada passo da ficha, *fica, sai ou troca?* Cada "troca" é algo que dependia do
-   autor: pergunte o que entra no lugar.
-5. **Saída:** *"onde isso fica gravado e como você sabe que ficou certo?"*
-6. **Nunca:** *"o que essa skill jamais deve fazer?"*
+1. **Why it exists:** *"what annoyed you, in one sentence?"*
+2. **Triggers:** *"what phrases would you type to call this?"* (3 to 5, in their words)
+3. **When NOT to trigger:** *"in what situation would this only get in the way?"*
+4. **Steps:** for each step of the worksheet, *stays, goes or changes?* Each "changes" is something that depended on the
+   author: ask what goes in its place.
+5. **Output:** *"where is this saved and how do you know it came out right?"*
+6. **Never:** *"what should this skill never do?"*
 
-Nome: ela escolhe. `description` com até 1024 caracteres, com `GATILHOS` e `NÃO dispare` (confira com
-`wc -c`). Monte o `SKILL.md`, **mostre inteiro** e pergunte *"é isso mesmo? o que você tiraria?"*. Só
-grave `.claude/skills/<nome>/SKILL.md` depois do sim.
+Name: the user chooses. `description` up to 1024 characters, with `TRIGGERS` and `Do NOT trigger` (check with
+`wc -c`). Build the `SKILL.md`, **show it whole** and ask *"is this right? what would you take out?"*. Only
+save `.claude/skills/<name>/SKILL.md` after the yes.
 
-### 6. Testar num caso real
+### 6. Test on a real case
 
-Peça um caso de hoje, não inventado. Rode a skill com ela olhando a saída. Pergunte *"serviu? o que
-faltou? o que sobrou?"* e ajuste **uma vez**. Sem caso hoje, registre "não testada".
+Ask for a case from today, not an invented one. Run the skill with the user watching the output. Ask *"did it work? what
+was missing? what was extra?"* and adjust **once**. With no case today, record "not tested".
 
-### 7. Registrar
+### 7. Record
 
-Acrescente uma linha em `vault/memory/skills-avaliadas.md` (se não existe, crie só com o cabeçalho):
+Append a line to `vault/memory/skills-reviewed.md` (if it does not exist, create it with the header only):
 
 ```markdown
-| data | ficha | veredito | dor citada | o que mudou | a sua skill |
+| date | worksheet | verdict | pain cited | what changed | your skill |
 |---|---|---|---|---|---|
-| AAAA-MM-DD | conselho | serve, adaptada | "travei dois dias entre A e B" | troquei as lentes | .claude/skills/<nome>/SKILL.md |
+| YYYY-MM-DD | council | fits, adapted | "I was stuck two days between A and B" | swapped the lenses | .claude/skills/<name>/SKILL.md |
 ```
 
-Veredito: **serve, adaptada** · **serve sem mexer** · **serve depois** · **não serve**. A coluna da skill
-só é preenchida se o arquivo existe.
+Verdict: **fits, adapted** · **fits as is** · **fits later** · **does not fit**. The skill column
+is filled in only if the file exists.
 
-## O fecho
+## The close
 
-Peça que ela diga, com as palavras dela, o que aprendeu sobre fazer skill. Anote o próximo caso em que
-a skill deve ser usada.
+Ask the user to say, in their own words, what they learned about making a skill. Note the next case where
+the skill should be used.
 
-## Nunca
+## Never
 
-- Entregar a skill pronta ou escrever partes sem pergunta.
-- Criar skill sem ela pedir.
-- Dar nota a ela: a pergunta é se a **skill** serve, não se ela acertou.
-- Copiar a ficha inteira como se fosse a skill dela.
+- Hand over the finished skill or write parts without a question.
+- Create a skill without the user asking.
+- Grade the user: the question is whether the **skill** fits, not whether they got it right.
+- Copy the whole worksheet as if it were the user's skill.

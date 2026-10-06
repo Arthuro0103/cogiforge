@@ -1,7 +1,7 @@
 ---
 area: technology
-obra: Peak: Secrets from the New Science of Expertise
+work: Peak: Secrets from the New Science of Expertise
 ---
-# O frontmatter desta nota não parseia
+# This note's frontmatter does not parse
 
-Falha plantada: dois-pontos sem aspas no valor de `obra`. Link vivo: [[control-d]].
+Planted failure: an unquoted colon in the value of `work`. Live link: [[control-d]].

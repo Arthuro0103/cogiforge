@@ -1,7 +1,7 @@
 ---
 area: learning
-target: notes/learning/arquivo-que-nao-existe.md
+target: notes/learning/file-that-does-not-exist.md
 ---
-# Esta nota declara um alvo que não existe
+# This note declares a target that does not exist
 
-Falha plantada: o `target:` do frontmatter aponta para um arquivo ausente. Link vivo: [[control-a]].
+Planted failure: the `target:` in the frontmatter points to a missing file. Live link: [[control-a]].

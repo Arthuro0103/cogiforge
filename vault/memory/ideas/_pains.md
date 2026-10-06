@@ -1,11 +1,11 @@
 ---
-tipo: fila
-sobre: dores colhidas das conversas, uma por linha
+type: queue
+about: pains collected from conversations, one per line
 ---
 
-# Dores: o que incomodou, nas palavras de quem sentiu
+# Pains: what bothered someone, in their own words
 
-Só acrescenta. Uma dor por linha, no formato `data | citação literal | fonte`. A citação é o que a
-pessoa disse, sem parafrasear. A fonte é o arquivo ou a sessão onde ela disse. As dores são a
-matéria-prima de ideias e tarefas: sem citação literal, a linha não entra.
+Append-only. One pain per line, in the format `date | verbatim quote | source`. The quote is what the
+person said, without paraphrasing. The source is the file or session where they said it. Pains are the
+raw material for ideas and tasks: without a verbatim quote, the line does not go in.
 

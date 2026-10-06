@@ -1,88 +1,88 @@
-# CLAUDE.md: como esta bancada opera
+# CLAUDE.md: how this workbench operates
 
-Bancada criativa: trabalho, escola e vida pessoal no mesmo lugar. Você (Claude) organiza projetos,
-ideias e tarefas, ajuda a escrever e planejar, e melhora junto com quem usa. O Obsidian abre `vault/`;
-você roda na raiz do repo e lê e escreve **só dentro de `vault/`**.
+A creative workbench: work, school and personal life in the same place. You (Claude) organize projects,
+ideas and tasks, help write and plan, and improve together with whoever uses it. Obsidian opens `vault/`;
+you run at the repo root and read and write **only inside `vault/`**.
 
-## Primeira vez
+## First time
 
-1. Rode a skill `conhecer`: a pessoa responde `_questions_about_me.md` (vazio no começo), uma pergunta por vez. Nada é inventado por você.
-2. Crie o projeto: copie `projects/example-my-first-project/` para `projects/<nome>/`, edite o
-   frontmatter (`tipo`, `status`, `declared_target`) e acrescente a linha em `projects/_index.md`.
-3. Rode `python3 ferramentas/hub.py` para o projeto listar seus arquivos.
+1. Run the `onboard` skill: the user answers `_questions_about_me.md` (empty at the start), one question at a time. You invent nothing.
+2. Create the project: copy `projects/example-my-first-project/` to `projects/<name>/`, edit the
+   frontmatter (`type`, `status`, `declared_target`) and add the line to `projects/_index.md`.
+3. Run `python3 tools/hub.py` so the project lists its files.
 
-## Pastas
+## Folders
 
-`inbox/` captura bruta · `notes/<area>/` notas processadas (a pasta é definida pelo `area:` da nota;
-as áreas são as que a pessoa configurar) · `projects/<nome>/instructions.md` raiz de cada projeto ·
-`memory/` o que a pessoa disse (`perfil`, `padroes`, `decisoes`, `ideias/_pains.md`) · `tasks/`
-uma nota por tarefa, no formato do plugin **TaskNotes** (ver *Tarefas* abaixo).
+`inbox/` raw capture · `notes/<area>/` processed notes (the folder is set by the note's `area:`;
+the areas are whatever the user configures) · `projects/<name>/instructions.md` root of each project ·
+`memory/` what the user said (`profile`, `patterns`, `decisions`, `ideas/_pains.md`) · `tasks/`
+one note per task, in the **TaskNotes** plugin format (see *Tasks* below).
 
-## O alvo vem antes
+## The target comes first
 
-**Um item só está processado quando um arquivo que já existia ficou diferente.** A nota é o rastro,
-não o produto. Medido: nota que nasce de conversa chegou a um arquivo de projeto em 4 de 4; a que
-nasceu de arquivo solto, em 0 de 43. Por isso:
+**An item is only processed when a file that already existed changed.** The note is the trace,
+not the product. Measured: a note born from a conversation reached a project file in 4 of 4; one
+born from a loose file, in 0 of 43. So:
 
-1. Nomeie o alvo **antes** de escrever: `projeto::` · `artigo::` · `pergunta::` · `tarefa::` · `nenhum`.
-   `nenhum` é resposta legítima; o item fica no inbox com data, não é apagado.
-2. Escreva a nota e o diff no alvo no mesmo commit.
-3. Conversa direta vale mais que inbox. Inbox é fallback.
+1. Name the target **before** writing: `project::` · `article::` · `question::` · `task::` · `none`.
+   `none` is a legitimate answer; the item stays in the inbox with a date, it is not deleted.
+2. Write the note and the diff in the target in the same commit.
+3. A direct conversation is worth more than the inbox. The inbox is a fallback.
 
-## Regras de escrita
+## Writing rules
 
-- Título é uma afirmação de até 10 palavras, nunca uma categoria.
-- Link por caminho completo a partir de `vault/`: `[[projects/example-my-first-project/instructions|exemplo]]`. Só existe quando a conexão é real.
-- **Sem bloco `## Conexões` no rodapé.** O link entra no corpo, no meio do argumento.
-- Arquivo novo que fala de um projeto leva um wikilink para a raiz dele.
-- Nada afirma coisa sobre a pessoa que ela não disse. Você **propõe** em `memory/observacoes.md`; só entra em `memory/` com o "sim" dela, com data e citação literal.
+- A title is a statement of up to 10 words, never a category.
+- Link by full path from `vault/`: `[[projects/example-my-first-project/instructions|example]]`. It only exists when the connection is real.
+- **No `## Connections` block at the bottom.** The link goes in the body, in the middle of the argument.
+- A new file that talks about a project carries a wikilink to its root.
+- Nothing claims something about the user that they did not say. You **propose** in `memory/observations.md`; it only enters `memory/` with the user's "yes", with a date and a verbatim quote.
 
-## Tarefas
+## Tasks
 
-As tarefas são do plugin **TaskNotes** (público, MIT). Cada uma é uma nota em `tasks/` com a tag `task`
-e este cabeçalho: `status: open | in-progress | done`, `priority: none | low | normal | high`,
-`projects:` com um link de caminho completo pra raiz do projeto. O plugin cria e lista tarefas na
-interface do Obsidian; você (Claude) também pode escrever o arquivo direto, no mesmo formato. `tasks/`
-é isento do portão das órfãs e o portão não julga o YAML dali (o plugin acrescenta campos próprios), mas
-link morto dentro de uma tarefa ainda reprova.
+Tasks belong to the **TaskNotes** plugin (public, MIT). Each one is a note in `tasks/` with the `task` tag
+and this header: `status: open | in-progress | done`, `priority: none | low | normal | high`,
+`projects:` with a full-path link to the project root. The plugin creates and lists tasks in the
+Obsidian interface; you (Claude) can also write the file directly, in the same format. `tasks/`
+is exempt from the orphan gate and the gate does not judge the YAML there (the plugin adds its own fields), but
+a dead link inside a task still fails.
 
-## Mapa de conexões (opcional)
+## Connection map (optional)
 
-Se a pessoa instalou o **graphify** (público, Apache-2.0) e rodou `/graphify vault` na raiz do repo,
-existe `graphify-out/GRAPH_REPORT.md`: leia antes de procurar conexões entre notas. O grafo é gerado:
-não edite e não commite.
+If the user installed **graphify** (public, Apache-2.0) and ran `/graphify vault` at the repo root,
+`graphify-out/GRAPH_REPORT.md` exists: read it before looking for connections between notes. The graph is generated:
+do not edit it and do not commit it.
 
-## Primeira nota
+## First note
 
-Modelo mínimo (as áreas válidas estão em `areas.txt`; a pasta é `notes/<area>/` e tem o mesmo nome):
+Minimal template (the valid areas are in `areas.txt`; the folder is `notes/<area>/` and has the same name):
 
 ```
 ---
-tipo: nota
+type: note
 area: learning
-projeto: example-my-first-project
-data: 2026-10-03
+project: example-my-first-project
+date: 2026-10-03
 ---
-# Título que é uma afirmação de até dez palavras
+# A title that is a statement of up to ten words
 
-Corpo com o argumento. O link entra aqui, no meio:
-[[projects/example-my-first-project/instructions|o projeto]] muda por causa disto.
+Body with the argument. The link goes here, in the middle:
+[[projects/example-my-first-project/instructions|the project]] changes because of this.
 ```
 
-Depois de gravar, rode `python3 ferramentas/hub.py`: nota em `projects/<nome>/` entra sozinha no
-bloco da raiz; nota em `notes/` só aparece lá pelo link no corpo.
+After saving, run `python3 tools/hub.py`: a note in `projects/<name>/` enters the root's block
+on its own; a note in `notes/` only shows up there through the link in the body.
 
-## Quando usar cada skill
+## When to use each skill
 
-| skill | quando |
+| skill | when |
 |---|---|
-| `abrir-sessao` | ao começar o trabalho num projeto: diga o nome dele e ela lê a raiz, o diário e as tarefas abertas |
-| `fechar-sessao` | ao terminar o dia: diário, briefing, dores colhidas, tarefas abertas |
-| `task-observer` | durante o trabalho: vê o que se repete ou foi corrigido e **só propõe** melhorias |
-| `claude-corner` | quando a pessoa avisar que vai sair: o Claude relê, conecta e testa fora de `vault/`, e **só propõe** |
-| `conhecer` | na primeira vez e quando a pessoa quiser atualizar o perfil: uma pergunta por vez, a saída é a fala dela |
-| `adaptar-skill` | quando a pessoa quiser uma skill dela a partir de uma ficha de `skill-worksheets/`; o Claude não escreve a skill sozinho |
+| `open-session` | when starting work on a project: say its name and it reads the root, the diary and the open tasks |
+| `close-session` | when ending the day: diary, briefing, pains collected, tasks opened |
+| `task-observer` | during the work: sees what repeats or was corrected and **only proposes** improvements |
+| `claude-corner` | when the user says they are leaving: Claude rereads, connects and tests outside `vault/`, and **only proposes** |
+| `onboard` | the first time and when the user wants to update the profile: one question at a time, the output is the user's own words |
+| `adapt-skill` | when the user wants a skill of their own from a worksheet in `skill-worksheets/`; Claude does not write the skill alone |
 
-## Nunca
+## Never
 
-Gravar fora de `vault/`. Apagar nota sem pedido. Preencher `memory/` sem fala da pessoa.
+Write outside `vault/`. Delete a note without being asked. Fill `memory/` without the user's words.

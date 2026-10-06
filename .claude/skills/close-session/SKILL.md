@@ -1,32 +1,34 @@
 ---
-name: fechar-sessao
-description: Fecha o dia de trabalho na bancada. Escreve o diário do dia (vault/memory/diario/), um briefing por sessão (vault/memory/briefings/) com link de caminho completo pra raiz do projeto no corpo, colhe dores da fala da pessoa em vault/memory/ideas/_pains.md, abre tarefa em vault/tasks/ pro que ficou pendente e roda os verificadores se existirem. Skill nova ou projeto novo saem só como proposta. Commita só se a pessoa mandar e nunca dá push. GATILHOS - "fecha a sessão", "fechar o dia", "/fechar-sessao", "o que fizemos hoje", "resume o dia", "vou parar por hoje". NÃO dispare para resumir conversa curta sem trabalho, para abrir sessão (isso é abrir-sessao) nem para observar processo (isso é task-observer).
+name: close-session
+description: Closes the workday on the workbench. Writes the day's diary (vault/memory/diary/), one briefing per session (vault/memory/briefings/) with a full-path link to the project root in the body, collects pains from the user's own words into vault/memory/ideas/_pains.md, opens a task in vault/tasks/ for whatever is left pending, and runs the verifiers if they exist. A new skill or new project comes out only as a proposal. Commits only if the user says so and never pushes. TRIGGERS - "fecha a sessão", "vou parar por hoje", "/close-session", "what did we do today", "summarize the day". Do NOT trigger to summarize a short conversation with no work, to open a session (that is open-session), nor to observe process (that is task-observer).
 ---
 
-# fechar-sessao: o que sobrou do dia, escrito antes de esquecer
+# close-session: what is left of the day, written down before it is forgotten
 
-## Por que existe
+## Why it exists
 
-Trabalho termina e o contexto some: na sessão seguinte ninguém sabe o que ficou pendente, que
-incômodo apareceu, que decisão foi tomada. Quem fecha de memória registra o que lembra, não o que
-aconteceu. Fechar com método é transformar a sessão em quatro coisas: diário, briefing, dores, tarefas.
+Work ends and the context vanishes: in the next session nobody knows what was left pending, what
+annoyance came up, what decision was made. Closing from memory records what you remember, not what
+happened. Closing with a method turns the session into four things: diary, briefing, pains, tasks.
 
-## A lei
+## The rules
 
-1. **A fonte é o que aconteceu, não o que lembro.** Todo número ou fato do briefing vem de comando
-   rodado nesta sessão (`git log`, `git diff --stat`, `ls`). Sem comando, escrevo "não medi".
-2. **Dor só com fala da pessoa.** Em `_pains.md` entra a frase que ela **escreveu**, entre aspas.
-   Frase minha, ou rótulo de opção de menu que ela clicou, não é fala dela: não entra.
-3. **Link só se o arquivo existe.** Confira com `test -f` antes de escrever o wikilink. Caminho completo
-   a partir de `vault/`, no meio do argumento. **Nunca** um bloco `## Conexões` no rodapé.
-4. **Seção sem conteúdo é omitida.** Sessão fraca gera briefing curto. "Nenhuma dor hoje" é resposta válida.
-5. **Proponho, não afirmo.** Skill nova, projeto novo, mudança em `perfil.md`, `padroes.md` ou
-   `decisoes.md`: saem como proposta no briefing. Quem grava lá é a pessoa.
-6. **Sem ordem, sem commit; nunca push.** Pergunte antes de commitar. Esta skill não empurra nada.
+1. **The source is what happened, not what I remember.** Every number or fact in the briefing comes from a
+   command run in this session (`git log`, `git diff --stat`, `ls`). With no command, I write "not measured".
+2. **A pain only with the user's words.** `_pains.md` gets the phrase the user **wrote**, in quotation marks.
+   My phrase, or the label of a menu option they clicked, is not their words: it does not go in.
+3. **Link only if the file exists.** Check with `test -f` before writing the wikilink. Full path
+   from `vault/`, in the middle of the argument. **Never** a `## Connections` block at the bottom.
+4. **A section with no content is omitted.** A weak session produces a short briefing. "No pain today" is a valid answer.
+5. **I propose, I do not assert.** A new skill, a new project, a change to `profile.md`, `patterns.md` or
+   `decisions.md`: they come out as a proposal in the briefing. The user is the one who writes there.
+6. **No order, no commit; never push.** Ask before committing. This skill pushes nothing.
 
-## Os passos
+> Talk to the user and write prose (notes, briefings, profile lines) in the language the user writes in. Never translate a quote: verbatim quotes stay in the original language. Fixed tokens (frontmatter keys, status values, paths, enums) stay exactly as written.
 
-### 1. Levantar o que aconteceu (você, o Claude)
+## The steps
+
+### 1. Gather what happened (you, Claude)
 
 ```bash
 git log --since=midnight --oneline --stat 2>/dev/null | head -40 || true
@@ -34,87 +36,88 @@ git status --short
 ls -t vault/tasks/ | head -10
 ```
 
-Se `git log` não mostrar nada (repo sem commits), diga "não medi: sem commits" e siga pela conversa. Cruze com o que foi dito nela. Descubra o(s) projeto(s) tocado(s): cada um precisa ter
-`vault/projects/<nome>/instructions.md`. Se não tiver, diga e pergunte qual é.
+If `git log` shows nothing (repo with no commits), say "not measured: no commits" and go by the conversation.
+Cross it with what was said in it. Find the project(s) touched: each one must have
+`vault/projects/<name>/instructions.md`. If it does not, say so and ask which it is.
 
-### 2. Escrever o briefing, um por sessão (você)
+### 2. Write the briefing, one per session (you)
 
-Arquivo `vault/memory/briefings/AAAA-MM-DD-<slug>.md`, slug curto do assunto:
+File `vault/memory/briefings/YYYY-MM-DD-<slug>.md`, a short slug of the subject:
 
 ```yaml
 ---
-tipo: briefing-sessao
-data: AAAA-MM-DD
-projetos: [<nome>]
+type: session-briefing
+date: YYYY-MM-DD
+projects: [<name>]
 ---
 ```
 
-Título: uma afirmação de até 10 palavras sobre o que a sessão produziu. Seções, nesta ordem, **omitindo
-as vazias**: *O que aconteceu* (2-3 parágrafos) · *O que foi medido* (comando e número) · *O que a pessoa
-corrigiu* (a fala citada) · *O que ficou de pé* (pendência com próximo passo) · *O que pode nascer*
-(proposta, com "por que agora"). O link pra raiz entra no corpo, por exemplo:
-`... avançou em [[projects/<nome>/instructions|<nome>]] até o ponto X`.
+Title: a statement of up to 10 words about what the session produced. Sections, in this order, **omitting
+the empty ones**: *What happened* (2-3 paragraphs) · *What was measured* (command and number) · *What the user
+corrected* (the quoted words) · *What is still standing* (pending item with next step) · *What could be born*
+(proposal, with "why now"). The link to the root goes in the body, for example:
+`... moved forward on [[projects/<name>/instructions|<name>]] up to point X`.
 
-### 3. Escrever ou acrescentar o diário (você)
+### 3. Write or append the diary (you)
 
-`vault/memory/diario/AAAA-MM-DD.md`. Se já existe, **acrescente** uma seção; nunca reescreva o que
-está lá. Três a cinco linhas por projeto: o que andou, o que travou, link pro briefing de caminho
-completo (`memory/briefings/...`).
+`vault/memory/diary/YYYY-MM-DD.md`. If it already exists, **append** a section; never rewrite what is
+there. Three to five lines per project: what moved, what got stuck, a full-path link to the briefing
+(`memory/briefings/...`).
 
-### 4. Colher dores (você)
+### 4. Collect pains (you)
 
-Releia o que a pessoa **digitou** na sessão: reclamação, gambiarra, coisa feita à mão, "de novo isso".
-Acrescente ao fim de `vault/memory/ideas/_pains.md`, uma por linha, no formato:
+Reread what the user **typed** in the session: complaint, workaround, something done by hand, "this again".
+Append to the end of `vault/memory/ideas/_pains.md`, one per line, in this format:
 
 ```
-AAAA-MM-DD | "citação literal dela" | <briefing ou projeto de onde veio>
+YYYY-MM-DD | "verbatim quote from the user" | <briefing or project it came from>
 ```
 
-Se o arquivo não existir, não crie: diga que ele pertence à estrutura da bancada e deixe as dores no
-briefing, na seção *O que ficou de pé*. Se a citação não for literal, não escreva.
+If the file does not exist, do not create it: say it belongs to the workbench structure and leave the pains in the
+briefing, in the section *What is still standing*. If the quote is not verbatim, do not write it.
 
-### 5. Abrir tarefa pro que ficou pendente (você)
+### 5. Open a task for whatever is left pending (you)
 
-Uma pendência com próximo passo concreto vira uma tarefa no formato do plugin **TaskNotes**, em
-`vault/tasks/<slug>.md` (o slug sai do título; se o arquivo já existe, acrescente `-2`). Sem ID no nome:
-o plugin reconhece tarefa pela tag `task`, não pelo nome do arquivo. `status` é `open`, `in-progress` ou
-`done`; `priority` é `none`, `low`, `normal` ou `high`. Pergunte a prioridade se não for óbvia.
+A pending item with a concrete next step becomes a task in the **TaskNotes** plugin format, in
+`vault/tasks/<slug>.md` (the slug comes from the title; if the file already exists, add `-2`). No ID in the name:
+the plugin recognizes a task by the `task` tag, not by the file name. `status` is `open`, `in-progress` or
+`done`; `priority` is `none`, `low`, `normal` or `high`. Ask for the priority if it is not obvious.
 
 ```yaml
 ---
 tags:
   - task
-title: <verbo no infinitivo + o que>
+title: <verb in the infinitive + what>
 status: open
 priority: normal
 projects:
-  - "[[projects/<nome>/instructions|<nome>]]"
+  - "[[projects/<name>/instructions|<name>]]"
 ---
 ```
 
-O link em `projects` é de **caminho completo** (o portão confere). Corpo: uma linha do que fazer e uma
-de "pronto quando".
+The link in `projects` is a **full path** (the gate checks it). Body: one line on what to do and one
+on "done when".
 
-### 6. Rodar os verificadores, se existirem (um comando cada)
+### 6. Run the verifiers, if they exist (one command each)
 
 ```bash
-test -f nucleo/portao.py && python3 nucleo/portao.py || echo "portao.py ainda não existe: pulei"
-test -f nucleo/anel.py && python3 nucleo/anel.py --gate || echo "anel.py ainda não existe: pulei"
+test -f core/gate.py && python3 core/gate.py || echo "gate.py does not exist yet: skipped"
+test -f core/ring.py && python3 core/ring.py --gate || echo "ring.py does not exist yet: skipped"
 ```
 
-Se algum falhar, mostre a saída e corrija **só o que é seu** (o briefing que acabou de escrever). Não
-esconda falha: reporte.
+If one fails, show the output and fix **only what is yours** (the briefing you just wrote). Do not
+hide a failure: report it.
 
-### 7. Entregar e perguntar (você)
+### 7. Deliver and ask (you)
 
-Chat, no máximo 8 linhas: caminhos dos arquivos criados, quantas dores colhidas, tarefas abertas,
-resultado dos verificadores (ou "pulei: não existem"). Pergunte: *"quer que eu commite?"* Só com sim,
-commite os arquivos desta skill, e **sem `git push`**.
+Chat, at most 8 lines: paths of the files created, how many pains collected, tasks opened,
+result of the verifiers (or "skipped: they do not exist"). Ask: *"do you want me to commit?"* Only with a yes,
+commit the files of this skill, and **no `git push`**.
 
-## Nunca
+## Never
 
-- Dar `git push`, nem commitar sem a pessoa mandar.
-- Colocar fala minha em `_pains.md`.
-- Escrever em `perfil.md`, `padroes.md`, `decisoes.md` ou em `vault/notes/`.
-- Criar skill ou projeto: só propor.
-- Apagar ou reescrever diário que já existe.
+- Run `git push`, or commit without the user's order.
+- Put my words in `_pains.md`.
+- Write to `profile.md`, `patterns.md`, `decisions.md` or `vault/notes/`.
+- Create a skill or project: only propose.
+- Delete or rewrite a diary that already exists.

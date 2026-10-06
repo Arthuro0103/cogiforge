@@ -1,6 +1,6 @@
 ---
 area: technology
 ---
-# Um script que roda sozinho precisa de um teste
+# A script that runs on its own needs a test
 
-Exemplo de nota. Parte da [[notes/learning/how-to-link-a-note|how-to-link-a-note]] aplicada a código. Índice em [[home]].
+Example note. Part of [[notes/learning/how-to-link-a-note|how-to-link-a-note]] applied to code. Index in [[home]].

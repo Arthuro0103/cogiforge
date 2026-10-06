@@ -1,4 +1,4 @@
-# Captura solta
+# Loose capture
 
-Uma ideia anotada na pressa, sem nenhum link. A caixa de entrada é isenta de órfã:
-quem é barrado na captura rápida desinstala.
+An idea jotted down in a hurry, with no links at all. The inbox is exempt from the orphan check:
+whoever gets blocked at quick capture uninstalls.

@@ -2,6 +2,6 @@
 area: technology
 target: [notes/learning/control-b.md, "none"]
 ---
-# Um hook versionado só vale se estiver ativo
+# A versioned hook is only worth it if it is active
 
-Controle: lista no `target:`, com a resposta legítima "none". Volta a [[control-c]].
+Control: a list in `target:`, with the legitimate answer "none". Goes back to [[control-c]].

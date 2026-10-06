@@ -1,59 +1,59 @@
 ---
-tipo: onboarding
-status: vazio
+type: onboarding
+status: empty
 ---
 
-# Perguntas para a bancada te conhecer
+# Questions so the workbench can get to know you
 
-Responda no seu ritmo: uma por dia ou todas de uma vez, e pule o que não fizer sentido. Escreva
-solto, em frase ou em tópicos. Só o que você escrever aqui vira fato sobre você. O Claude lê, propõe
-o que enxergou e **só grava em `memory/` o que você confirmar**, com data e a sua frase literal.
+Answer at your own pace: one a day or all at once, and skip whatever makes no sense. Write freely, in
+sentences or bullets. Only what you write here becomes a fact about you. Claude reads it, proposes
+what it noticed and **only writes to `memory/` what you confirm**, with the date and your verbatim phrase.
 
-Quando tiver um bloco respondido, peça: `conhecer`.
+When a block is answered, ask for: `onboard`.
 
-## Quem você é e o que quer da bancada
+## Who you are and what you want from the workbench
 
-1. Em três frases, como você se apresentaria?
-   Resposta:
-2. O que você está construindo ou estudando agora?
-   Resposta:
-3. O que você quer que a bancada faça por você? O que seria um bom resultado daqui a três meses?
-   Resposta:
-4. Onde você vai usar: trabalho, escola, vida pessoal, tudo junto?
-   Resposta:
+1. In three sentences, how would you introduce yourself?
+   Answer:
+2. What are you building or studying right now?
+   Answer:
+3. What do you want the workbench to do for you? What would a good result look like three months from now?
+   Answer:
+4. Where will you use it: work, school, personal life, all together?
+   Answer:
 
-## Como você decide e trabalha
+## How you decide and work
 
-5. Como você costuma decidir entre dois caminhos?
-   Resposta:
-6. O que mais te trava quando você precisa começar algo?
-   Resposta:
-7. Como é a sua rotina: quando você rende mais e quando menos?
-   Resposta:
-8. Quanto tempo por dia você pode dar à bancada?
-   Resposta:
+5. How do you usually decide between two paths?
+   Answer:
+6. What blocks you most when you need to start something?
+   Answer:
+7. What is your routine like: when do you perform best and worst?
+   Answer:
+8. How much time per day can you give the workbench?
+   Answer:
 
-## Escola e trabalho
+## School and work
 
-9. Se estuda: o que, e o que mais pesa (provas, prazos, matéria específica)?
-   Resposta:
-10. Se trabalha: em que, e o que mais consome o seu tempo ou a sua cabeça?
-    Resposta:
+9. If you study: what, and what weighs most (exams, deadlines, a specific subject)?
+   Answer:
+10. If you work: at what, and what takes most of your time or your head?
+    Answer:
 
-## Como o Claude deve te tratar
+## How Claude should treat you
 
-11. Como você quer que ele fale com você (direto, didático, curto, detalhado)?
-    Resposta:
-12. O que ele faz que mais ajuda? O que mais irrita?
-    Resposta:
-13. O que o Claude nunca deve fazer?
-    Resposta:
-14. Quando ele não tiver certeza, você prefere que pergunte ou que proponha e espere?
-    Resposta:
+11. How do you want it to talk to you (direct, didactic, short, detailed)?
+    Answer:
+12. What does it do that helps most? What annoys you most?
+    Answer:
+13. What should Claude never do?
+    Answer:
+14. When it is not sure, do you prefer that it asks or that it proposes and waits?
+    Answer:
 
-## Onde dói
+## Where it hurts
 
-15. Qual tarefa recorrente te cansa ou você sempre adia?
-    Resposta:
-16. Tem algum assunto que você quer explorar com ajuda e ainda não pediu?
-    Resposta:
+15. Which recurring task tires you out or do you always put off?
+    Answer:
+16. Is there a subject you want to explore with help and have not asked about yet?
+    Answer:

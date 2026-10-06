@@ -1,6 +1,6 @@
 ---
 area: life
 ---
-# Uma ideia por nota facilita ligar
+# One idea per note makes linking easy
 
-Exemplo de nota. Fica fácil apontar para ela de [[notes/technology/a-script-is-only-worth-it-with-a-test|a-script-is-only-worth-it-with-a-test]] ou do [[home]].
+Example note. It is easy to point to it from [[notes/technology/a-script-is-only-worth-it-with-a-test|a-script-is-only-worth-it-with-a-test]] or from [[home]].

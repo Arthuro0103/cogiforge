@@ -1,15 +1,15 @@
 ---
-tipo: memoria
-escreve: a pessoa
+type: memory
+writes: the user
 ---
 
-# Perfil: o que a pessoa disse sobre si
+# Profile: what the user said about themselves
 
-> **Quem escreve aqui é você.** Só entra o que você disse, com a data e a sua frase literal entre
-> aspas. O Claude **propõe** (em `memory/observacoes.md`) e nunca afirma nada sobre você por
-> conta própria. Proposta só vira linha aqui depois do seu "sim".
+> **You are the one who writes here.** Only what you said goes in, with the date and your verbatim
+> phrase in quotes. Claude **proposes** (in `memory/observations.md`) and never states anything about
+> you on its own. A proposal only becomes a line here after your "yes".
 
-Quem você é, o que quer, como quer ser tratado.
+Who you are, what you want, how you want to be treated.
 
-Formato de cada linha: `AAAA-MM-DD | "frase literal" | onde você disse`
+Format of each line: `YYYY-MM-DD | "verbatim phrase" | where you said it`
 

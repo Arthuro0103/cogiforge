@@ -1,83 +1,85 @@
 ---
 name: task-observer
-description: Observa uma sessão de trabalho e SÓ PROPÕE melhorias de processo, acrescentando em vault/memory/observacoes.md (data, o que viu, o que propõe). Procura três sinais - uma skill que faltou, um passo repetido três vezes, uma correção que a pessoa fez duas vezes. Nunca escreve em perfil.md, padroes.md, decisoes.md nem em vault/notes/, e nunca cria skill: a pauta de skills é da pessoa, e quem guia a criação é o adaptar-skill. É a metade "melhora comigo" da bancada. GATILHOS - "/task-observer", "observa essa sessão", "o que eu repito muito?", "o que dava pra automatizar?", "tem algo pra melhorar no meu processo?". NÃO dispare para executar a tarefa em si, para fechar o dia (isso é fechar-sessao), nem para criar skill (isso é adaptar-skill).
+description: Observes a work session and ONLY PROPOSES process improvements, appending to vault/memory/observations.md (date, what was seen, what is proposed). Looks for three signals - a skill that was missing, a step repeated three times, a correction the user made twice. Never writes to profile.md, patterns.md, decisions.md nor vault/notes/, and never creates a skill: the skill agenda belongs to the user, and adapt-skill guides the creation. It is the "improves with me" half of the workbench. TRIGGERS - "/task-observer", "observa essa sessão", "what do I repeat a lot?", "what could be automated?", "is there anything to improve in my process?". Do NOT trigger to carry out the task itself, to close the day (that is close-session), nor to create a skill (that is adapt-skill).
 ---
 
-# task-observer: ver o processo enquanto ele acontece
+# task-observer: see the process while it happens
 
-## Por que existe
+## Why it exists
 
-Quem trabalha sempre do mesmo jeito deixa de ver o próprio jeito: o passo que repete todo dia, a
-correção que dá ao assistente pela terceira vez, a skill que ajudaria e ninguém escreveu. Quem faz
-o trabalho está ocupado demais pra anotar. Alguém de fora precisa olhar e **só apontar**, sem mexer.
+Someone who always works the same way stops seeing their own way: the step repeated every day, the
+correction given to the assistant for the third time, the skill that would help and nobody wrote. Whoever does
+the work is too busy to take notes. Someone from outside has to look and **only point**, without touching.
 
-## A lei
+## The rules
 
-1. **Só propõe.** O único arquivo que esta skill escreve é `vault/memory/observacoes.md`, e só
-   **acrescentando** no fim. Nunca reescreve nem apaga linha anterior.
-2. **Três sinais, nada além.** (a) uma skill que faltou, (b) um passo feito à mão 3 vezes ou mais,
-   (c) uma correção que a pessoa fez 2 vezes ou mais. Sem o número, não vira observação.
-3. **Cada observação traz a evidência.** Onde aconteceu (arquivo, data ou trecho curto da fala) e a
-   contagem. "Parece que..." sem evidência não entra.
-4. **Não afirma sobre a pessoa.** Escrevo "o passo X apareceu 3 vezes", nunca "ela é desorganizada".
-   `perfil.md`, `padroes.md` e `decisoes.md` são afirmações sobre ela: eu não escrevo lá.
-5. **Nunca cria skill.** Se o sinal é "faltou skill", a observação diz isso e aponta pro `adaptar-skill`.
-   A pessoa decide se e quando.
-6. **Não mexe em `vault/notes/`.** Nota é o acervo dela.
-7. **Observar não interrompe.** Não pare o trabalho pra comentar; registre e mostre no fim, ou quando pedirem.
+1. **Only propose.** The only file this skill writes is `vault/memory/observations.md`, and only
+   by **appending** at the end. It never rewrites or deletes an earlier line.
+2. **Three signals, nothing else.** (a) a skill that was missing, (b) a step done by hand 3 times or more,
+   (c) a correction the user made 2 times or more. Without the number, it does not become an observation.
+3. **Every observation brings its evidence.** Where it happened (file, date or a short excerpt of what was said) and the
+   count. "It seems that..." without evidence does not go in.
+4. **No claims about the user.** I write "step X appeared 3 times", never "they are disorganized".
+   `profile.md`, `patterns.md` and `decisions.md` are claims about the user: I do not write there.
+5. **Never create a skill.** If the signal is "a skill was missing", the observation says so and points to `adapt-skill`.
+   The user decides if and when.
+6. **Do not touch `vault/notes/`.** A note belongs to the user's collection.
+7. **Observing does not interrupt.** Do not stop the work to comment; record it and show it at the end, or when asked.
 
-## Os passos
+> Talk to the user and write prose (notes, briefings, profile lines) in the language the user writes in. Never translate a quote: verbatim quotes stay in the original language. Fixed tokens (frontmatter keys, status values, paths, enums) stay exactly as written.
 
-### 1. Antes (você, o Claude)
+## The steps
+
+### 1. Before (you, Claude)
 
 ```bash
-tail -30 vault/memory/observacoes.md 2>/dev/null
+tail -30 vault/memory/observations.md 2>/dev/null
 ```
 
-Leia o que já foi observado, pra não repetir. Se uma observação antiga voltou a acontecer, **cite a data
-dela** e some à contagem em vez de abrir outra.
+Read what was already observed, so you do not repeat it. If an old observation happened again, **cite its date**
+and add to the count instead of opening another one.
 
-### 2. Durante a sessão (você)
+### 2. During the session (you)
 
-Mantenha uma contagem mental simples de: comandos ou passos repetidos, correções que a pessoa fez
-("não, assim não", "de novo", "já te falei"), e pedidos que não tinham skill pra atender. Anote a
-evidência na hora, em duas linhas, para não depender da memória no fim.
+Keep a simple mental count of: repeated commands or steps, corrections the user made
+("no, not like that", "again", "I already told you"), and requests that had no skill to serve them. Note the
+evidence on the spot, in two lines, so you do not depend on memory at the end.
 
-### 3. Filtrar (você)
+### 3. Filter (you)
 
-No fim do bloco de trabalho, descarte o que não bate com os três sinais ou não tem contagem. Tenha
-no máximo **3 observações por sessão**: mais que isso é ruído, e a pessoa para de ler.
+At the end of the block of work, discard what does not match the three signals or has no count. Keep
+at most **3 observations per session**: more than that is noise, and the user stops reading.
 
-### 4. Acrescentar (você)
+### 4. Append (you)
 
-Se `vault/memory/observacoes.md` não existe, avise que ele pertence à estrutura e mostre as
-observações no chat, sem criar o arquivo. Se existe, acrescente no fim:
+If `vault/memory/observations.md` does not exist, say it belongs to the structure and show the
+observations in the chat, without creating the file. If it exists, append at the end:
 
 ```markdown
-## AAAA-MM-DD
+## YYYY-MM-DD
 
-- **O que vi:** <fato, com a contagem e onde aconteceu>
-- **Sinal:** skill que faltou | passo repetido | correção repetida
-- **O que proponho:** <uma frase; se for skill, "levar ao /adaptar-skill">
-- **Estado:** aberta
+- **What I saw:** <fact, with the count and where it happened>
+- **Signal:** missing skill | repeated step | repeated correction
+- **What I propose:** <one sentence; if it is a skill, "take it to /adapt-skill">
+- **State:** open
 ```
 
-Se a observação diz respeito a um projeto, ponha um wikilink de caminho completo na frase, no meio
-do texto (`[[projects/<nome>/instructions|<nome>]]`), e só depois de conferir que o arquivo existe.
+If the observation concerns a project, put a full-path wikilink in the sentence, in the middle
+of the text (`[[projects/<name>/instructions|<name>]]`), and only after checking that the file exists.
 
-### 5. Mostrar (você)
+### 5. Show (you)
 
-Chat: as observações do dia em uma linha cada, e a pergunta *"alguma dessas vale virar algo?"*. Se a
-resposta for sobre skill, passe pro `adaptar-skill`; não comece a escrever.
+Chat: the day's observations in one line each, and the question *"is any of these worth turning into something?"*. If the
+answer is about a skill, hand over to `adapt-skill`; do not start writing.
 
-### 6. Fechar o ciclo (a pessoa)
+### 6. Close the cycle (the user)
 
-Só a pessoa muda o campo **Estado** (`aberta`, `adotada`, `recusada`). Recusar é resposta boa:
-na próxima rodada, não proponha de novo a mesma coisa sem uma contagem nova.
+Only the user changes the **State** field (`open`, `adopted`, `declined`). Declining is a good answer:
+in the next round, do not propose the same thing again without a new count.
 
-## Nunca
+## Never
 
-- Escrever em `perfil.md`, `padroes.md`, `decisoes.md` ou `vault/notes/`.
-- Criar, editar ou instalar uma skill.
-- Registrar observação sem contagem e evidência.
-- Repetir proposta que a pessoa recusou, sem fato novo.
+- Write to `profile.md`, `patterns.md`, `decisions.md` or `vault/notes/`.
+- Create, edit or install a skill.
+- Record an observation without a count and evidence.
+- Repeat a proposal the user declined, without a new fact.

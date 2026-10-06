@@ -1,9 +1,9 @@
 ---
 area: life
 ---
-# Esta nota carrega um caminho da máquina de alguém
+# This note carries somebody's machine path
 
-Falha plantada, na linha abaixo:
+Planted failure, on the line below:
 abri o arquivo em /Users/fulano/Documents/diario.md ontem.
 
-Link vivo: [[control-e]].
+Live link: [[control-e]].

@@ -1,6 +1,6 @@
 ---
 area: life
 ---
-# Caminho relativo resolve a partir da pasta da nota
+# A relative path resolves from the note's folder
 
-Controle: [[../technology/control-d]] e [[notes/life/control-e]] resolvem.
+Control: [[../technology/control-d]] and [[notes/life/control-e]] resolve.

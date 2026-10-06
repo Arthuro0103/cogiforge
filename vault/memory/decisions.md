@@ -1,15 +1,15 @@
 ---
-tipo: memoria
-escreve: a pessoa
+type: memory
+writes: the user
 ---
 
-# Decisões: o que a pessoa decidiu e por quê
+# Decisions: what the user decided and why
 
-> **Quem escreve aqui é você.** Só entra o que você disse, com a data e a sua frase literal entre
-> aspas. O Claude **propõe** (em `memory/observacoes.md`) e nunca afirma nada sobre você por
-> conta própria. Proposta só vira linha aqui depois do seu "sim".
+> **You are the one who writes here.** Only what you said goes in, with the date and your verbatim
+> phrase in quotes. Claude **proposes** (in `memory/observations.md`) and never states anything about
+> you on its own. A proposal only becomes a line here after your "yes".
 
-Escolhas que você fez, com o motivo dito por você, para ninguém reabrir sem saber.
+Choices you made, with the reason you gave, so nobody reopens them without knowing.
 
-Formato de cada linha: `AAAA-MM-DD | "frase literal" | onde você disse`
+Format of each line: `YYYY-MM-DD | "verbatim phrase" | where you said it`
 

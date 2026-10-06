@@ -1,13 +1,13 @@
 ---
 area: life
 ---
-# Um link bom tem muitas formas
+# A good link comes in many forms
 
-Controle: alias [[control-c|um alias]], âncora [[control-a#Seção]], caixa diferente
-[[CONTROL-B]] e embed ![[control-d]] resolvem. Já o que está em código não é link:
+Control: alias [[control-c|an alias]], anchor [[control-a#Section]], different case
+[[CONTROL-B]] and embed ![[control-d]] all resolve. What sits in code is not a link:
 
 ```md
-[[isto-esta-num-bloco-de-codigo]]
+[[this-is-in-a-code-block]]
 ```
 
-E `[[isto-tambem-nao]]` entre crases. O caminho `~/www/algo` e o diretório /Users sem nome passam.
+And `[[this-is-not-either]]` between backticks. The path `~/www/algo` and the nameless /Users directory pass.

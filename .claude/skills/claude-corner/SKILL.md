@@ -1,90 +1,92 @@
 ---
 name: claude-corner
-description: O canto do Claude. Quando a pessoa avisa que vai sair, o Claude usa o tempo fora (o que ela disser, no máximo 1h30) pra reler as notas, achar conexões reais, ler as dores e os projetos, e testar ideias num lugar descartável fora de vault/. Só propõe, em vault/memory/corner/AAAA-MM-DD-<slug>.md - não afirma, não faz merge, não dá push, não instala nada fora do descartável, não envia mensagem a ninguém. REGRA DE ORDEM - se a pessoa pediu algo antes de sair, o pedido é feito INTEIRO primeiro. GATILHOS - "vou sair", "tô saindo", "volto às X", "fico fora até", "/claude-corner". NÃO dispare para saída de poucos minutos, para tarefa específica que a pessoa quer rodando, nem para decidir entre dois caminhos.
+description: Claude's corner. When the user says they are leaving, Claude uses the time away (whatever they say, at most 1h30) to reread the notes, find real connections, read the pains and the projects, and test ideas in a throwaway place outside vault/. Only proposes, in vault/memory/corner/YYYY-MM-DD-<slug>.md - it does not assert, does not merge, does not push, does not install anything outside the throwaway, does not send messages to anyone. ORDER RULE - if the user asked for something before leaving, the request is done IN FULL first. TRIGGERS - "vou sair", "volto às X", "I'm heading out", "back at X", "/claude-corner". Do NOT trigger for a leave of a few minutes, for a specific task the user wants running, nor for deciding between two paths.
 ---
 
-# claude-corner: o tempo fora vira proposta
+# claude-corner: the time away becomes a proposal
 
-## Por que existe
+## Why it exists
 
-Enquanto a pessoa está fora, o assistente fica parado, e ela volta ao mesmo ponto. Esse tempo pode ser
-usado pra olhar o acervo com calma, e o que ela não teria feito: cruzar notas que não se citam, ler as
-dores em fila, testar uma ideia barata. O risco é o assistente agir sem ela. Por isso o produto aqui é
-**proposta com procedência**, nunca decisão.
+While the user is away, the assistant sits idle, and the user comes back to the same point. That time can be
+used to look at the collection calmly, and at what the user would not have done: cross notes that do not cite
+each other, read the pains in a row, test a cheap idea. The risk is the assistant acting without the user. So the
+product here is a **proposal with provenance**, never a decision.
 
-## A lei
+## The rules
 
-1. **O pedido dela vem primeiro e inteiro.** Se ela disse "faz X e vou sair", termino X, **confiro que
-   está feito** e só então começo o canto. Se X não pode terminar sem ela, digo isso na hora e o canto
-   não começa fingindo que terminou.
-2. **Só propõe.** O único lugar de escrita é `vault/memory/corner/`. Não toco em `vault/notes/`,
-   `perfil.md`, `padroes.md`, `decisoes.md` nem em `vault/projects/`.
-3. **Procedência em cada achado.** Caminho do arquivo e um trecho curto. A fala dela vai entre aspas;
-   ideia que nasceu minha leva o rótulo **palpite do Claude**.
-4. **Testar só no descartável.** Diretório temporário (`mktemp -d`) ou worktree fora de `vault/`.
-   Nada de merge, push, remote novo, mensagem enviada, e-mail, PR, nem instalar pacote fora do descartável.
-5. **Tempo tem teto.** O que ela disser; sem prazo dito, **1h30**. Se ela voltar antes, entrego o que
-   está pronto.
-6. **Link só se o arquivo existe.** Wikilink de caminho completo a partir de `vault/`, no meio do
-   argumento. Nunca um bloco `## Conexões` no rodapé.
+1. **The user's request comes first and whole.** If they said "do X and I'm leaving", I finish X, **check that
+   it is done** and only then start the corner. If X cannot be finished without them, I say so right away and the corner
+   does not start pretending it was finished.
+2. **Only propose.** The only place to write is `vault/memory/corner/`. I do not touch `vault/notes/`,
+   `profile.md`, `patterns.md`, `decisions.md` nor `vault/projects/`.
+3. **Provenance on every finding.** File path and a short excerpt. The user's words go in quotation marks;
+   an idea that was born mine carries the label **Claude's guess**.
+4. **Test only in the throwaway.** A temporary directory (`mktemp -d`) or a worktree outside `vault/`.
+   No merge, push, new remote, message sent, email, PR, nor installing a package outside the throwaway.
+5. **Time has a ceiling.** Whatever the user says; with no stated deadline, **1h30**. If they come back earlier, I hand over what
+   is ready.
+6. **Link only if the file exists.** A full-path wikilink from `vault/`, in the middle of the argument. Never a
+   `## Connections` block at the bottom.
 
-## Os passos
+> Talk to the user and write prose (notes, briefings, profile lines) in the language the user writes in. Never translate a quote: verbatim quotes stay in the original language. Fixed tokens (frontmatter keys, status values, paths, enums) stay exactly as written.
 
-### 0. Fechar o pedido e ler o relógio (você, o Claude)
+## The steps
 
-Aplique a lei 1. Depois anote o prazo (a hora que ela disse, ou 1h30 a partir de agora).
+### 0. Close the request and read the clock (you, Claude)
+
+Apply rule 1. Then note the deadline (the time the user said, or 1h30 from now).
 
 ```bash
 ls vault/memory/corner/ 2>/dev/null | tail -5
 ```
 
-Abra as propostas anteriores, pra não repetir o que ela já viu, adotou ou recusou.
+Open the previous proposals, so you do not repeat what the user already saw, adopted or declined.
 
-### 1. Varrer o acervo (você)
+### 1. Sweep the collection (you)
 
-Cada frente rende **até 5 achados**; leia, não escreva ainda:
+Each front yields **up to 5 findings**; read, do not write yet:
 
-- **Conexões:** notas de áreas diferentes que falam da mesma coisa e não se citam
-  (`ls vault/notes/`, `grep -rli "<termo>" vault/notes/`).
-- **Dores:** `vault/memory/ideas/_pains.md`. Quais se repetem? Alguma tem remédio barato?
-- **Projetos:** `vault/projects/_index.md` e as raízes. O que está parado e dá pra adiantar como proposta?
-- **Livre:** uma coisa que a pessoa não pediu e que você acha que vale olhar, marcada como palpite.
+- **Connections:** notes from different areas that talk about the same thing and do not cite each other
+  (`ls vault/notes/`, `grep -rli "<term>" vault/notes/`).
+- **Pains:** `vault/memory/ideas/_pains.md`. Which ones repeat? Does any have a cheap remedy?
+- **Projects:** `vault/projects/_index.md` and the roots. What is stalled and can be moved ahead as a proposal?
+- **Free:** one thing the user did not ask for and that you think is worth a look, marked as a guess.
 
-Se uma frente estiver vazia (pasta inexistente, sem dores), diga "frente vazia" no arquivo. Não preencha.
+If a front is empty (folder missing, no pains), write "empty front" in the file. Do not fill it.
 
-### 2. Escolher até 3 ideias pra testar (você)
+### 2. Pick up to 3 ideas to test (you)
 
-Corte o fraco e o repetido. Fique com as que dá pra testar no tempo que sobrou.
+Cut the weak and the repeated. Keep the ones that can be tested in the time left.
 
-### 3. Testar no descartável (você)
+### 3. Test in the throwaway (you)
 
 ```bash
-T=$(mktemp -d) && echo "$T"   # tudo roda aqui dentro, nunca em vault/
+T=$(mktemp -d) && echo "$T"   # everything runs in here, never in vault/
 ```
 
-Rode, meça, escreva o protótipo ali. Registre **o que rodou, a saída e o veredito** (funcionou, não
-funcionou, não deu pra medir). Se esbarrar numa decisão que é dela, escreva `ESCALAR: <motivo>` e siga
-com o resto.
+Run, measure, write the prototype there. Record **what ran, the output and the verdict** (worked, did not
+work, could not measure). If you hit a decision that is the user's, write `ESCALAR: <reason>` and continue
+with the rest.
 
-### 4. Escrever a proposta (você)
+### 4. Write the proposal (you)
 
-`vault/memory/corner/AAAA-MM-DD-<slug>.md`. Abre com um **resumo de até 150 palavras** (os achados mais
-fortes). Depois, cada achado traz: o que é, de onde veio (caminho + trecho), o teste, o veredito e o
-estado `aberta`. Crie a pasta só se faltar, e só ela.
+`vault/memory/corner/YYYY-MM-DD-<slug>.md`. Opens with a **summary of up to 150 words** (the strongest findings).
+Then each finding carries: what it is, where it came from (path + excerpt), the test, the verdict and the
+state `open`. Create the folder only if it is missing, and only that one.
 
-### 5. Avisar ao voltar (você)
+### 5. Report on return (you)
 
-Resumo curto no chat (até 8 linhas) e o caminho do arquivo. Pergunte qual proposta ela quer olhar
-primeiro. Nada é commitado a menos que ela mande, e nunca há push.
+A short summary in the chat (up to 8 lines) and the file path. Ask which proposal the user wants to look at
+first. Nothing is committed unless they say so, and there is never a push.
 
-## Como saber se presta
+## How to tell it is worth it
 
-O resumo cabe em 150 palavras e cada achado tem caminho ao lado. Se, depois de algumas rodadas, tudo
-fica `aberta`, o canto está produzindo volume e não valor: encolha a rodada.
+The summary fits in 150 words and every finding has a path next to it. If, after a few rounds, everything
+stays `open`, the corner is producing volume and not value: shrink the round.
 
-## Nunca
+## Never
 
-- Começar o canto antes de terminar o pedido dela.
-- Afirmar algo sobre ela, ou gravar o que ela "provavelmente" quer.
-- Fazer merge, push, enviar mensagem, criar remote ou instalar fora do descartável.
-- Criar skill ou tarefa: só propor.
+- Start the corner before finishing the user's request.
+- Assert something about the user, or save what they "probably" want.
+- Merge, push, send a message, create a remote or install outside the throwaway.
+- Create a skill or task: only propose.

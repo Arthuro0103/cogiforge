@@ -1,15 +1,15 @@
 ---
-tipo: memoria
-escreve: a pessoa
+type: memory
+writes: the user
 ---
 
-# Padrões: o que a pessoa disse que se repete
+# Patterns: what the user said keeps repeating
 
-> **Quem escreve aqui é você.** Só entra o que você disse, com a data e a sua frase literal entre
-> aspas. O Claude **propõe** (em `memory/observacoes.md`) e nunca afirma nada sobre você por
-> conta própria. Proposta só vira linha aqui depois do seu "sim".
+> **You are the one who writes here.** Only what you said goes in, with the date and your verbatim
+> phrase in quotes. Claude **proposes** (in `memory/observations.md`) and never states anything about
+> you on its own. A proposal only becomes a line here after your "yes".
 
-Hábitos, travas e gatilhos que você mesmo reconheceu.
+Habits, blockers and triggers you recognized yourself.
 
-Formato de cada linha: `AAAA-MM-DD | "frase literal" | onde você disse`
+Format of each line: `YYYY-MM-DD | "verbatim phrase" | where you said it`
 
