@@ -72,7 +72,8 @@ This is the foundation under the workbench. It is deliberately small and runs on
 - **Orphan gate.** The pre-commit hook blocks a note that links to nothing and nothing links to. `inbox/` is exempt: if quick capture gets blocked, people uninstall the thing. Only notes in *that* commit are blocked; others just get a warning.
 - **Link check** (`core/gate.py`). Dead links, broken links, a path that only matches by file name, a bad `area:`, unreadable files (reported as "could not read", never as OK).
 - **Leak scanner** (`core/leak.py`). Blocks machine paths, e-mails, phone numbers, CPF and a **private list of terms that lives outside the repo**. Without that list it says `NOT_VERIFIED`, never "clean".
-- **CI** (`.github/workflows/prova.yml`). Installs from a clean clone, runs the tests and the mutation check, and tries the orphan gate end to end.
+- **No Portuguese by accident** (`tests/test_no_portuguese.py`). The repo moved to English in October 2026, and this test fails on accented letters, common Portuguese words and the old Portuguese folder and script names. The few deliberate exceptions are in `tests/pt_allowlist.txt`, one `path: reason` per line, and a second test fails when an exception no longer exists or no longer needs to be one.
+- **CI** (`.github/workflows/prova.yml`). Installs from a clean clone, runs the tests and the mutation check, and tries the orphan gate end to end. The step that proves the hook test goes red now insists on that exact failure: a renamed test once made it print "ok" without testing anything.
 
 The hook can be bypassed on purpose with `git commit --no-verify`. Every rule here comes from a real,
 dated failure, and each one has a test that fails without it: see [WHY.md](WHY.md).
@@ -82,8 +83,8 @@ dated failure, and each one has a test that fails without it: see [WHY.md](WHY.m
 Measured on 2026-10-06, after the move to English, on one machine (macOS), in a fresh clone:
 
 - Tests: after `sh install.sh` and `python3 -m pip install pytest`, `python3 -m pytest -q` gave **206 passed, 2 skipped**. Run before `sh install.sh`, one test fails on purpose: it checks that the hook is active.
-- Mutation: `python3 tests/mutate.py` breaks every check one at a time and gave **113 of 113 mutants killed, 0 alive**.
-- CI: the last run **before** the move to English ([run 37326653651](https://github.com/Arthuro0103/cogiforge/actions/runs/37326653651), 2026-10-05) had **8 of 8 jobs green**, on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. The run for the English version is in the [Actions tab](https://github.com/Arthuro0103/cogiforge/actions). Each job starts from a clean checkout, runs `install.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end.
+- Mutation: `python3 tests/mutate.py` breaks every check one at a time and gave **113 of 113 mutants killed, 0 alive**. `python3 tests/mutate.py --dry` only checks, in seconds, that every mutant still applies (113 do, 0 inapplicable), so a rename that breaks one is caught before the long run.
+- CI: the run for the English version ([run 37525945635](https://github.com/Arthuro0103/cogiforge/actions/runs/37525945635), 2026-10-06, commit `863cd21`) had **8 of 8 jobs green**, on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. Each job starts from a clean checkout, runs `install.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end.
 - Two tests compare this link checker with the author's private vault, which is not in this repo. They are **skipped** (reported as skipped, not as passed).
 - **Nobody other than the author has used it yet.** If you are the first, tell us where you got stuck: that is the most useful thing you can send.
 
