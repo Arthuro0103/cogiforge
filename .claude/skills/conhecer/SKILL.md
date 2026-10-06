@@ -1,6 +1,6 @@
 ---
 name: conhecer
-description: Onboarding da bancada. Faz perguntas que seguem o que a pessoa respondeu, uma por vez, e a saída sai da fala dela - preenche vault/_perguntas_sobre_mim.md e propõe linhas pra vault/memoria/perfil.md com data e citação literal. Não deduz nada que ela não disse; resposta curta é resposta válida e "prefiro não dizer" também. GATILHOS - "/conhecer", "primeira vez aqui", "me conhece", "atualiza meu perfil", "como eu uso essa bancada". Pode ser sugerida (nunca imposta) quando vault/memoria/perfil.md estiver vazio ou não existir. NÃO dispare para abrir sessão de projeto (isso é abrir-sessao), para conhecer outra pessoa que não quem está usando, nem para pesquisar a pessoa fora dos arquivos dela.
+description: Onboarding da bancada. Faz perguntas que seguem o que a pessoa respondeu, uma por vez, e a saída sai da fala dela - preenche vault/_questions_about_me.md e propõe linhas pra vault/memory/profile.md com data e citação literal. Não deduz nada que ela não disse; resposta curta é resposta válida e "prefiro não dizer" também. GATILHOS - "/conhecer", "primeira vez aqui", "me conhece", "atualiza meu perfil", "como eu uso essa bancada". Pode ser sugerida (nunca imposta) quando vault/memory/profile.md estiver vazio ou não existir. NÃO dispare para abrir sessão de projeto (isso é abrir-sessao), para conhecer outra pessoa que não quem está usando, nem para pesquisar a pessoa fora dos arquivos dela.
 ---
 
 # conhecer: a bancada aprende quem usa
@@ -30,13 +30,13 @@ boas respostas vêm de perguntas que seguem o que a pessoa acabou de dizer.
 ### 1. Antes de perguntar (você, o Claude)
 
 ```bash
-cat vault/_perguntas_sobre_mim.md 2>/dev/null
-cat vault/memoria/perfil.md 2>/dev/null
-ls vault/projetos/ 2>/dev/null
+cat vault/_questions_about_me.md 2>/dev/null
+cat vault/memory/profile.md 2>/dev/null
+ls vault/projects/ 2>/dev/null
 ```
 
 Se o perfil já tem linhas, é revisão: abra dizendo o que ele diz e pergunte o que mudou. Se
-`_perguntas_sobre_mim.md` não existe, diga que ele pertence à estrutura da bancada e responda no chat.
+`_questions_about_me.md` não existe, diga que ele pertence à estrutura da bancada e responda no chat.
 
 ### 2. Conversar pelos cinco blocos (a ordem é da conversa)
 
@@ -50,7 +50,7 @@ Se o perfil já tem linhas, é revisão: abra dizendo o que ele diz e pergunte o
 
 Quem chega sem nada pra organizar fica mais tempo em **pra que usa** e **onde trava**.
 
-### 3. Preencher `_perguntas_sobre_mim.md` (você, com o sim dela)
+### 3. Preencher `_questions_about_me.md` (você, com o sim dela)
 
 Mostre as respostas organizadas por pergunta do arquivo e pergunte *"posso gravar assim?"*. Só grave
 depois do sim, mantendo as palavras dela. Pergunta sem resposta fica em branco.
@@ -63,7 +63,7 @@ Monte as linhas e mostre **antes de gravar**, no formato:
 AAAA-MM-DD | "frase literal dela" | <bloco> | <o que isto parece dizer, marcado como leitura minha>
 ```
 
-Se `vault/memoria/perfil.md` existe, acrescente **só as linhas que ela aprovou**, no fim. Se não
+Se `vault/memory/profile.md` existe, acrescente **só as linhas que ela aprovou**, no fim. Se não
 existe, deixe as linhas no chat e avise que o arquivo é da estrutura.
 
 ### 5. O fecho (você)
@@ -77,4 +77,4 @@ Skill própria só se ela descreveu algo que repete; aí aponte pro `adaptar-ski
 - Escrever no perfil algo que ela não disse, ou "limpar" a fala dela.
 - Gravar sem mostrar antes.
 - Avaliar a pessoa: o perfil descreve, não dá nota.
-- Escrever em `padroes.md`, `decisoes.md` ou `vault/notas/`.
+- Escrever em `padroes.md`, `decisoes.md` ou `vault/notes/`.

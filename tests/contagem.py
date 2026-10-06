@@ -14,16 +14,16 @@ DEMO = RAIZ / "demo"
 
 # check -> o ÚNICO arquivo que o reprova (o nome do arquivo diz qual falha ele carrega)
 ESPERADO = {
-    "orfa": "notas/aprendizado/orfa.md",
-    "link-morto": "notas/aprendizado/link-morto.md",
-    "link-partido": "notas/aprendizado/link-partido.md",
-    "alvo-morto": "notas/aprendizado/alvo-morto.md",
-    "area": "notas/tecnologia/area-errada.md",
-    "frontmatter": "notas/tecnologia/frontmatter-quebrado.md",
-    "vazamento": "notas/vida/vazou.md",
+    "orfa": "notes/learning/orphan.md",
+    "link-morto": "notes/learning/dead-link.md",
+    "link-partido": "notes/learning/broken-link.md",
+    "alvo-morto": "notes/learning/dead-target.md",
+    "area": "notes/technology/wrong-area.md",
+    "frontmatter": "notes/technology/broken-frontmatter.md",
+    "vazamento": "notes/life/leaked.md",
 }
 TOTAL_NOTAS = 15
-ISENTAS_ANEL = ["inbox/captura-solta.md"]
+ISENTAS_ANEL = ["inbox/loose-capture.md"]
 
 
 def _rodar(script, *args):

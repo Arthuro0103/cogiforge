@@ -1,6 +1,6 @@
 ---
 name: adaptar-skill
-description: Guia a pessoa a fazer uma skill SUA a partir de uma ficha do catálogo (vault/fichas-de-skills/) - ler a ficha, separar o método do que é só do autor original, decidir se resolve uma dor dela, escrever com as respostas dela, testar num caso real e registrar o veredito em vault/memoria/skills-avaliadas.md. Uma pergunta por mensagem. O Claude nunca escreve a skill sozinho, e "não serve pra mim" é resposta válida que fica registrada. GATILHOS - "/adaptar-skill", "quero uma skill parecida com essa", "essa skill serve pra mim?", "como eu faço uma skill", "o que tem no catálogo de skills". NÃO dispare para USAR uma skill que já existe, para criar skill sem ter olhado uma ficha, nem para o task-observer propor skill (ele só aponta pra cá).
+description: Guia a pessoa a fazer uma skill SUA a partir de uma ficha do catálogo (vault/skill-worksheets/) - ler a ficha, separar o método do que é só do autor original, decidir se resolve uma dor dela, escrever com as respostas dela, testar num caso real e registrar o veredito em vault/memory/skills-avaliadas.md. Uma pergunta por mensagem. O Claude nunca escreve a skill sozinho, e "não serve pra mim" é resposta válida que fica registrada. GATILHOS - "/adaptar-skill", "quero uma skill parecida com essa", "essa skill serve pra mim?", "como eu faço uma skill", "o que tem no catálogo de skills". NÃO dispare para USAR uma skill que já existe, para criar skill sem ter olhado uma ficha, nem para o task-observer propor skill (ele só aponta pra cá).
 ---
 
 # adaptar-skill: aprender a fazer a sua olhando a de outra pessoa
@@ -19,7 +19,7 @@ material e a **pessoa** é a autora.
 2. **O Claude não escreve a skill sozinho.** A dor, os gatilhos e o "quando NÃO" saem das respostas
    dela. Eu organizo e formato. Se eu deduzi algo, pergunto.
 3. **Ensine enquanto faz.** Em cada passo, uma frase sobre o que aquela parte faz numa skill, com a
-   referência em `vault/fichas-de-skills/anatomia-de-uma-skill.md`.
+   referência em `vault/skill-worksheets/anatomy-of-a-skill.md`.
 4. **"Não serve" é resposta boa.** Registro com o porquê.
 5. **Sem dor, sem skill.** Se ela não diz quando fez isso à mão (ou por que vai precisar), a resposta é
    "não agora": registro e a conversa acaba bem.
@@ -31,9 +31,9 @@ material e a **pessoa** é a autora.
 ### 1. Antes de perguntar (você, o Claude)
 
 ```bash
-cat vault/fichas-de-skills/_catalogo.md
-cat vault/memoria/skills-avaliadas.md 2>/dev/null     # o que ela já olhou
-head -40 vault/memoria/ideias/_dores.md 2>/dev/null   # dores já colhidas
+cat vault/skill-worksheets/_catalog.md
+cat vault/memory/skills-avaliadas.md 2>/dev/null     # o que ela já olhou
+head -40 vault/memory/ideas/_pains.md 2>/dev/null   # dores já colhidas
 ```
 
 Se `skills-avaliadas.md` tem linhas, abra dizendo o que ela já avaliou.
@@ -41,7 +41,7 @@ Se `skills-avaliadas.md` tem linhas, abra dizendo o que ela já avaliou.
 ### 2. Escolher qual ficha ler
 
 Mostre o catálogo em uma linha por skill. Pergunte se alguma chamou atenção. Se ela pedir sugestão,
-proponha **no máximo duas**, cada uma com a **frase dela** (de `_dores.md`, do perfil ou da conversa)
+proponha **no máximo duas**, cada uma com a **frase dela** (de `_pains.md`, do perfil ou da conversa)
 que sustenta, e diga o que você não leu o bastante pra afirmar. Opção "nenhuma serve hoje": registre
 no passo 7 e pare.
 
@@ -80,7 +80,7 @@ faltou? o que sobrou?"* e ajuste **uma vez**. Sem caso hoje, registre "não test
 
 ### 7. Registrar
 
-Acrescente uma linha em `vault/memoria/skills-avaliadas.md` (se não existe, crie só com o cabeçalho):
+Acrescente uma linha em `vault/memory/skills-avaliadas.md` (se não existe, crie só com o cabeçalho):
 
 ```markdown
 | data | ficha | veredito | dor citada | o que mudou | a sua skill |

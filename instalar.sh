@@ -28,4 +28,4 @@ python3 nucleo/anel.py --selftest >/dev/null 2>&1 \
     || { python3 nucleo/anel.py --selftest >&2; falha "o selftest do anel falhou: o gate não pega órfã."; }
 
 echo "OK — hook ativo (core.hooksPath=.githooks) e selftest do anel passou."
-echo "Teste você mesmo: crie uma nota sem link em vault/notas/ e rode git commit."
+echo "Teste você mesmo: crie uma nota sem link em vault/notes/ e rode git commit."

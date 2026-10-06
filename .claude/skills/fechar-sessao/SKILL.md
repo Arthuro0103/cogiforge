@@ -1,6 +1,6 @@
 ---
 name: fechar-sessao
-description: Fecha o dia de trabalho na bancada. Escreve o diário do dia (vault/memoria/diario/), um briefing por sessão (vault/memoria/briefings/) com link de caminho completo pra raiz do projeto no corpo, colhe dores da fala da pessoa em vault/memoria/ideias/_dores.md, abre tarefa em vault/tarefas/ pro que ficou pendente e roda os verificadores se existirem. Skill nova ou projeto novo saem só como proposta. Commita só se a pessoa mandar e nunca dá push. GATILHOS - "fecha a sessão", "fechar o dia", "/fechar-sessao", "o que fizemos hoje", "resume o dia", "vou parar por hoje". NÃO dispare para resumir conversa curta sem trabalho, para abrir sessão (isso é abrir-sessao) nem para observar processo (isso é task-observer).
+description: Fecha o dia de trabalho na bancada. Escreve o diário do dia (vault/memory/diario/), um briefing por sessão (vault/memory/briefings/) com link de caminho completo pra raiz do projeto no corpo, colhe dores da fala da pessoa em vault/memory/ideas/_pains.md, abre tarefa em vault/tasks/ pro que ficou pendente e roda os verificadores se existirem. Skill nova ou projeto novo saem só como proposta. Commita só se a pessoa mandar e nunca dá push. GATILHOS - "fecha a sessão", "fechar o dia", "/fechar-sessao", "o que fizemos hoje", "resume o dia", "vou parar por hoje". NÃO dispare para resumir conversa curta sem trabalho, para abrir sessão (isso é abrir-sessao) nem para observar processo (isso é task-observer).
 ---
 
 # fechar-sessao: o que sobrou do dia, escrito antes de esquecer
@@ -15,7 +15,7 @@ aconteceu. Fechar com método é transformar a sessão em quatro coisas: diário
 
 1. **A fonte é o que aconteceu, não o que lembro.** Todo número ou fato do briefing vem de comando
    rodado nesta sessão (`git log`, `git diff --stat`, `ls`). Sem comando, escrevo "não medi".
-2. **Dor só com fala da pessoa.** Em `_dores.md` entra a frase que ela **escreveu**, entre aspas.
+2. **Dor só com fala da pessoa.** Em `_pains.md` entra a frase que ela **escreveu**, entre aspas.
    Frase minha, ou rótulo de opção de menu que ela clicou, não é fala dela: não entra.
 3. **Link só se o arquivo existe.** Confira com `test -f` antes de escrever o wikilink. Caminho completo
    a partir de `vault/`, no meio do argumento. **Nunca** um bloco `## Conexões` no rodapé.
@@ -31,15 +31,15 @@ aconteceu. Fechar com método é transformar a sessão em quatro coisas: diário
 ```bash
 git log --since=midnight --oneline --stat 2>/dev/null | head -40 || true
 git status --short
-ls -t vault/tarefas/ | head -10
+ls -t vault/tasks/ | head -10
 ```
 
 Se `git log` não mostrar nada (repo sem commits), diga "não medi: sem commits" e siga pela conversa. Cruze com o que foi dito nela. Descubra o(s) projeto(s) tocado(s): cada um precisa ter
-`vault/projetos/<nome>/instrucoes.md`. Se não tiver, diga e pergunte qual é.
+`vault/projects/<nome>/instructions.md`. Se não tiver, diga e pergunte qual é.
 
 ### 2. Escrever o briefing, um por sessão (você)
 
-Arquivo `vault/memoria/briefings/AAAA-MM-DD-<slug>.md`, slug curto do assunto:
+Arquivo `vault/memory/briefings/AAAA-MM-DD-<slug>.md`, slug curto do assunto:
 
 ```yaml
 ---
@@ -53,18 +53,18 @@ Título: uma afirmação de até 10 palavras sobre o que a sessão produziu. Se�
 as vazias**: *O que aconteceu* (2-3 parágrafos) · *O que foi medido* (comando e número) · *O que a pessoa
 corrigiu* (a fala citada) · *O que ficou de pé* (pendência com próximo passo) · *O que pode nascer*
 (proposta, com "por que agora"). O link pra raiz entra no corpo, por exemplo:
-`... avançou em [[projetos/<nome>/instrucoes|<nome>]] até o ponto X`.
+`... avançou em [[projects/<nome>/instructions|<nome>]] até o ponto X`.
 
 ### 3. Escrever ou acrescentar o diário (você)
 
-`vault/memoria/diario/AAAA-MM-DD.md`. Se já existe, **acrescente** uma seção; nunca reescreva o que
+`vault/memory/diario/AAAA-MM-DD.md`. Se já existe, **acrescente** uma seção; nunca reescreva o que
 está lá. Três a cinco linhas por projeto: o que andou, o que travou, link pro briefing de caminho
-completo (`memoria/briefings/...`).
+completo (`memory/briefings/...`).
 
 ### 4. Colher dores (você)
 
 Releia o que a pessoa **digitou** na sessão: reclamação, gambiarra, coisa feita à mão, "de novo isso".
-Acrescente ao fim de `vault/memoria/ideias/_dores.md`, uma por linha, no formato:
+Acrescente ao fim de `vault/memory/ideas/_pains.md`, uma por linha, no formato:
 
 ```
 AAAA-MM-DD | "citação literal dela" | <briefing ou projeto de onde veio>
@@ -76,7 +76,7 @@ briefing, na seção *O que ficou de pé*. Se a citação não for literal, não
 ### 5. Abrir tarefa pro que ficou pendente (você)
 
 Uma pendência com próximo passo concreto vira uma tarefa no formato do plugin **TaskNotes**, em
-`vault/tarefas/<slug>.md` (o slug sai do título; se o arquivo já existe, acrescente `-2`). Sem ID no nome:
+`vault/tasks/<slug>.md` (o slug sai do título; se o arquivo já existe, acrescente `-2`). Sem ID no nome:
 o plugin reconhece tarefa pela tag `task`, não pelo nome do arquivo. `status` é `open`, `in-progress` ou
 `done`; `priority` é `none`, `low`, `normal` ou `high`. Pergunte a prioridade se não for óbvia.
 
@@ -88,7 +88,7 @@ title: <verbo no infinitivo + o que>
 status: open
 priority: normal
 projects:
-  - "[[projetos/<nome>/instrucoes|<nome>]]"
+  - "[[projects/<nome>/instructions|<nome>]]"
 ---
 ```
 
@@ -114,7 +114,7 @@ commite os arquivos desta skill, e **sem `git push`**.
 ## Nunca
 
 - Dar `git push`, nem commitar sem a pessoa mandar.
-- Colocar fala minha em `_dores.md`.
-- Escrever em `perfil.md`, `padroes.md`, `decisoes.md` ou em `vault/notas/`.
+- Colocar fala minha em `_pains.md`.
+- Escrever em `perfil.md`, `padroes.md`, `decisoes.md` ou em `vault/notes/`.
 - Criar skill ou projeto: só propor.
 - Apagar ou reescrever diário que já existe.

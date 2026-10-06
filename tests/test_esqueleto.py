@@ -14,13 +14,13 @@ def rodar(script, *args):
 
 
 def test_estrutura_minima():
-    assert (VAULT / "_indice.md").is_file() and (VAULT / "inbox").is_dir()
+    assert (VAULT / "home.md").is_file() and (VAULT / "inbox").is_dir()
     areas = [l for l in (VAULT / "areas.txt").read_text(encoding="utf-8").splitlines()
              if l.strip() and not l.startswith("#")]
     assert len(areas) == 3
     for a in areas:
         pasta = a.split(":")[0].strip()
-        assert list((VAULT / "notas" / pasta).glob("*.md")), pasta
+        assert list((VAULT / "notes" / pasta).glob("*.md")), pasta
 
 
 def test_portao_e_anel_passam_no_esqueleto():

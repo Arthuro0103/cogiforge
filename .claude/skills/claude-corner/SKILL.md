@@ -1,6 +1,6 @@
 ---
 name: claude-corner
-description: O canto do Claude. Quando a pessoa avisa que vai sair, o Claude usa o tempo fora (o que ela disser, no máximo 1h30) pra reler as notas, achar conexões reais, ler as dores e os projetos, e testar ideias num lugar descartável fora de vault/. Só propõe, em vault/memoria/corner/AAAA-MM-DD-<slug>.md - não afirma, não faz merge, não dá push, não instala nada fora do descartável, não envia mensagem a ninguém. REGRA DE ORDEM - se a pessoa pediu algo antes de sair, o pedido é feito INTEIRO primeiro. GATILHOS - "vou sair", "tô saindo", "volto às X", "fico fora até", "/claude-corner". NÃO dispare para saída de poucos minutos, para tarefa específica que a pessoa quer rodando, nem para decidir entre dois caminhos.
+description: O canto do Claude. Quando a pessoa avisa que vai sair, o Claude usa o tempo fora (o que ela disser, no máximo 1h30) pra reler as notas, achar conexões reais, ler as dores e os projetos, e testar ideias num lugar descartável fora de vault/. Só propõe, em vault/memory/corner/AAAA-MM-DD-<slug>.md - não afirma, não faz merge, não dá push, não instala nada fora do descartável, não envia mensagem a ninguém. REGRA DE ORDEM - se a pessoa pediu algo antes de sair, o pedido é feito INTEIRO primeiro. GATILHOS - "vou sair", "tô saindo", "volto às X", "fico fora até", "/claude-corner". NÃO dispare para saída de poucos minutos, para tarefa específica que a pessoa quer rodando, nem para decidir entre dois caminhos.
 ---
 
 # claude-corner: o tempo fora vira proposta
@@ -17,8 +17,8 @@ dores em fila, testar uma ideia barata. O risco é o assistente agir sem ela. Po
 1. **O pedido dela vem primeiro e inteiro.** Se ela disse "faz X e vou sair", termino X, **confiro que
    está feito** e só então começo o canto. Se X não pode terminar sem ela, digo isso na hora e o canto
    não começa fingindo que terminou.
-2. **Só propõe.** O único lugar de escrita é `vault/memoria/corner/`. Não toco em `vault/notas/`,
-   `perfil.md`, `padroes.md`, `decisoes.md` nem em `vault/projetos/`.
+2. **Só propõe.** O único lugar de escrita é `vault/memory/corner/`. Não toco em `vault/notes/`,
+   `perfil.md`, `padroes.md`, `decisoes.md` nem em `vault/projects/`.
 3. **Procedência em cada achado.** Caminho do arquivo e um trecho curto. A fala dela vai entre aspas;
    ideia que nasceu minha leva o rótulo **palpite do Claude**.
 4. **Testar só no descartável.** Diretório temporário (`mktemp -d`) ou worktree fora de `vault/`.
@@ -35,7 +35,7 @@ dores em fila, testar uma ideia barata. O risco é o assistente agir sem ela. Po
 Aplique a lei 1. Depois anote o prazo (a hora que ela disse, ou 1h30 a partir de agora).
 
 ```bash
-ls vault/memoria/corner/ 2>/dev/null | tail -5
+ls vault/memory/corner/ 2>/dev/null | tail -5
 ```
 
 Abra as propostas anteriores, pra não repetir o que ela já viu, adotou ou recusou.
@@ -45,9 +45,9 @@ Abra as propostas anteriores, pra não repetir o que ela já viu, adotou ou recu
 Cada frente rende **até 5 achados**; leia, não escreva ainda:
 
 - **Conexões:** notas de áreas diferentes que falam da mesma coisa e não se citam
-  (`ls vault/notas/`, `grep -rli "<termo>" vault/notas/`).
-- **Dores:** `vault/memoria/ideias/_dores.md`. Quais se repetem? Alguma tem remédio barato?
-- **Projetos:** `vault/projetos/_index.md` e as raízes. O que está parado e dá pra adiantar como proposta?
+  (`ls vault/notes/`, `grep -rli "<termo>" vault/notes/`).
+- **Dores:** `vault/memory/ideas/_pains.md`. Quais se repetem? Alguma tem remédio barato?
+- **Projetos:** `vault/projects/_index.md` e as raízes. O que está parado e dá pra adiantar como proposta?
 - **Livre:** uma coisa que a pessoa não pediu e que você acha que vale olhar, marcada como palpite.
 
 Se uma frente estiver vazia (pasta inexistente, sem dores), diga "frente vazia" no arquivo. Não preencha.
@@ -68,7 +68,7 @@ com o resto.
 
 ### 4. Escrever a proposta (você)
 
-`vault/memoria/corner/AAAA-MM-DD-<slug>.md`. Abre com um **resumo de até 150 palavras** (os achados mais
+`vault/memory/corner/AAAA-MM-DD-<slug>.md`. Abre com um **resumo de até 150 palavras** (os achados mais
 fortes). Depois, cada achado traz: o que é, de onde veio (caminho + trecho), o teste, o veredito e o
 estado `aberta`. Crie a pasta só se faltar, e só ela.
 

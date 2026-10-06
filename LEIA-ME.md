@@ -17,24 +17,24 @@ notas (o Obsidian abre) mais um Claude Code que sabe operar essa pasta.
 
 | Peça | O que faz |
 |---|---|
-| `vault/` | A bancada. `inbox/` pra captura rápida, `notas/` pra nota processada, `projetos/` com um arquivo raiz por projeto, `memoria/` pro que **você** disse, `tarefas/` pras tarefas. Abra essa pasta no Obsidian. |
+| `vault/` | A bancada. `inbox/` pra captura rápida, `notes/` pra nota processada, `projects/` com um arquivo raiz por projeto, `memory/` pro que **você** disse, `tasks/` pras tarefas. Abra essa pasta no Obsidian. |
 | `/conhecer` | O onboarding. Pergunta uma coisa por vez, cada pergunta seguindo a sua resposta, e grava o que **você disse**, com data e citação. Não deduz nada. |
 | `/abrir-sessao <projeto>` | Começa o trabalho num projeto: lê a raiz dele, o diário recente e as tarefas abertas, e diz onde você parou. |
 | `/fechar-sessao` | Fecha o dia: diário, um briefing por sessão, as **dores que você falou** num arquivo só, tarefas abertas pro que ficou pendente. Só commita se você mandar e nunca dá push. |
 | `/task-observer` | Olha como você trabalha e **só propõe** melhorias: uma skill que faltou, um passo repetido três vezes, uma correção que você fez duas. Quem decide é você. |
 | `/claude-corner` | Quando você avisa que vai sair, o Claude usa o tempo pra reler suas notas, achar conexões reais e testar ideias num lugar descartável. **Só propõe**, num arquivo. |
-| Tarefas (**TaskNotes**) | As tarefas são notas em `vault/tarefas/`, gerenciadas pelo plugin público [TaskNotes](https://github.com/callumalpass/tasknotes) do Obsidian (MIT). Ele **não vem no repo**: você instala pela loja de plugins da comunidade. `abrir-sessao` e `fechar-sessao` leem e escrevem o mesmo formato. |
+| Tarefas (**TaskNotes**) | As tarefas são notas em `vault/tasks/`, gerenciadas pelo plugin público [TaskNotes](https://github.com/callumalpass/tasknotes) do Obsidian (MIT). Ele **não vem no repo**: você instala pela loja de plugins da comunidade. `abrir-sessao` e `fechar-sessao` leem e escrevem o mesmo formato. |
 | Mapa de conexões (**graphify**, opcional) | O [graphify](https://github.com/Graphify-Labs/graphify) (Apache-2.0), público, transforma as suas notas num grafo que você consulta. Você instala; a pasta que ele gera fica no `.gitignore`. Veja o tutorial. |
-| `/adaptar-skill` | Te guia a fazer uma skill **sua** a partir de uma ficha em `vault/fichas-de-skills/`. Uma pergunta por vez; o Claude nunca escreve a skill por você, e "não serve pra mim" é resposta válida que fica registrada. |
+| `/adaptar-skill` | Te guia a fazer uma skill **sua** a partir de uma ficha em `vault/skill-worksheets/`. Uma pergunta por vez; o Claude nunca escreve a skill por você, e "não serve pra mim" é resposta válida que fica registrada. |
 
-As fichas de `artigo`, `conselho`, `ideia-de-produto` e `consultar-notas` já estão em
-`vault/fichas-de-skills/`: elas ensinam o método, e você decide se quer uma versão sua.
+As fichas de `artigo`, `conselho`, `product-idea` e `consult-notes` já estão em
+`vault/skill-worksheets/`: elas ensinam o método, e você decide se quer uma versão sua.
 
 ## Como ela melhora com você
 
 Três ciclos, e nos três a decisão é sua:
 
-1. **Dores.** No fim da sessão, o que você disse que doeu fica salvo, com data, em `vault/memoria/ideias/_dores.md`.
+1. **Dores.** No fim da sessão, o que você disse que doeu fica salvo, com data, em `vault/memory/ideas/_pains.md`.
 2. **Propostas.** `task-observer` e `claude-corner` escrevem sugestões em arquivos. Nada muda pelas suas costas.
 3. **Suas próprias skills.** As fichas mostram como uma skill é feita e o `adaptar-skill` te leva a fazer a sua. Você não recebe uma pronta.
 
@@ -60,7 +60,7 @@ claude              # rode o Claude Code na RAIZ do repo
 
 1. No Claude Code, digite `/conhecer` e responda. Pode responder curto ou dizer "prefiro não dizer".
 2. Abra a pasta `vault/` como cofre no Obsidian.
-3. Crie o seu primeiro projeto: copie `vault/projetos/exemplo-meu-primeiro-projeto/` pra `vault/projetos/<nome>/`, edite o cabeçalho e acrescente uma linha em `vault/projetos/_index.md`. Depois rode `python3 ferramentas/hub.py` pra a raiz do projeto listar os arquivos dele.
+3. Crie o seu primeiro projeto: copie `vault/projects/example-my-first-project/` pra `vault/projects/<nome>/`, edite o cabeçalho e acrescente uma linha em `vault/projects/_index.md`. Depois rode `python3 ferramentas/hub.py` pra a raiz do projeto listar os arquivos dele.
 4. Escreva uma nota ligada ao projeto (o modelo está em `vault/CLAUDE.md`, seção *Primeira nota*) e tente commitar.
 5. `/abrir-sessao <nome>` no começo, `/fechar-sessao` no fim.
 
@@ -88,7 +88,7 @@ Se você recebeu isto pra testar, faça nesta ordem e anote **onde travou**, o q
 esperava que acontecesse:
 
 1. Clonar e rodar `sh instalar.sh`. Deu `OK`?
-2. Criar uma nota em `vault/notas/aprendizado/` sem nenhum link e tentar commitar. Bloqueou? A mensagem te ajudou a consertar?
+2. Criar uma nota em `vault/notes/learning/` sem nenhum link e tentar commitar. Bloqueou? A mensagem te ajudou a consertar?
 3. `/conhecer`. As perguntas fizeram sentido? Alguma te incomodou?
 4. Criar um projeto e uma nota ligada a ele. Você soube o que fazer só com o `vault/CLAUDE.md`?
 5. `/fechar-sessao` no fim. O que ele colheu estava certo?
@@ -106,7 +106,7 @@ Mande o que achou do jeito que for mais fácil: uma mensagem pra quem te passou,
 
 ## Próximos passos
 
-`artigo`, `conselho`, `ideia-de-produto` e `consultar-notas` como skills de verdade (as fichas já existem); uma skill que transforma uma falha sua em regra mais teste.
+`artigo`, `conselho`, `product-idea` e `consult-notes` como skills de verdade (as fichas já existem); uma skill que transforma uma falha sua em regra mais teste.
 
 ## Licença
 

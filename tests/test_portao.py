@@ -58,15 +58,15 @@ def test_parser_devolve_tipos():
 # ---- area --------------------------------------------------------------------
 
 def test_area_ok_passa(tmp_path):
-    assert checks_de(tmp_path, {"notas/vida/a.md": nota("vida")}) == []
+    assert checks_de(tmp_path, {"notes/life/a.md": nota("life")}) == []
 
 
 @pytest.mark.parametrize("arquivos, motivo", [
-    ({"notas/vida/a.md": nota("tecnologia")}, "mora em notas/tecnologia"),   # pasta ≠ area
-    ({"notas/vida/a.md": "---\ntitulo: x\n---\n"}, "sem campo area"),
-    ({"notas/vida/a.md": nota("inventada")}, "não está na lista"),
-    ({"notas/a.md": nota("vida")}, "solta na raiz"),
-    ({"notas/outra/a.md": nota("vida")}, "nenhuma área configurada"),
+    ({"notes/life/a.md": nota("technology")}, "mora em notes/technology"),   # pasta ≠ area
+    ({"notes/life/a.md": "---\ntitulo: x\n---\n"}, "sem campo area"),
+    ({"notes/life/a.md": nota("inventada")}, "não está na lista"),
+    ({"notes/a.md": nota("life")}, "solta na raiz"),
+    ({"notes/outra/a.md": nota("life")}, "nenhuma área configurada"),
 ])
 def test_area_errada_reprova(tmp_path, arquivos, motivo):
     v = vault(tmp_path, arquivos)
@@ -75,35 +75,35 @@ def test_area_errada_reprova(tmp_path, arquivos, motivo):
 
 
 def test_area_fora_de_notas_nao_se_aplica(tmp_path):
-    assert checks_de(tmp_path, {"inbox/a.md": "x\n", "projetos/a.md": nota("qualquer")}) == []
+    assert checks_de(tmp_path, {"inbox/a.md": "x\n", "projects/a.md": nota("qualquer")}) == []
 
 
 def test_area_nao_conta_duas_vezes_quando_frontmatter_ja_reprovou(tmp_path):
-    r = checks_de(tmp_path, {"notas/vida/a.md": "---\nobra: A: B\n---\n"})
-    assert r == [("notas/vida/a.md", "frontmatter")]
+    r = checks_de(tmp_path, {"notes/life/a.md": "---\nobra: A: B\n---\n"})
+    assert r == [("notes/life/a.md", "frontmatter")]
 
 
 def test_areas_configuraveis_por_arquivo(tmp_path):
-    arq = {"areas.txt": "# minhas\nestudo\ntrabalho: emprego\n", "notas/estudo/a.md": nota("estudo"),
-           "notas/trabalho/b.md": nota("emprego"), "notas/vida/c.md": nota("vida")}
-    assert checks_de(tmp_path, arq) == [("notas/vida/c.md", "area")]
+    arq = {"areas.txt": "# minhas\nestudo\ntrabalho: emprego\n", "notes/estudo/a.md": nota("estudo"),
+           "notes/trabalho/b.md": nota("emprego"), "notes/life/c.md": nota("life")}
+    assert checks_de(tmp_path, arq) == [("notes/life/c.md", "area")]
 
 
 # ---- link-morto --------------------------------------------------------------
 
 @pytest.mark.parametrize("link", [
-    "[[b]]", "[[b|alias]]", "[[b#secao]]", "[[B]]", "![[b]]", "[[notas/vida/b]]", "[[notas/vida/b.md]]",
-    "[[../vida/b]]", "[[vida/b]]",
+    "[[b]]", "[[b|alias]]", "[[b#secao]]", "[[B]]", "![[b]]", "[[notes/life/b]]", "[[notes/life/b.md]]",
+    "[[../life/b]]", "[[life/b]]",
 ])
 def test_link_vivo_passa(tmp_path, link):
-    arq = {"notas/vida/a.md": nota("vida", f"{link}\n"), "notas/vida/b.md": nota("vida")}
+    arq = {"notes/life/a.md": nota("life", f"{link}\n"), "notes/life/b.md": nota("life")}
     assert checks_de(tmp_path, arq) == []
 
 
 @pytest.mark.parametrize("link", ["[[nao-existe]]", "[[b-quase]]", "[[outra/pasta/b]]", "[[b.png]]"])
 def test_link_morto_reprova(tmp_path, link):
-    arq = {"notas/vida/a.md": nota("vida", f"{link}\n"), "notas/vida/b.md": nota("vida")}
-    assert checks_de(tmp_path, arq) == [("notas/vida/a.md", "link-morto")]
+    arq = {"notes/life/a.md": nota("life", f"{link}\n"), "notes/life/b.md": nota("life")}
+    assert checks_de(tmp_path, arq) == [("notes/life/a.md", "link-morto")]
 
 
 def test_link_em_codigo_nao_e_link(tmp_path):
@@ -142,32 +142,32 @@ def test_link_inteiro_e_codigo_passam(tmp_path):
 # ---- alvo-morto --------------------------------------------------------------
 
 def test_alvo_existente_passa(tmp_path):
-    arq = {"a.md": "---\nalvo: x/b.md\n---\n", "x/b.md": "b\n", "c.md": "---\nalvo: x/b\n---\n"}
+    arq = {"a.md": "---\ntarget: x/b.md\n---\n", "x/b.md": "b\n", "c.md": "---\ntarget: x/b\n---\n"}
     assert checks_de(tmp_path, arq) == []
 
 
 def test_alvo_inexistente_reprova(tmp_path):
-    assert checks_de(tmp_path, {"a.md": "---\nalvo: x/some.md\n---\n"}) == [("a.md", "alvo-morto")]
+    assert checks_de(tmp_path, {"a.md": "---\ntarget: x/some.md\n---\n"}) == [("a.md", "alvo-morto")]
 
 
 def test_alvo_so_casa_por_basename_com_caminho_declarado_reprova(tmp_path):
-    arq = {"a.md": "---\nalvo: pasta-errada/b.md\n---\n", "x/b.md": "b\n"}
+    arq = {"a.md": "---\ntarget: pasta-errada/b.md\n---\n", "x/b.md": "b\n"}
     assert checks_de(tmp_path, arq) == [("a.md", "alvo-morto")]
 
 
 def test_alvo_sem_barra_resolve_por_nome(tmp_path):
-    assert checks_de(tmp_path, {"a.md": "---\nalvo: b\n---\n", "x/b.md": "b\n"}) == []
+    assert checks_de(tmp_path, {"a.md": "---\ntarget: b\n---\n", "x/b.md": "b\n"}) == []
 
 
 def test_alvo_lista_nenhum_diretorio_e_absoluto(tmp_path):
     d = tmp_path / "fora"
     d.mkdir()
-    arq = {"a.md": f"---\nalvo: [nenhum, x, '{d}']\n---\n", "x/b.md": "b\n"}
+    arq = {"a.md": f"---\ntarget: [none, x, '{d}']\n---\n", "x/b.md": "b\n"}
     assert checks_de(tmp_path / "v", arq) == []
 
 
 def test_alvo_na_lista_conta_so_o_morto(tmp_path):
-    arq = {"a.md": "---\nalvo: [x/b.md, x/morto.md]\n---\n", "x/b.md": "b\n"}
+    arq = {"a.md": "---\ntarget: [x/b.md, x/morto.md]\n---\n", "x/b.md": "b\n"}
     v = vault(tmp_path, arq)
     _, falhas = portao.auditar(v)
     assert [(f.arquivo, f.check) for f in falhas] == [("a.md", "alvo-morto")]
@@ -202,7 +202,7 @@ def test_arquivo_fora_do_vault_sai_2_nunca_limpo_e_sem_traceback(tmp_path):
     """Um rascunho FORA do vault não pode ser dado como conferido: o portão resolve link e área
     relativos ao vault, então conferir o que está fora dele seria um OK que não tocou em nada.
     Achado em 03/10 ao escrever o README: o portão derrubava com traceback (rc 1, ValueError)."""
-    v = vault(tmp_path / "v", {"notas/vida/a.md": nota("vida", "[[b]]\n"), "notas/vida/b.md": nota("vida", "[[a]]\n")})
+    v = vault(tmp_path / "v", {"notes/life/a.md": nota("life", "[[b]]\n"), "notes/life/b.md": nota("life", "[[a]]\n")})
     rascunho = tmp_path / "rascunho.md"  # irmão do vault, não dentro dele
     rascunho.write_text("---\narea: nada-a-ver\n---\n# Rascunho\n\nTexto.\n")
     r = rodar("--vault", str(v), str(rascunho))
@@ -215,18 +215,18 @@ TAREFA_COM_TEMPO = ("---\ntags:\n  - task\ntitle: Comprar pilhas\nstatus: open\n
 
 
 def test_frontmatter_de_tarefa_do_plugin_nao_e_julgado_pelo_subconjunto(tmp_path):
-    """tarefas/ pertence ao plugin TaskNotes, cujo YAML (lista de mapas em timeEntries) é válido mas
+    """tasks/ pertence ao plugin TaskNotes, cujo YAML (lista de mapas em timeEntries) é válido mas
     fica fora do subconjunto do portão. Achado em 03/10 medindo uma tarefa com tempo registrado."""
-    assert checks_de(tmp_path, {"tarefas/t.md": TAREFA_COM_TEMPO}) == []
+    assert checks_de(tmp_path, {"tasks/t.md": TAREFA_COM_TEMPO}) == []
 
 
 def test_o_mesmo_yaml_fora_de_tarefas_continua_reprovando(tmp_path):
-    assert checks_de(tmp_path, {"notas/vida/t.md": TAREFA_COM_TEMPO}) == [("notas/vida/t.md", "frontmatter")]
+    assert checks_de(tmp_path, {"notes/life/t.md": TAREFA_COM_TEMPO}) == [("notes/life/t.md", "frontmatter")]
 
 
 def test_link_morto_dentro_da_tarefa_ainda_reprova(tmp_path):
-    tarefa = "---\ntags:\n  - task\nprojects:\n  - \"[[projetos/nao-existe/instrucoes]]\"\n---\n"
-    assert checks_de(tmp_path, {"tarefas/t.md": tarefa}) == [("tarefas/t.md", "link-morto")]
+    tarefa = "---\ntags:\n  - task\nprojects:\n  - \"[[projects/nao-existe/instructions]]\"\n---\n"
+    assert checks_de(tmp_path, {"tasks/t.md": tarefa}) == [("tasks/t.md", "link-morto")]
 
 
 def test_cli_arquivo_ilegivel_sai_3_nunca_limpo(tmp_path):
@@ -250,13 +250,13 @@ def test_comentario_no_fim_do_valor_com_dois_pontos_passa(tmp_path):
 
 
 def test_alvo_com_caminho_declarado_so_vale_a_partir_da_raiz(tmp_path):
-    arq = {"a.md": "---\nalvo: vida/b.md\n---\n", "notas/vida/b.md": nota("vida")}
+    arq = {"a.md": "---\ntarget: life/b.md\n---\n", "notes/life/b.md": nota("life")}
     assert checks_de(tmp_path, arq) == [("a.md", "alvo-morto")]
 
 
 def test_frontmatter_com_crlf_passa(tmp_path):
     v = vault(tmp_path, {})
-    (v / "x.md").write_bytes(b"---\r\narea: vida\r\n---\r\ncorpo [[x]]\r\n")
+    (v / "x.md").write_bytes(b"---\r\narea: life\r\n---\r\ncorpo [[x]]\r\n")
     assert portao.auditar(v)[1] == []
 
 

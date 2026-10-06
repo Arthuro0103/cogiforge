@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """hub.py: a raiz de cada projeto aponta para TODOS os .md do projeto.
 
-Em vault/projetos/<nome>/instrucoes.md existe um bloco GERADO entre dois marcadores. O script
+Em vault/projects/<nome>/instructions.md existe um bloco GERADO entre dois marcadores. O script
 regrava so esse bloco, com um wikilink de caminho completo a partir de vault/
-(`[[projetos/<nome>/arquivo|arquivo]]`) para cada .md do projeto. Caminho completo e a unica forma
+(`[[projects/<nome>/arquivo|arquivo]]`) para cada .md do projeto. Caminho completo e a unica forma
 que o Obsidian resolve sem ambiguidade. Lista escrita a mao nao acompanha o projeto; a gerada sim.
 
 Uso:
@@ -13,8 +13,8 @@ Uso:
     python3 ferramentas/hub.py --selftest
     python3 ferramentas/hub.py --vault DIR  # outro vault (testes)
 
-Regra de admissao: se vault/projetos/_index.md existe, todo projeto precisa aparecer nele.
-Pasta de projeto sem instrucoes.md e reportada, nunca inventada.
+Regra de admissao: se vault/projects/_index.md existe, todo projeto precisa aparecer nele.
+Pasta de projeto sem instructions.md e reportada, nunca inventada.
 """
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ VAULT = Path(__file__).resolve().parent.parent / "vault"
 
 
 def listar(pasta: Path) -> list[Path]:
-    return sorted(p for p in pasta.rglob("*.md") if p != pasta / "instrucoes.md")
+    return sorted(p for p in pasta.rglob("*.md") if p != pasta / "instructions.md")
 
 
 def gerar(pasta: Path, vault: Path) -> str:
@@ -52,7 +52,7 @@ def bloco_atual(texto: str) -> str | None:
 
 
 def processar(pasta: Path, vault: Path, check: bool, dry: bool) -> str:
-    raiz = pasta / "instrucoes.md"
+    raiz = pasta / "instructions.md"
     if not raiz.is_file():
         return "SEM RAIZ"
     novo, texto = gerar(pasta, vault), raiz.read_text(encoding="utf-8")
@@ -72,7 +72,7 @@ def processar(pasta: Path, vault: Path, check: bool, dry: bool) -> str:
 
 
 def faltando_no_indice(vault: Path, projetos: list[Path]) -> list[str]:
-    indice = vault / "projetos" / "_index.md"
+    indice = vault / "projects" / "_index.md"
     if not indice.is_file():
         return []
     texto = indice.read_text(encoding="utf-8")
@@ -80,7 +80,7 @@ def faltando_no_indice(vault: Path, projetos: list[Path]) -> list[str]:
 
 
 def rodar(vault: Path, check: bool, dry: bool) -> int:
-    base = vault / "projetos"
+    base = vault / "projects"
     projetos = sorted(p for p in base.iterdir() if p.is_dir()) if base.is_dir() else []
     ruim = 0
     for p in projetos:
@@ -88,7 +88,7 @@ def rodar(vault: Path, check: bool, dry: bool) -> int:
         print(f"{st:10} {p.name}")
         ruim += st in ("STALE", "SEM BLOCO", "SEM RAIZ")
     for nome in faltando_no_indice(vault, projetos):
-        print(f"FORA DO INDICE {nome}  (todo projeto entra em projetos/_index.md)")
+        print(f"FORA DO INDICE {nome}  (todo projeto entra em projects/_index.md)")
         ruim += 1
     return 1 if check and ruim else 0
 
@@ -96,9 +96,9 @@ def rodar(vault: Path, check: bool, dry: bool) -> int:
 def selftest() -> int:
     with tempfile.TemporaryDirectory() as td:
         v = Path(td)
-        p = v / "projetos" / "x"
+        p = v / "projects" / "x"
         p.mkdir(parents=True)
-        (p / "instrucoes.md").write_text("# x\n")
+        (p / "instructions.md").write_text("# x\n")
         vazio = rodar(v, check=True, dry=False)
         (p / "a.md").write_text("a")
         stale = rodar(v, check=True, dry=False)

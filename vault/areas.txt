@@ -1,5 +1,5 @@
-# áreas: uma por linha. `area` (a pasta tem o mesmo nome) ou `pasta: area`.
-# O portão exige que `area:` na nota case com a pasta dentro de notas/.
-aprendizado
-tecnologia
-vida
+# áreas: uma por linha. `area` (the folder has the same name) or `folder: area`.
+# O portão exige que `area:` na nota case com a pasta dentro de notes/.
+learning
+technology
+life

@@ -24,21 +24,21 @@ cogiforge came out of using Claude on a real vault. Three decisions shaped it:
 
 | Piece | What it does |
 |---|---|
-| `vault/` | The workbench: `inbox/` for quick capture, `notas/` for processed notes, `projetos/` with one root file per project, `memoria/` for what *you* told it, `tarefas/` for tasks. Open this folder in Obsidian. |
+| `vault/` | The workbench: `inbox/` for quick capture, `notes/` for processed notes, `projects/` with one root file per project, `memory/` for what *you* told it, `tasks/` for tasks. Open this folder in Obsidian. |
 | `/conhecer` | Onboarding. Asks one question at a time, each following your last answer, and writes what **you said**, dated and quoted. It never guesses. |
 | `/abrir-sessao <project>` | Starts work on a project: reads its root file, the last diary entries and the open tasks, and tells you where you stopped. |
 | `/fechar-sessao` | Ends the day: diary, a briefing per session, the **pains you voiced** collected in one file, tasks opened for what is pending. It commits only if you say so and never pushes. |
 | `/task-observer` | Watches how you work and **only proposes** improvements (a missing skill, a step you repeated three times, a correction you made twice). You decide. |
 | `/claude-corner` | When you say you are leaving, Claude uses that time to reread your notes, find real connections and test ideas in a throwaway place. It **only proposes**, in a file. |
-| Tasks (**TaskNotes**) | Tasks are notes in `vault/tarefas/`, managed by the public [TaskNotes](https://github.com/callumalpass/tasknotes) Obsidian plugin (MIT). Not bundled: you install it from Obsidian's community plugin store. `abrir-sessao` and `fechar-sessao` read and write the same format. |
+| Tasks (**TaskNotes**) | Tasks are notes in `vault/tasks/`, managed by the public [TaskNotes](https://github.com/callumalpass/tasknotes) Obsidian plugin (MIT). Not bundled: you install it from Obsidian's community plugin store. `abrir-sessao` and `fechar-sessao` read and write the same format. |
 | Connection map (**graphify**, optional) | The public [graphify](https://github.com/Graphify-Labs/graphify) (Apache-2.0) maps your notes into a graph you can query. Install it yourself; its output folder is git-ignored. See the tutorial. |
-| `/adaptar-skill` | Helps you write **your own** skill from a worksheet in `vault/fichas-de-skills/`. One question at a time; Claude never writes it for you, and "this is not for me" is a valid answer that gets recorded. |
+| `/adaptar-skill` | Helps you write **your own** skill from a worksheet in `vault/skill-worksheets/`. One question at a time; Claude never writes it for you, and "this is not for me" is a valid answer that gets recorded. |
 
 ## How it improves with you
 
 Three loops, and in all of them the decision stays with you:
 
-1. **Pains.** At the end of a session your own words about what hurt are saved, dated, in `vault/memoria/ideias/_dores.md`.
+1. **Pains.** At the end of a session your own words about what hurt are saved, dated, in `vault/memory/ideas/_pains.md`.
 2. **Proposals.** `task-observer` and `claude-corner` write suggestions to files. Nothing is changed behind your back.
 3. **Your own skills.** The worksheets teach how a skill is built, and `adaptar-skill` walks you through making yours. You are not handed a finished one.
 
@@ -61,7 +61,7 @@ claude              # run Claude Code at the repo root
 
 Then, inside Claude Code, type `/conhecer`. Open `vault/` as a vault in Obsidian. When you have a
 project, `/abrir-sessao <name>` to start and `/fechar-sessao` to end the day. The example project
-`vault/projetos/exemplo-meu-primeiro-projeto/` shows the shape. Tasks need the public TaskNotes plugin
+`vault/projects/example-my-first-project/` shows the shape. Tasks need the public TaskNotes plugin
 (install it from Obsidian's community plugins), and the optional connection map needs graphify: both are
 in the [tutorial](TUTORIAL.md).
 
@@ -89,7 +89,7 @@ Measured on 2026-10-06 at commit `2c4bf50`, on one machine (macOS), in a fresh c
 
 ## Roadmap
 
-`artigo`, `conselho`, `ideia-de-produto` and `consultar-notas` as real skills (their worksheets are in `vault/fichas-de-skills/` today); a skill that turns one of your own failures into a rule plus a test.
+`artigo`, `conselho`, `product-idea` and `consult-notes` as real skills (their worksheets are in `vault/skill-worksheets/` today); a skill that turns one of your own failures into a rule plus a test.
 
 ## License
 

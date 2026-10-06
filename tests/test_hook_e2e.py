@@ -51,23 +51,23 @@ def test_instalar_ativa_o_hookspath(clone):
 
 
 def test_orfa_bloqueia_o_commit_e_ensina(clone):
-    r = commitar(clone, "vault/notas/vida/orfa.md", ORFA)
+    r = commitar(clone, "vault/notes/life/orphan.md", ORFA)
     assert r.returncode == 1
     assert "COMMIT BLOQUEADO" in r.stdout + r.stderr and "Como consertar" in r.stdout + r.stderr
 
 
 def test_com_o_wikilink_o_commit_passa(clone):
-    r = commitar(clone, "vault/notas/vida/orfa.md", ORFA + "\nVolta ao [[_indice]].\n")
+    r = commitar(clone, "vault/notes/life/orphan.md", ORFA + "\nVolta ao [[home]].\n")
     assert r.returncode == 0, r.stdout + r.stderr
 
 
 def test_sem_hookspath_o_hook_nao_dispara(clone):
     sh(clone, "git", "config", "--unset", "core.hooksPath")
-    assert commitar(clone, "vault/notas/vida/orfa.md", ORFA).returncode == 0
+    assert commitar(clone, "vault/notes/life/orphan.md", ORFA).returncode == 0
 
 
 def test_no_verify_e_o_escape_consciente(clone):
-    assert commitar(clone, "vault/notas/vida/orfa.md", ORFA, "--no-verify").returncode == 0
+    assert commitar(clone, "vault/notes/life/orphan.md", ORFA, "--no-verify").returncode == 0
 
 
 def test_inbox_nunca_e_barrado(clone):
@@ -75,8 +75,8 @@ def test_inbox_nunca_e_barrado(clone):
 
 
 def test_orfa_de_fora_do_commit_so_avisa(clone):
-    (clone / "vault/notas/vida/velha.md").write_text(ORFA, encoding="utf-8")  # não entra no stage
-    r = commitar(clone, "vault/notas/vida/ok.md", "---\narea: vida\n---\n# Ligada\n\n[[_indice]]\n")
+    (clone / "vault/notes/life/velha.md").write_text(ORFA, encoding="utf-8")  # não entra no stage
+    r = commitar(clone, "vault/notes/life/ok.md", "---\narea: vida\n---\n# Ligada\n\n[[home]]\n")
     assert r.returncode == 0 and "AVISO" in r.stdout + r.stderr and "velha.md" in r.stdout + r.stderr
 
 
@@ -87,7 +87,7 @@ def test_vazamento_no_stage_bloqueia_qualquer_arquivo(clone):
 
 
 def test_vazamento_em_md_do_vault_tambem_bloqueia(clone):
-    r = commitar(clone, "vault/notas/vida/v.md", f"---\narea: vida\n---\n# V\n\n[[_indice]] {LEAK}\n")
+    r = commitar(clone, "vault/notes/life/v.md", f"---\narea: vida\n---\n# V\n\n[[home]] {LEAK}\n")
     assert r.returncode == 1
 
 

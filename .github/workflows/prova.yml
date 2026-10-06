@@ -57,11 +57,11 @@ jobs:
       - name: ponta a ponta — órfã bloqueia, link libera, hooksPath removido deixa o teste vermelho
         run: |
           set -u
-          orfa=vault/notas/aprendizado/orfa-do-ci.md
+          orfa=vault/notes/learning/orfa-do-ci.md
           printf -- '---\narea: aprendizado\n---\n# Nota sem aresta\n\nTexto sem link.\n' > "$orfa"
           git add "$orfa"
           if git commit -q -m "ci: orfa"; then echo "FALHOU: commit de órfã passou"; exit 1; fi
-          printf '\nVolta ao [[_indice]].\n' >> "$orfa"
+          printf '\nVolta ao [[home]].\n' >> "$orfa"
           git add "$orfa"
           git commit -q -m "ci: com link"
           git config --unset core.hooksPath

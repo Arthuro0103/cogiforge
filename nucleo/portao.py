@@ -5,7 +5,7 @@
 
 Os 5 checks:
   frontmatter   o bloco entre `---` parseia (parser próprio, subconjunto abaixo)
-  area          `area:` está na lista configurada e casa com a pasta `notas/<pasta>/`
+  area          `area:` está na lista configurada e casa com a pasta `notes/<pasta>/`
   link-morto    todo [[wikilink]] resolve (raiz > relativo à nota > nome em qualquer pasta)
   link-partido  `[[` abre e fecha na MESMA linha (o Obsidian não resolve link quebrado em duas)
   alvo-morto    `alvo:` do frontmatter aponta para algo que existe
@@ -13,7 +13,7 @@ Os 5 checks:
 Código (bloco cercado e `inline`) não conta como link. rc: 0 limpo · 1 reprova · 2 uso · 3 não deu pra ler.
 
 Áreas: `<vault>/areas.txt`, uma por linha, `area` (a pasta tem o mesmo nome) ou `pasta: area`.
-Sem o arquivo valem as 3 de exemplo (aprendizado, tecnologia, vida). Só vale dentro de `notas/`.
+Sem o arquivo valem as 3 de exemplo (learning, technology, life). Só vale dentro de `notes/`.
 
 SUBCONJUNTO DE YAML aceito no frontmatter (fora dele reprova, em vez de adivinhar):
   chave: valor            valor simples, 'aspas simples' ou "aspas duplas" (valor simples não
@@ -41,7 +41,7 @@ CHECAGENS = [
     ("link-partido", "`[[` abre e fecha na mesma linha"),
     ("alvo-morto", "alvo: aponta pra algo que existe"),
 ]
-AREAS_PADRAO = {"aprendizado": "aprendizado", "tecnologia": "tecnologia", "vida": "vida"}
+AREAS_PADRAO = {"learning": "learning", "technology": "technology", "life": "life"}
 IGNORAR_DIRS = {".git", ".obsidian", ".trash", "node_modules", "__pycache__", ".venv", "venv", ".pytest_cache"}
 EXTS = (".md", ".canvas", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".pdf", ".txt", ".json",
         ".excalidraw", ".mp4", ".mp3")
@@ -218,7 +218,7 @@ class Nota:
 
 # ---- os 5 checks --------------------------------------------------------------
 
-PASTAS_DO_PLUGIN = ("tarefas",)  # o YAML daqui é do TaskNotes (ex.: timeEntries, lista de mapas), não do subconjunto
+PASTAS_DO_PLUGIN = ("tasks",)  # o YAML daqui é do TaskNotes (ex.: timeEntries, lista de mapas), não do subconjunto
 
 
 def chk_frontmatter(n, idx):
@@ -229,11 +229,11 @@ def chk_frontmatter(n, idx):
 
 def chk_area(n, idx):
     partes = Path(n.rel).parts
-    if partes[0] != "notas":
+    if partes[0] != "notes":
         return []
     areas = idx.areas
     if len(partes) < 3:
-        return [Falha(n.rel, "area", f"nota solta na raiz de notas/: mova para notas/<pasta>/ "
+        return [Falha(n.rel, "area", f"nota solta na raiz de notes/: mova para notes/<pasta>/ "
                                      f"(pastas: {', '.join(sorted(areas))})")]
     if n.fm_erro:
         return []  # já reprovou em frontmatter; não contar duas vezes
@@ -248,7 +248,7 @@ def chk_area(n, idx):
         return [Falha(n.rel, "area", f"area: '{area}' não está na lista configurada ({', '.join(sorted(set(areas.values())))})")]
     if area != esperada:
         pasta_da_area = next(p for p, a in areas.items() if a == area)
-        return [Falha(n.rel, "area", f"area: '{area}' mora em notas/{pasta_da_area}/, mas o arquivo está em notas/{pasta}/")]
+        return [Falha(n.rel, "area", f"area: '{area}' mora em notes/{pasta_da_area}/, mas o arquivo está em notes/{pasta}/")]
     return []
 
 
@@ -267,13 +267,13 @@ def chk_link_partido(n, idx):
 
 
 def chk_alvo(n, idx):
-    alvo = n.fm.get("alvo")
+    alvo = n.fm.get("target")
     if alvo is None:
         return []
     out = []
     for a in alvo if isinstance(alvo, list) else [alvo]:
         a = str(a).strip().strip("[]").strip()
-        if not a or a.lower() == "nenhum":
+        if not a or a.lower() == "none":
             continue
         # disco primeiro (cobre diretório e caminho absoluto); nome puro sem barra vale como nome de nota
         cands = [idx.raiz / a, idx.raiz / (a + ".md")]  # pathlib: `raiz / "/abs"` já é "/abs"

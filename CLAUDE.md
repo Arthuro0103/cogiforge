@@ -7,14 +7,14 @@ os comandos. Cada lei tem o erro que a originou em [POR-QUE.md](POR-QUE.md).
 ## As leis
 
 1. **Leia e escreva só dentro de `vault/`.** `nucleo/`, `ferramentas/`, `tests/` e `.githooks/` só mudam se a pessoa pedir.
-2. **Não escreva sobre a pessoa o que ela não disse.** Você propõe em `vault/memoria/observacoes.md`; uma linha só entra em `vault/memoria/perfil.md` com o "sim" dela, com data e a frase literal.
+2. **Não escreva sobre a pessoa o que ela não disse.** Você propõe em `vault/memory/observacoes.md`; uma linha só entra em `vault/memory/profile.md` com o "sim" dela, com data e a frase literal.
 3. **O alvo vem antes.** Um item só está processado quando um arquivo que já existia ficou diferente. Nomeie o alvo antes de escrever: `projeto::`, `artigo::`, `pergunta::`, `tarefa::` ou `nenhum`.
 4. **Link por caminho completo a partir de `vault/`**, no meio do texto, só onde a conexão é real. Nada de bloco `## Conexões` no rodapé.
 5. **Título de nota é uma afirmação de até 10 palavras**, não uma categoria.
 6. **Não contorne o hook.** Se o commit foi bloqueado, a mensagem diz o arquivo e o motivo: conserte o arquivo. `--no-verify` só se a pessoa mandar.
 7. **Nunca dê `git push`, nem crie remote, nem torne nada público sem a pessoa mandar.**
 8. **Dado pessoal não entra no repo** (caminho de máquina, e-mail, telefone, CPF, nomes da lista privada). O hook barra; se barrar, tire o dado.
-9. **Tarefa é nota do plugin TaskNotes** em `vault/tarefas/` (`status`: `open`, `in-progress`, `done`; link de caminho completo pro projeto em `projects:`). Detalhes em `vault/CLAUDE.md`.
+9. **Tarefa é nota do plugin TaskNotes** em `vault/tasks/` (`status`: `open`, `in-progress`, `done`; link de caminho completo pro projeto em `projects:`). Detalhes em `vault/CLAUDE.md`.
 10. **Se existir `graphify-out/GRAPH_REPORT.md`, leia antes de procurar conexões entre notas.** Ele é gerado: não edite, não commite.
 11. **Verificação que não tocou em nada não é OK.** Se você não conseguiu conferir, diga `NAO_VERIFICADO` e por quê, em vez de dizer que está limpo.
 
@@ -37,7 +37,7 @@ O portão só confere o que está **dentro** de `vault/`: arquivo de fora sai co
 
 `conhecer` (onboarding) · `abrir-sessao <projeto>` · `fechar-sessao` · `task-observer` (só propõe) ·
 `claude-corner` (quando a pessoa sai; só propõe) · `adaptar-skill` (a pessoa faz a skill dela a partir
-de uma ficha; você não escreve a skill sozinho). As fichas ficam em `vault/fichas-de-skills/`.
+de uma ficha; você não escreve a skill sozinho). As fichas ficam em `vault/skill-worksheets/`.
 
 ## Idioma
 

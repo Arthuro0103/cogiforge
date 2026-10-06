@@ -1,6 +1,6 @@
 ---
 name: task-observer
-description: Observa uma sessão de trabalho e SÓ PROPÕE melhorias de processo, acrescentando em vault/memoria/observacoes.md (data, o que viu, o que propõe). Procura três sinais - uma skill que faltou, um passo repetido três vezes, uma correção que a pessoa fez duas vezes. Nunca escreve em perfil.md, padroes.md, decisoes.md nem em vault/notas/, e nunca cria skill: a pauta de skills é da pessoa, e quem guia a criação é o adaptar-skill. É a metade "melhora comigo" da bancada. GATILHOS - "/task-observer", "observa essa sessão", "o que eu repito muito?", "o que dava pra automatizar?", "tem algo pra melhorar no meu processo?". NÃO dispare para executar a tarefa em si, para fechar o dia (isso é fechar-sessao), nem para criar skill (isso é adaptar-skill).
+description: Observa uma sessão de trabalho e SÓ PROPÕE melhorias de processo, acrescentando em vault/memory/observacoes.md (data, o que viu, o que propõe). Procura três sinais - uma skill que faltou, um passo repetido três vezes, uma correção que a pessoa fez duas vezes. Nunca escreve em perfil.md, padroes.md, decisoes.md nem em vault/notes/, e nunca cria skill: a pauta de skills é da pessoa, e quem guia a criação é o adaptar-skill. É a metade "melhora comigo" da bancada. GATILHOS - "/task-observer", "observa essa sessão", "o que eu repito muito?", "o que dava pra automatizar?", "tem algo pra melhorar no meu processo?". NÃO dispare para executar a tarefa em si, para fechar o dia (isso é fechar-sessao), nem para criar skill (isso é adaptar-skill).
 ---
 
 # task-observer: ver o processo enquanto ele acontece
@@ -13,7 +13,7 @@ o trabalho está ocupado demais pra anotar. Alguém de fora precisa olhar e **s�
 
 ## A lei
 
-1. **Só propõe.** O único arquivo que esta skill escreve é `vault/memoria/observacoes.md`, e só
+1. **Só propõe.** O único arquivo que esta skill escreve é `vault/memory/observacoes.md`, e só
    **acrescentando** no fim. Nunca reescreve nem apaga linha anterior.
 2. **Três sinais, nada além.** (a) uma skill que faltou, (b) um passo feito à mão 3 vezes ou mais,
    (c) uma correção que a pessoa fez 2 vezes ou mais. Sem o número, não vira observação.
@@ -23,7 +23,7 @@ o trabalho está ocupado demais pra anotar. Alguém de fora precisa olhar e **s�
    `perfil.md`, `padroes.md` e `decisoes.md` são afirmações sobre ela: eu não escrevo lá.
 5. **Nunca cria skill.** Se o sinal é "faltou skill", a observação diz isso e aponta pro `adaptar-skill`.
    A pessoa decide se e quando.
-6. **Não mexe em `vault/notas/`.** Nota é o acervo dela.
+6. **Não mexe em `vault/notes/`.** Nota é o acervo dela.
 7. **Observar não interrompe.** Não pare o trabalho pra comentar; registre e mostre no fim, ou quando pedirem.
 
 ## Os passos
@@ -31,7 +31,7 @@ o trabalho está ocupado demais pra anotar. Alguém de fora precisa olhar e **s�
 ### 1. Antes (você, o Claude)
 
 ```bash
-tail -30 vault/memoria/observacoes.md 2>/dev/null
+tail -30 vault/memory/observacoes.md 2>/dev/null
 ```
 
 Leia o que já foi observado, pra não repetir. Se uma observação antiga voltou a acontecer, **cite a data
@@ -50,7 +50,7 @@ no máximo **3 observações por sessão**: mais que isso é ruído, e a pessoa 
 
 ### 4. Acrescentar (você)
 
-Se `vault/memoria/observacoes.md` não existe, avise que ele pertence à estrutura e mostre as
+Se `vault/memory/observacoes.md` não existe, avise que ele pertence à estrutura e mostre as
 observações no chat, sem criar o arquivo. Se existe, acrescente no fim:
 
 ```markdown
@@ -63,7 +63,7 @@ observações no chat, sem criar o arquivo. Se existe, acrescente no fim:
 ```
 
 Se a observação diz respeito a um projeto, ponha um wikilink de caminho completo na frase, no meio
-do texto (`[[projetos/<nome>/instrucoes|<nome>]]`), e só depois de conferir que o arquivo existe.
+do texto (`[[projects/<nome>/instructions|<nome>]]`), e só depois de conferir que o arquivo existe.
 
 ### 5. Mostrar (você)
 
@@ -77,7 +77,7 @@ na próxima rodada, não proponha de novo a mesma coisa sem uma contagem nova.
 
 ## Nunca
 
-- Escrever em `perfil.md`, `padroes.md`, `decisoes.md` ou `vault/notas/`.
+- Escrever em `perfil.md`, `padroes.md`, `decisoes.md` ou `vault/notes/`.
 - Criar, editar ou instalar uma skill.
 - Registrar observação sem contagem e evidência.
 - Repetir proposta que a pessoa recusou, sem fato novo.
