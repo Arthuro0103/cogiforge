@@ -44,7 +44,7 @@ of the time had a test for only 1 of the 8 checks: the other 7 could be deleted 
 **The rule.** Every check must have a test that fails when the check is broken.
 
 **Who catches it.** `tests/mutate.py`, which runs in CI as a gate: a surviving mutant fails the build.
-**The test.** `mutate.py` itself. Result today: **105 of 105 mutants killed, 0 alive** (Oct 3).
+**The test.** `mutate.py` itself. Result on Oct 6: **113 of 113 mutants killed, 0 alive**.
 
 ### 3. A checker that touched nothing and said OK (Sep 11)
 
