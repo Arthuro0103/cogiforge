@@ -65,8 +65,13 @@ jobs:
           git add "$orfa"
           git commit -q -m "ci: com link"
           git config --unset core.hooksPath
-          if python -m pytest -q tests/test_hook_ativo.py::test_hookspath_aponta_pro_githooks; then
-            echo "FALHOU: test_hook_ativo continuou verde sem hooksPath"; exit 1
+          # rc 1 = o teste foi achado e reprovou, que é o esperado sem o hooksPath.
+          # Qualquer outro rc (0 verde, 4 teste não achado por ter sido renomeado) quebra o CI:
+          # antes, um teste renomeado dava rc 4, o `if` dava falso e o passo passava sem testar nada.
+          rc=0
+          python -m pytest -q tests/test_hook_ativo.py::test_hookspath_aponta_pro_githooks || rc=$?
+          if [ "$rc" -ne 1 ]; then
+            echo "FALHOU: esperava o teste vermelho (rc 1) sem hooksPath, veio rc=$rc"; exit 1
           fi
           echo "ok: o teste ficou vermelho sem o hooksPath, como deveria"
           git config core.hooksPath .githooks

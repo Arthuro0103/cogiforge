@@ -12,6 +12,7 @@ a cada rodada e roda com PYTHONDONTWRITEBYTECODE=1.
 
     python3 tests/mutar.py                 todas as peças
     python3 tests/mutar.py vazamento anel  só essas
+    python3 tests/mutar.py --dry           só confere que cada mutante se aplica (segundos, sem suíte)
 rc: 0 todo mutante morto · 1 sobrou mutante vivo · 2 suíte já vermelha / mutante inaplicável
 """
 import os
@@ -167,8 +168,35 @@ def mutantes(peca, fonte):
         yield f"texto:{nome}", lambda f, a=antigo, n=novo: mutar_texto(f, a, n)
 
 
+def dry(alvos):
+    """Só confere que cada mutante se aplica (o trecho existe UMA vez), sem rodar a suíte.
+
+    Leva segundos. Serve para rodar antes de cada commit de uma renomeação: uma mensagem ou
+    um nome que mudou deixa o mutante inaplicável, e isso aparece aqui em vez de aparecer
+    só no fim, na rodada completa."""
+    total, inaplicaveis = 0, []
+    for peca in alvos:
+        arq = RAIZ / PECAS[peca]["arquivo"]
+        if not arq.exists():
+            print(f"[{peca}] {PECAS[peca]['arquivo']} não existe ainda — pulado")
+            continue
+        original = arq.read_text(encoding="utf-8")
+        for nome, fn in mutantes(peca, original):
+            try:
+                fn(original)
+                total += 1
+            except LookupError as e:
+                inaplicaveis.append(f"{peca}/{nome}")
+                print(f"  INAPLICÁVEL {nome}: {e}")
+    print(f"{total} mutantes se aplicam; {len(inaplicaveis)} inaplicáveis")
+    return 2 if inaplicaveis else 0
+
+
 def main():
-    alvos = sys.argv[1:] or list(PECAS)
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    alvos = args or list(PECAS)
+    if "--dry" in sys.argv:
+        return dry(alvos)
     vivos, inaplicaveis, total = [], [], 0
     for peca in alvos:
         spec = PECAS[peca]
