@@ -1,157 +1,162 @@
-# POR-QUE
+# WHY
 
-Cada regra deste repo nasceu de um erro real, com data. O erro está contado sem nomes de projeto, e o
-**teste que o pega mora aqui**: dá pra rodar e ver vermelho sem a regra, verde com ela.
+Every rule in this repo was born from a real mistake, with a date. The mistake is told without project
+names, and the **test that catches it lives here**: you can run it and see red without the rule, green
+with it.
 
-Isto não é o que a bancada faz (isso está no [LEIA-ME](LEIA-ME.md)). É a base debaixo dela: o que
-impede a bancada de apodrecer sem ninguém perceber.
+This is not what the workbench does (that is in the [README](README.md)). This is the foundation under
+it: what keeps the workbench from rotting without anyone noticing.
 
-## Como uma regra entra
+The tests and scripts named below use their English names. If you are reading a translated copy or an
+older clone, see [docs/TRANSLATING.md](docs/TRANSLATING.md).
 
-1. **Um erro com data e número**, do tipo que já aconteceu, não do tipo que podia acontecer.
-2. **Um teste em par**: a entrada que sabidamente falha **e** uma plausível que tem que passar.
-3. **Uma mutação**: `tests/mutar.py` quebra cada check de propósito e exige que a suíte fique vermelha. Teste que continua verde com o check quebrado não testa nada.
+## How a rule gets in
 
-Regra sem erro que a justifique, ou sem teste que falhe sem ela, não entra. Quando você achar um erro
-seu, registre aqui com a data, escreva o teste que falha, e só então escreva a regra. (A skill que
-automatiza isso, `regra-nova`, ainda não existe.)
+1. **A mistake with a date and a number**, the kind that already happened, not the kind that could happen.
+2. **A paired test**: an input that is known to fail **and** a plausible one that must pass.
+3. **A mutation**: `tests/mutate.py` breaks each check on purpose and requires the suite to go red. A test that stays green with the check broken tests nothing.
 
-## Os erros
+A rule with no mistake to justify it, or with no test that fails without it, does not get in. When you
+find a mistake of your own, record it here with the date, write the test that fails, and only then write
+the rule. (A skill that automates this does not exist yet.)
 
-### 1. O link com caminho velho que o verificador aprovava (25/08)
+## The mistakes
 
-**O que quebrou.** Um conjunto de notas foi movido de pasta. 58 wikilinks em 38 arquivos continuaram
-apontando pro caminho antigo. O verificador dizia "tudo certo" porque, quando o caminho não existia,
-ele caía pro **nome do arquivo** e achava a nota. O Obsidian não faz isso quando o link traz
-caminho: os 58 estavam quebrados na tela, com o verificador dizendo que estava tudo bem.
+### 1. The link with an old path that the checker approved (Aug 25)
 
-**A regra.** Link **com** caminho só vale pelo caminho. Só o link **sem** barra resolve por nome.
+**What broke.** A set of notes was moved to another folder. 58 wikilinks in 38 files kept pointing to the
+old path. The checker said "all good" because, when the path did not exist, it fell back to the **file
+name** and found the note. Obsidian does not do that when the link carries a path: the 58 were broken on
+screen, with the checker saying everything was fine.
 
-**Quem pega.** `nucleo/portao.py`, check `link-morto`.
-**O teste.** `tests/test_portao.py::test_link_morto_reprova` (o caso `[[outra/pasta/b]]`, onde `b`
-existe em outra pasta) e `test_alvo_so_casa_por_basename_com_caminho_declarado_reprova`.
+**The rule.** A link **with** a path is only valid by its path. Only a link **without** a slash resolves by name.
 
-### 2. Sete dos oito checks podiam ser apagados e o teste continuava verde (05/09)
+**Who catches it.** `core/gate.py`, check `dead-link`.
+**The test.** `tests/test_gate.py::test_dead_link_fails` (the case `[[other/folder/b]]`, where `b`
+exists in another folder) and
+`test_target_that_only_matches_by_basename_with_a_declared_path_fails`.
 
-**O que quebrou.** Alguém quebrou de propósito um check de cada vez pra ver se a suíte percebia.
-A suíte da época só tinha teste pra 1 dos 8 checks: os outros 7 podiam ser apagados e nada ficava
-vermelho.
+### 2. Seven of the eight checks could be deleted and the tests stayed green (Sep 5)
 
-**A regra.** Todo check tem que ter um teste que falha quando ele é quebrado.
+**What broke.** Someone broke one check at a time on purpose to see whether the suite noticed. The suite
+of the time had a test for only 1 of the 8 checks: the other 7 could be deleted and nothing went red.
 
-**Quem pega.** `tests/mutar.py`, que roda no CI como portão: mutante vivo reprova.
-**O teste.** O próprio `mutar.py`. Resultado hoje: **105 de 105 mutantes mortos, 0 vivos** (03/10).
+**The rule.** Every check must have a test that fails when the check is broken.
 
-### 3. Um verificador que não tocou em nada e disse OK (11/09)
+**Who catches it.** `tests/mutate.py`, which runs in CI as a gate: a surviving mutant fails the build.
+**The test.** `mutate.py` itself. Result today: **105 of 105 mutants killed, 0 alive** (Oct 3).
 
-**O que quebrou.** Um check de deploy imprimiu "9 · 0 falharam" **sem nunca falar com o servidor**.
-Zero falhas, porque nada foi tentado.
+### 3. A checker that touched nothing and said OK (Sep 11)
 
-**A regra.** Um check que não tocou em nada **não pode dizer OK**. Ele diz `NAO_VERIFICADO`.
+**What broke.** A deploy check printed "9 · 0 failed" **without ever talking to the server**.
+Zero failures, because nothing was tried.
 
-**Quem pega.** `nucleo/vazamento.py`: sem a lista privada de termos, ele roda só os padrões
-genéricos e diz `NAO_VERIFICADO`; `--exigir-lista` vira rc 3.
-**O teste.** `tests/test_hook_e2e.py::test_sem_lista_privada_avisa_nao_verificado_e_nao_bloqueia`.
+**The rule.** A check that touched nothing **cannot say OK**. It says `NOT_VERIFIED`.
 
-### 4. 389 notas órfãs viraram 1, e cinco novas nasceram na mesma sessão (13 e 14/09)
+**Who catches it.** `core/leak.py`: without the private list of terms, it runs only the generic patterns
+and says `NOT_VERIFIED`; `--require-list` turns that into rc 3.
+**The test.** `tests/test_hook_e2e.py::test_without_a_private_list_warns_not_verified_and_does_not_block`.
 
-**O que quebrou.** Uma sessão costurou 254 links **à mão** e levou as órfãs de 389 pra 1. Na mesma
-sessão nasceram 5 órfãs novas. Consertar o acervo não fecha a torneira. O hook que fecha só foi
-escrito no dia seguinte.
+### 4. 389 orphan notes became 1, and five new ones were born in the same session (Sep 13 and 14)
 
-**A regra.** Nota sem nenhum link de entrada ou de saída é barrada **no commit**, não depois.
+**What broke.** One session stitched 254 links **by hand** and took the orphans from 389 down to 1. In
+the same session, 5 new orphans were born. Fixing the collection does not close the tap. The hook that
+closes it was only written the next day.
 
-**Quem pega.** `nucleo/anel.py` pelo hook `.githooks/pre-commit`.
-**Os testes.** `tests/test_anel.py::test_gate_reprova_orfa_e_ensina_o_conserto` e
-`tests/test_hook_e2e.py::test_orfa_bloqueia_o_commit_e_ensina`.
+**The rule.** A note with no incoming and no outgoing link is blocked **at commit time**, not afterwards.
 
-### 5. O hook que existia no disco e nunca rodava (14/09)
+**Who catches it.** `core/ring.py` through the hook `.githooks/pre-commit`.
+**The tests.** `tests/test_ring.py::test_gate_fails_an_orphan_and_teaches_the_fix` and
+`tests/test_hook_e2e.py::test_orphan_blocks_the_commit_and_teaches`.
 
-**O que quebrou.** `core.hooksPath` é configuração **local** do git. Num clone novo o hook vem no
-disco e **não dispara**: a proteção existe e não protege.
+### 5. The hook that existed on disk and never ran (Sep 14)
 
-**A regra.** A instalação ativa o hook e **prova** que ele está ativo; um teste reprova quando não está.
+**What broke.** `core.hooksPath` is **local** git configuration. In a fresh clone the hook arrives on
+disk and **does not fire**: the protection exists and does not protect.
 
-**Quem pega.** `instalar.sh` (falha alto, rc ≠ 0) e `tests/test_hook_ativo.py`. O CI ainda confere que
-o clone **começa sem** `hooksPath` e que passa a tê-lo depois do `instalar.sh`.
-**Os testes.** `tests/test_hook_ativo.py::test_hookspath_aponta_pro_githooks` e
-`tests/test_hook_e2e.py::test_sem_hookspath_o_hook_nao_dispara`.
+**The rule.** The install step activates the hook and **proves** it is active; a test fails when it is not.
 
-### 6. Verificador que não conseguiu ler o arquivo e chamou de dívida (13 e 14/09)
+**Who catches it.** `install.sh` (fails loudly, rc ≠ 0) and `tests/test_hook_active.py`. CI also checks
+that the clone **starts without** `hooksPath` and that it has it after `install.sh`.
+**The tests.** `tests/test_hook_active.py::test_hookspath_points_to_githooks` and
+`tests/test_hook_e2e.py::test_without_hookspath_the_hook_does_not_fire`.
 
-**O que quebrou.** Um arquivo sem permissão de leitura saía como "erro de YAML" e entrava na conta como
-dívida de formatação. "Não consegui ler" e "li e está errado" são coisas diferentes.
+### 6. A checker that could not read the file and called it debt (Sep 13 and 14)
 
-**A regra.** Arquivo ilegível tem veredito próprio: rc 3, `ILEGIVEL`, nunca limpo.
+**What broke.** A file without read permission came out as a "YAML error" and went into the count as
+formatting debt. "I could not read it" and "I read it and it is wrong" are different things.
 
-**Quem pega.** `nucleo/portao.py`.
-**Os testes.** `tests/test_portao.py::test_cli_arquivo_ilegivel_sai_3_nunca_limpo` e
-`test_ilegivel_e_arquivo_nao_utf8_nunca_e_limpo`.
+**The rule.** An unreadable file has its own verdict: rc 3, `UNREADABLE`, never clean.
 
-### 7. O verificador que dava OK ao que não conferiu, de novo (05/09, e hoje)
+**Who catches it.** `core/gate.py`.
+**The tests.** `tests/test_gate.py::test_cli_unreadable_file_exits_3_never_clean` and
+`test_unreadable_is_a_non_utf8_file_never_clean`.
 
-**O que quebrou, no original.** 3 dos 8 checks abortavam na primeira linha fora da pasta de notas.
-Rodar o portão num rascunho que ainda não estava lá conferia só 5 dos 8, **em silêncio**.
+### 7. The checker that said OK to what it had not checked, again (Sep 5, and today)
 
-**E o mesmo erro apareceu aqui, hoje (03/10).** Ao escrever este arquivo, testei o portão num rascunho
-**fora** do vault. Com um vault de caminho absoluto ele saiu **limpo (rc 0)** sem ter conferido nada;
-com um vault relativo, derrubou com traceback. O teste foi escrito antes do conserto, falhou, e só
-então o portão foi consertado.
+**What broke, in the original.** 3 of the 8 checks aborted on the first line outside the notes folder.
+Running the gate on a draft that was not there yet checked only 5 of the 8, **in silence**.
 
-**A regra.** O portão só confere o que está **dentro** do vault; arquivo de fora sai com rc 2 e uma
-mensagem, nunca como OK.
+**And the same mistake showed up here, today (Oct 3).** While writing this file, I tested the gate on a
+draft **outside** the vault. With a vault given as an absolute path it came out **clean (rc 0)** without
+having checked anything; with a relative vault, it crashed with a traceback. The test was written before
+the fix, failed, and only then was the gate fixed.
 
-**Quem pega.** `nucleo/portao.py`.
-**O teste.** `tests/test_portao.py::test_arquivo_fora_do_vault_sai_2_nunca_limpo_e_sem_traceback`.
-Há também um mutante dedicado em `tests/mutar.py`.
+**The rule.** The gate only checks what is **inside** the vault; a file outside it exits with rc 2 and a
+message, never as OK.
 
-### 8. O gate que barra o que você não fez vira o gate que você pula (20 e 24/09)
+**Who catches it.** `core/gate.py`.
+**The test.** `tests/test_gate.py::test_file_outside_the_vault_exits_2_never_clean_and_no_traceback`.
+There is also a dedicated mutant in `tests/mutate.py`.
 
-**O que quebrou.** Um gate que reprovava o commit por causa de uma nota que **não era sua**, ou de um
-rascunho que nem estava no commit, foi contornado: 3 commits, depois 6, com `--no-verify`.
+### 8. The gate that blocks what you did not do becomes the gate you skip (Sep 20 and 24)
 
-**A regra.** O hook só olha o que **este** commit leva. O resto vira aviso. E a captura rápida
-(`inbox/`) nunca é barrada.
+**What broke.** A gate that failed the commit because of a note that **was not yours**, or a draft that
+was not even in the commit, was bypassed: 3 commits, then 6, with `--no-verify`.
 
-**Quem pega.** `nucleo/anel.py --gate --stage`.
-**Os testes.** `tests/test_hook_e2e.py::test_orfa_de_fora_do_commit_so_avisa`, `test_inbox_nunca_e_barrado`
-e `test_no_verify_e_o_escape_consciente`.
+**The rule.** The hook only looks at what **this** commit carries. The rest becomes a warning. And quick
+capture (`inbox/`) is never blocked.
 
-### 9. O `;` no laço que deixou o commit passar (25/09)
+**Who catches it.** `core/ring.py --gate --stage`.
+**The tests.** `tests/test_hook_e2e.py::test_orphan_outside_the_commit_only_warns`,
+`test_inbox_is_never_blocked` and `test_no_verify_is_the_deliberate_bypass`.
 
-**O que quebrou.** Um laço de shell rodava o verificador e o `git commit` separados por `;`. Dois
-commits saíram com o verificador reprovando, porque o commit rodava mesmo assim.
+### 9. The `;` in the loop that let the commit through (Sep 25)
 
-**A regra.** O bloqueio mora **no hook do git**, que todo `git commit` atravessa, e não na disciplina
-de quem escreve o laço.
+**What broke.** A shell loop ran the checker and `git commit` separated by `;`. Two commits went out with
+the checker failing, because the commit ran anyway.
 
-**Quem pega.** `.githooks/pre-commit`.
-**O teste.** `tests/test_hook_e2e.py::test_orfa_bloqueia_o_commit_e_ensina` (o commit sai com erro e o
-HEAD não anda). O CI repete isso num clone limpo.
+**The rule.** The block lives **in the git hook**, which every `git commit` goes through, and not in the
+discipline of whoever writes the loop.
 
-### 10. O plugin que escreve o que o verificador não entende, e a tarefa que nasce sem link (03/10)
+**Who catches it.** `.githooks/pre-commit`.
+**The test.** `tests/test_hook_e2e.py::test_orphan_blocks_the_commit_and_teaches` (the commit exits with
+an error and HEAD does not move). CI repeats this in a clean clone.
 
-**O que quebrou.** Ao integrar o plugin de tarefas, medimos duas tarefas no formato dele. Uma igual ao
-exemplo da documentação passou. A outra, com **tempo registrado** (`timeEntries`, uma lista de mapas: YAML
-válido), **reprovou no portão** como "yaml fora do subconjunto". E uma tarefa **sem projeto**, do tipo que a
-interface cria sem pedir link, era **órfã**: o hook barraria o commit. **Ressalva:** o formato dessas duas
-foi montado a partir da documentação do plugin, não de uma saída real dele (o Obsidian não foi rodado aqui).
+### 10. The plugin that writes what the checker does not understand, and the task that is born without a link (Oct 3)
 
-**A regra.** O que o plugin escreve em `tasks/` é do plugin: o portão não julga o YAML dali e a pasta é
-isenta de órfã (como o `inbox/`). Link morto dentro da tarefa continua reprovando.
+**What broke.** When integrating the task plugin, we measured two tasks in its format. One identical to
+the example in its documentation passed. The other, with **logged time** (`timeEntries`, a list of maps:
+valid YAML), **failed the gate** as "yaml outside the subset". And a task **with no project**, the kind the
+interface creates without asking for a link, was an **orphan**: the hook would block the commit.
+**Caveat:** the format of these two was built from the plugin's documentation, not from real output from it
+(Obsidian was not run here).
 
-**Quem pega.** `nucleo/portao.py` (pasta `tasks/`) e `nucleo/anel.py` (`DEPOSITOS`).
-**Os testes.** `tests/test_portao.py::test_frontmatter_de_tarefa_do_plugin_nao_e_julgado_pelo_subconjunto`,
-`test_o_mesmo_yaml_fora_de_tarefas_continua_reprovando` e `test_link_morto_dentro_da_tarefa_ainda_reprova`;
-`tests/test_anel.py::test_tarefa_do_plugin_sem_projeto_e_isenta_mas_liga_o_que_aponta` e
-`test_so_tarefas_na_raiz_e_isenta_nao_um_nome_parecido`. Há três mutantes dedicados em `tests/mutar.py`.
-Os testes foram escritos antes do conserto e falharam.
+**The rule.** What the plugin writes in `tasks/` belongs to the plugin: the gate does not judge the YAML
+there, and the folder is exempt from the orphan rule (like `inbox/`). A dead link inside the task still fails.
 
-## O que ainda não está coberto
+**Who catches it.** `core/gate.py` (the `tasks/` folder) and `core/ring.py` (`DEPOSITS`).
+**The tests.** `tests/test_gate.py::test_plugin_task_frontmatter_is_not_judged_by_the_subset`,
+`test_the_same_yaml_outside_tasks_still_fails` and `test_dead_link_inside_the_task_still_fails`;
+`tests/test_ring.py::test_plugin_task_without_a_project_is_exempt_but_links_what_it_points_to` and
+`test_only_tasks_at_the_root_is_exempt_not_a_similar_name`. There are three dedicated mutants in
+`tests/mutate.py`. The tests were written before the fix and failed.
 
-### Uma regex que cortava a extensão e fabricou 18 caminhos "mortos" (06/09)
+## What is not covered yet
 
-O verificador do autor tinha um check que conferia caminhos citados no texto, e a regex lia `.tsx`
-como `.ts`: 18 caminhos "mortos" eram esse corte. **Este template não tem esse check** (são cinco
-checks, e nenhum confere caminho em texto corrido), então não existe regra nem teste aqui. Fica
-registrado pra não parecer que foi esquecido: quando o check for portado, ele entra com o teste.
+### A regex that cut the extension and fabricated 18 "dead" paths (Sep 6)
+
+The author's checker had a check that verified paths cited in the text, and its regex read `.tsx` as
+`.ts`: 18 "dead" paths were that cut. **This template does not have that check** (there are five checks,
+and none verifies paths in running text), so there is no rule or test here. It is recorded so it does not
+look forgotten: when the check is ported, it comes in with its test.

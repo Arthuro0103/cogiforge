@@ -1,401 +1,413 @@
-# Tutorial: usando cada parte da bancada
+# Tutorial: using each part of the workbench
 
-Este guia vai do zero ao primeiro dia de uso, parte por parte. Em cada uma: **o que fazer** e **o que
-você deve ver**. Se o que aparece na sua tela for diferente, é um defeito do guia ou do repo: conta pra
-gente.
+This guide goes from zero to your first day of use, one part at a time. For each part: **what to do**
+and **what you should see**. If what appears on your screen is different, it is a defect in the guide or
+in the repo: tell us.
 
-## O que foi conferido, e o que não foi
+## What was checked, and what was not
 
-| Parte | Como foi conferida (03/10) |
+| Part | How it was checked |
 |---|---|
-| `instalar.sh`, hook, portão, anel, vazamento, hub | **Rodados num clone limpo**, passo a passo. As saídas abaixo são as reais. |
-| `abrir-sessao`, `fechar-sessao` | **Rodadas numa sessão real do Claude Code** num clone limpo. As respostas abaixo são as reais. |
-| `conhecer`, `adaptar-skill` | Rodadas até a **primeira pergunta** (são conversas; o resto depende de você). |
-| `task-observer`, `claude-corner` | **Não exercitadas ainda.** O que está escrito vem da própria skill. |
-| TaskNotes (plugin) e graphify | Seguem a documentação dos projetos. O `graphifyy` foi instalado num ambiente isolado e o `graphify --help` conferido; **o plugin dentro do Obsidian e o `/graphify` sobre um vault não foram rodados aqui.** |
+| `install.sh`, hook, gate, ring, leak, hub | **Run in a fresh clone on Oct 6, 2026**, after the move to English, and the output blocks below are the real ones (your own home folder shows as `~`). |
+| `open-session`, `close-session` | **Run in a real Claude Code session on Oct 3**, before the commands were renamed and translated. Since the rename they have not been run in a live session yet. The replies below are examples. |
+| `onboard`, `adapt-skill` | Run up to the **first question** on Oct 3 (they are conversations; the rest depends on you), also before the rename. |
+| `task-observer`, `claude-corner` | **Not exercised yet.** What is written here comes from the skill itself. |
+| TaskNotes (plugin) and graphify | They follow the projects' own documentation. `graphifyy` was installed in an isolated environment and `graphify --help` was checked; **the plugin inside Obsidian and `/graphify` on a vault were not run.** |
 
-Todas as skills foram testadas na máquina do autor, que tem configurações próprias do Claude Code. Não
-provam que funcionam do mesmo jeito na sua. Por isso o guia pede que você anote onde travou.
+All skills were tested on the author's machine, which has its own Claude Code settings. That does not
+prove they work the same way on yours. This is why the guide asks you to write down where you got stuck.
 
-## 0. Antes de começar
+## 0. Before you start
 
-Você precisa de `git`, Python 3.10 ou mais novo, [Obsidian](https://obsidian.md) e o Claude Code. Só pra
-rodar os testes do próprio repo (seção 14) você também precisa do `pytest`: `python3 -m pip install pytest`.
-Funciona em macOS e Linux; no Windows não foi testado. Clone com `git clone` (não baixe o zip: o hook
-depende do git).
+You need `git`, Python 3.10 or newer, [Obsidian](https://obsidian.md) and Claude Code. Only to run the
+repo's own tests (section 14) you also need `pytest`: `python3 -m pip install pytest`.
+It works on macOS and Linux; Windows was not tested. Clone with `git clone` (do not download the zip: the
+hook depends on git).
 
 ```sh
 git clone https://github.com/Arthuro0103/cogiforge.git
 cd cogiforge
 ```
 
-## 1. Instalar o hook
+## 1. Install the hook
 
-**Faça:**
+**Do:**
 
 ```sh
-sh instalar.sh
+sh install.sh
 ```
 
-**Você vê:**
+**You see** (real output):
 
 ```
-OK — hook ativo (core.hooksPath=.githooks) e selftest do anel passou.
-Teste você mesmo: crie uma nota sem link em vault/notes/ e rode git commit.
+OK — hook active (core.hooksPath=.githooks) and the ring selftest passed.
+Test it yourself: create a note without a link in vault/notes/ and run git commit.
 ```
 
-O que isso fez: ligou o `core.hooksPath` do git neste clone e provou que o portão das órfãs reprova o
-que deve. **Sem este passo o hook existe e não protege**, porque essa configuração do git é local e o
-clone não a traz. Se aparecer `ERRO` e `A instalação NÃO foi concluída`, leia a linha acima dele: ela diz
-o que faltou (git, Python 3.10, ou estar dentro de um clone).
+What this did: it turned on git's `core.hooksPath` in this clone and proved that the orphan gate fails
+what it should fail. **Without this step the hook exists but does not protect you**, because that git
+setting is local and the clone does not bring it. If you see `ERROR` and `Installation was NOT
+completed`, read the line above it: it says what was missing (git, Python 3.10, or being inside a clone).
 
-## 2. Abrir o vault no Obsidian
+## 2. Open the vault in Obsidian
 
-No Obsidian: *Abrir pasta como cofre* (Open folder as vault) e escolha a pasta **`vault/`** do repo, não
-a raiz. O Claude Code você roda na **raiz** do repo, e ele lê e escreve só dentro de `vault/`.
+In Obsidian: *Open folder as vault*, and choose the **`vault/`** folder of the repo, not the root. You run
+Claude Code at the **root** of the repo, and it reads and writes only inside `vault/`.
 
-## 3. Instalar o TaskNotes (as tarefas)
+## 3. Install TaskNotes (the tasks)
 
-O [TaskNotes](https://github.com/callumalpass/tasknotes) é um plugin público do Obsidian (licença MIT,
-mantido por uma pessoa de fora deste projeto). Cada tarefa vira uma nota, com calendário e registro de
-tempo. **Ele não vem no repo**: você instala pela loja do Obsidian.
+[TaskNotes](https://github.com/callumalpass/tasknotes) is a public Obsidian plugin (MIT license,
+maintained by a person outside this project). Each task becomes a note, with a calendar and time
+tracking. **It does not come with the repo**: you install it from Obsidian's store.
 
-**Faça:**
+**Do:**
 
-1. Obsidian → *Configurações* → *Plugins da comunidade* (Community plugins) → ligue os plugins da comunidade.
-2. *Procurar* (Browse) → busque **TaskNotes** → *Instalar* → *Ativar*.
-3. *Configurações* → *TaskNotes* → aba geral: ponha **Default tasks folder** = `tarefas`, e em
-   **Identify tasks by** deixe **Tag** com a tag `task`.
+1. Obsidian → *Settings* → *Community plugins* → turn community plugins on.
+2. *Browse* → search for **TaskNotes** → *Install* → *Enable*.
+3. *Settings* → *TaskNotes* → general tab: set **Default tasks folder** = `tasks`, and leave
+   **Identify tasks by** on **Tag** with the tag `task`.
 
-**Você deve ver** (pela documentação do plugin; **não conferido aqui dentro do Obsidian**): a tarefa de
-exemplo `vault/tasks/write-the-first-example-note.md` aparecendo nas telas do plugin, e cada
-tarefa criada pela interface virando um arquivo `.md` em `vault/tasks/`.
+**You should see** (from the plugin's documentation; **not checked here inside Obsidian**): the example
+task `vault/tasks/write-the-first-example-note.md` showing up in the plugin's views, and each task created
+through the interface becoming a `.md` file in `vault/tasks/`.
 
-> Os nomes das opções acima são os da documentação do plugin na versão 4.13.8. Se estiverem diferentes
-> na sua, o que importa é: **pasta das tarefas = `tarefas`** e **tarefa identificada pela tag `task`**.
+> The option names above are the ones in the plugin's documentation for version 4.13.8. If they differ in
+> yours, what matters is: **tasks folder = `tasks`** and **task identified by the tag `task`**.
 
-O formato de uma tarefa (o plugin e as skills escrevem o mesmo):
+The format of a task (the plugin and the skills write the same one):
 
 ```yaml
 ---
 tags:
   - task
-title: Ligar pro dentista
+title: Call the dentist
 status: in-progress        # open | in-progress | done
 priority: high             # none | low | normal | high
 projects:
-  - "[[projects/example-my-first-project/instructions|exemplo]]"
+  - "[[projects/example-my-first-project/instructions|example]]"
 ---
 
-Pronto quando: consulta marcada.
+Done when: appointment booked.
 ```
 
-Duas regras da casa sobre tarefas: `tasks/` **não** é barrada como nota órfã (o plugin cria tarefa sem
-pedir link, e barrar aí faria você desinstalar), e o portão **não julga o YAML** dali (o plugin acrescenta
-campos próprios, como o tempo registrado). Link morto dentro de uma tarefa continua reprovando.
+Two house rules about tasks: `tasks/` is **not** failed as an orphan note (the plugin creates a task
+without asking for a link, and failing there would make you uninstall it), and the gate **does not judge
+the YAML** there (the plugin adds its own fields, such as tracked time). A dead link inside a task still
+fails.
 
-> Existem também linhas de comando públicas do mesmo autor (`npm install -g tasknotes-cli` e
-> `npm install -g mdbase-tasknotes`, as duas MIT). Não são necessárias aqui e não foram testadas.
+> There are also public command-line tools from the same author (`npm install -g tasknotes-cli` and
+> `npm install -g mdbase-tasknotes`, both MIT). They are not needed here and were not tested.
 
-## 4. Seu primeiro dia: `/conhecer`
+## 4. Your first day: `/onboard`
 
-**Faça:** com o Claude Code na raiz do repo (`claude`), digite `/conhecer`.
+**Do:** with Claude Code at the repo root (`claude`), type `/onboard`.
 
-**Você vê** (resposta real, num clone onde o perfil estava vazio):
+**You see** (example, in any language; a real reply in a clone where the profile was empty):
 
 ```
-Vamos começar. O perfil está vazio, então é a primeira vez.
+Let's start. Your profile is empty, so this is the first time.
 
-Pergunto isso para a bancada servir ao que pesa de verdade, e não a um modelo genérico.
+I ask this so the workbench serves what weighs on you for real, and not a generic template.
 
-Qual dessas frentes mais te pesa hoje?
-1. Trabalho   2. Escola ou estudo   3. Vida pessoal   4. Um projeto específico
-Pode escolher uma, juntar várias ou responder com as suas palavras. Também vale "prefiro não dizer".
+Which of these areas weighs on you most today?
+1. Work   2. School or study   3. Personal life   4. A specific project
+You can pick one, combine several, or answer in your own words. "I prefer not to say" is also fine.
 ```
 
-Uma pergunta por vez, cada uma seguindo a sua resposta. O que sai disso:
-`vault/_questions_about_me.md` preenchido e **propostas** de linhas para `vault/memory/profile.md`, com
-data e a sua frase literal. Nada entra no perfil sem o seu "sim", e o Claude não deduz o que você não disse.
-Resposta curta vale, e "prefiro não dizer" também.
+One question at a time, each following your answer. What comes out of it:
+`vault/_questions_about_me.md` filled in and **proposed** lines for `vault/memory/profile.md`, with the
+date and your verbatim quote. Nothing enters the profile without your "yes", and Claude does not infer
+what you did not say. A short answer is fine, and so is "I prefer not to say".
 
-## 5. Criar o seu primeiro projeto
+## 5. Create your first project
 
-Um projeto é uma pasta em `vault/projects/` com um arquivo `instructions.md` (a **raiz**). Tudo o que nasce
-do projeto se liga a ela.
+A project is a folder in `vault/projects/` with an `instructions.md` file (the **root**). Everything that
+comes out of the project links back to it.
 
-**Faça:**
+**Do:**
 
 ```sh
-cp -R vault/projects/example-my-first-project vault/projects/meu-app
+cp -R vault/projects/example-my-first-project vault/projects/my-app
 ```
 
-1. Abra `vault/projects/meu-app/instructions.md` e troque `tipo`, `status` (`ativo`, `pausado` ou
-   `encerrado`) e `declared_target` (uma frase: o que existe no mundo quando o projeto der certo).
-2. Em `vault/projects/_index.md`, acrescente uma linha **dentro da tabela** (logo abaixo da última linha
-   dela, não depois do parágrafo que vem em seguida):
-   `| [[projects/meu-app/instructions\|meu-app]] | ativo | software | Meu primeiro app. |`
-3. Rode o hub, que escreve na raiz do projeto a lista de todos os arquivos dele:
+1. Open `vault/projects/my-app/instructions.md` and change `type`, `status` (for example `active`,
+   `paused` or `closed`) and `declared_target` (one sentence: what exists in the world when the project
+   works out).
+2. In `vault/projects/_index.md`, add a line **inside the table** (right below its last row, not after
+   the paragraph that follows it):
+   `| [[projects/my-app/instructions\|my-app]] | active | software | My first app. |`
+3. Run the hub, which writes into the project root the list of all its files:
 
 ```sh
-python3 ferramentas/hub.py
-python3 ferramentas/hub.py --check
+python3 tools/hub.py
+python3 tools/hub.py --check
 ```
 
-**Você vê:**
+**You see** (real output):
 
 ```
 OK         example-my-first-project
-OK         meu-app
+OK         my-app
 ```
 
-Se esquecer o passo 2, o `--check` responde `FORA DO INDICE meu-app (todo projeto entra em
-projects/_index.md)` e sai com erro. Uma raiz de projeto que ninguém aponta também aparece como órfã
-no anel (passo 6).
+If you forget step 2, `--check` answers `NOT IN INDEX my-app (every project goes in
+projects/_index.md)` and exits with an error. A project root that nobody points to also shows up as an
+orphan in the ring (step 6).
 
-## 6. Escrever uma nota, e o hook trabalhando
+## 6. Write a note, and the hook at work
 
-Uma nota é um `.md` em `vault/notes/<area>/`. As áreas válidas estão em `vault/areas.txt` (a pasta tem o
-mesmo nome do `area:` da nota). O modelo mínimo está em `vault/CLAUDE.md`.
+A note is a `.md` file in `vault/notes/<area>/`. The valid areas are in `vault/areas.txt` (the folder has
+the same name as the note's `area:`). The minimal template is in `vault/CLAUDE.md`.
 
-**a) Uma nota solta é barrada.** Crie `vault/notes/learning/solta.md` com cabeçalho e texto, mas sem
-nenhum link, e tente commitar:
+**a) A loose note is blocked.** Create `vault/notes/learning/loose.md` with a heading and text, but with
+no link at all, and try to commit:
 
 ```sh
-git add vault/notes/learning/solta.md
-git commit -m "nota solta"
+git add vault/notes/learning/loose.md
+git commit -m "loose note"
 ```
 
-**Você vê:**
+**You see** (real output):
 
 ```
-  ⛔ COMMIT BLOQUEADO — nota deste commit sem nenhuma aresta no grafo
+  ⛔ COMMIT BLOCKED — a note in this commit has no edge in the graph
 
-     REPROVA — 1 nota(s) sem nenhum link de entrada ou saída:
-        notes/learning/solta.md
-
-     Como consertar: abra a nota e ligue ela a uma nota que EXISTE com um [[wikilink]] no meio do texto
-     (onde a conexão é real; bloco de links no rodapé não é o jeito), ou aponte pra ela a partir de uma
-     nota existente.
-     ...
-     Escape consciente: git commit --no-verify
+     FAILS — 1 note(s) with no inbound or outbound link:
+        notes/learning/loose.md
+     
+     How to fix: open the note and connect it to a note that EXISTS with a [[wikilink]] in the middle of the text
+     (where the connection is real; a block of links in the footer is not the way), or point to it from an
+     existing note.
+     A link to a file that does not exist does not count. Just a quick capture? Drop it in inbox/ (or create the task in tasks/): they are exempt.
+     Deliberate bypass: git commit --no-verify
+     
+  NOT_VERIFIED: private blocklist missing — only the generic patterns ran. Create ~/.config/cogiforge/blocklist.txt (one term per line) to check the private part.
+  Deliberate bypass: git commit --no-verify
 ```
 
-**b) Ligue a nota no meio do texto e o commit passa.** Acrescente ao corpo, por exemplo:
-`... [[projects/example-my-first-project/instructions|o projeto exemplo]] ganha esta nota.` O link é de
-**caminho completo a partir de `vault/`**, e vale onde a conexão é real.
+**b) Link the note in the middle of the text and the commit passes.** Add to the body, for example:
+`... [[projects/example-my-first-project/instructions|the example project]] gets this note.` The link is a
+**full path from `vault/`**, and it counts where the connection is real.
 
-**c) Captura rápida nunca é barrada.** Um arquivo em `vault/inbox/` entra sem link. É de propósito: quem é
-barrado na hora de anotar uma ideia desinstala a ferramenta.
+**c) Quick capture is never blocked.** A file in `vault/inbox/` goes in without a link. This is on
+purpose: someone who gets blocked while jotting down an idea uninstalls the tool.
 
-**d) Dado pessoal é barrado.** Um arquivo que cita um caminho de máquina (`/Users/<nome>/...`), e-mail,
-telefone ou CPF:
-
-```
-  ⛔ COMMIT BLOQUEADO — vazamento de dado pessoal no que vai pro commit
-
-     vault/inbox/leaked.md:3: caminho
-     1 achado(s) em 1 arquivo(s), de 1 varrido(s)
-
-  Tire o dado do arquivo (a saída acima diz arquivo:linha:tipo, nunca o dado).
-```
-
-A saída diz **onde** e **de que tipo**, nunca o dado achado.
-
-**e) A sua lista privada.** Além dos padrões acima, o varredor checa uma lista de termos seus (nomes,
-empresas, projetos que não podem aparecer). Ela mora **fora do repo**, em `~/.config/cogiforge/negra.txt`,
-um termo por linha. Sem ela, o hook não bloqueia, mas avisa:
+**d) Personal data is blocked.** A file that mentions a machine path (`/Users/<name>/...`), an e-mail, a
+phone number or a CPF (Brazilian tax ID):
 
 ```
-  NAO_VERIFICADO: lista negra privada ausente — só os padrões genéricos rodaram. Crie
-  ~/.config/cogiforge/negra.txt (um termo por linha) para checar a parte privada.
+  ⛔ COMMIT BLOCKED — personal data leak in what is going into the commit
+
+     vault/inbox/leaked.md:1: path
+     1 finding(s) in 1 file(s), of 1 scanned
+     NOT_VERIFIED: private blocklist missing — only the generic patterns ran. Create ~/.config/cogiforge/blocklist.txt (one term per line) to check the private part.
+
+  Take the data out of the file (the output above says file:line:type, never the data).
+  Deliberate bypass: git commit --no-verify
 ```
 
-Isso significa "a parte privada **não foi conferida**", e nunca "está limpo".
 
-**f) Conferir à mão a qualquer hora:**
+The output says **where** and **what type**, never the data that was found.
+
+**e) Your private blocklist.** Besides the patterns above, the scanner checks a list of your own terms
+(names, companies, projects that must not appear). It lives **outside the repo**, in
+`~/.config/cogiforge/blocklist.txt`, one term per line. Without it, the hook does not block, but it warns:
+
+```
+  NOT_VERIFIED: private blocklist missing — only the generic patterns ran. Create
+  ~/.config/cogiforge/blocklist.txt (one term per line) to check the private part.
+```
+
+
+This means "the private part was **not checked**", and never "it is clean".
+
+**f) Check by hand at any time:**
 
 ```sh
-python3 nucleo/portao.py        # links, áreas e cabeçalhos
-python3 nucleo/anel.py          # lista as notas órfãs
-python3 nucleo/vazamento.py .   # procura dado pessoal
+python3 core/gate.py        # links, areas and headers
+python3 core/ring.py        # lists the orphan notes
+python3 core/leak.py .      # looks for personal data
 ```
 
-O portão responde `N nota(s), 0 reprovam, 0 NAO DEU PRA LER` quando está tudo certo. Ele só confere o
-que está **dentro** de `vault/`: um arquivo de fora sai com erro (código 2), nunca como "ok".
+The gate answers `N note(s), 0 fail, 0 COULD NOT READ` when everything is fine. It only checks what is
+**inside** `vault/`: a file from outside exits with an error (code 2), never as "ok".
 
-## 7. `/abrir-sessao`: onde você parou
+## 7. `/open-session`: where you left off
 
-**Faça:** diga `abrir sessão do example-my-first-project` (ou o nome do seu projeto), ou use
-`/abrir-sessao <projeto>`. Foi com a frase que testamos. Sem nome de projeto ela não dispara.
+**Do:** say `open session for example-my-first-project` (or the name of your project), or use
+`/open-session <project>`. We tested it with the sentence. Without a project name it does not trigger.
 
-**Você vê** (resposta real, abreviada, no clone limpo, com a tarefa em andamento criada no passo 3):
-
-```
-Projeto: example-my-first-project · status: ativo · alvo: ainda é o texto do modelo (...)
-
-Onde parou: não há onde. vault/memory/diario/ e vault/memory/briefings/ não têm nenhum arquivo,
-então esta é a primeira sessão.
-
-Ficou aberto (2 tarefas):
-- in-progress, prioridade alta: Ligar pro dentista
-- open: Escrever a primeira nota ligada ao projeto exemplo
-
-Atenção: A tarefa do dentista aponta para este projeto. Isso é de propósito ou o link ficou errado?
-
-Próximo passo possível (sugestão minha): fazer a tarefa aberta de escrever a primeira nota ligada...
-Por onde você quer começar?
-```
-
-Ela **só relata o que está nos arquivos**, e onde o disco discorda do que o arquivo afirma ela **pergunta**,
-não decide. A sugestão vem marcada como sugestão.
-
-## 8. `/fechar-sessao`: fechar o dia
-
-**Faça:** ao terminar, `/fechar-sessao`. Se alguma coisa te doeu, diga com as suas palavras.
-
-**Você vê** (resposta real, abreviada; dissemos "toda vez que eu crio um projeto novo eu esqueço de pôr no índice" e
-pedimos uma tarefa):
+**You see** (example, in any language; an abridged real reply in the clean clone, with the in-progress task
+created in step 3):
 
 ```
-Arquivos criados (tudo em vault/):
-- tasks/por-projeto-novo-no-indice.md, aberta no projeto meu-app.
-- memory/briefings/2026-10-03-projeto-meu-app.md
-- memory/diario/2026-10-03.md
-- memory/ideas/_pains.md (1 linha acrescentada)
+Project: example-my-first-project · status: active · target: still the template text (...)
 
-Verificadores: portao.py: 27 notas, 0 reprovam. anel.py --gate: nenhuma órfã.
+Where you left off: nowhere. vault/memory/diary/ and vault/memory/briefings/ have no files,
+so this is the first session.
 
-Achado: a linha do meu-app em projects/_index.md caiu depois do parágrafo "Status possíveis", fora da
-tabela. (...) Quer que eu mova a linha pra dentro da tabela? Depois disso, quer que eu commite?
+Left open (2 tasks):
+- in-progress, high priority: Call the dentist
+- open: Write the first note linked to the example project
+
+Attention: The dentist task points to this project. Is that on purpose or is the link wrong?
+
+Possible next step (my suggestion): do the open task of writing the first note linked...
+Where do you want to start?
 ```
 
-O que ela faz: **diário** do dia, um **briefing** por sessão (com link de caminho completo pra raiz do
-projeto no corpo, sem bloco `## Conexões`), **dores** colhidas só da **sua** fala em
-`vault/memory/ideas/_pains.md` (`data | citação literal | fonte`; sem citação literal a linha não entra),
-**tarefas** abertas no formato do TaskNotes, e roda o portão e o anel. **Ela só faz commit se você mandar e
-nunca dá push.** O que ela criou passou no hook ao ser commitado, sem ajuste.
+It **only reports what is in the files**, and where the disk disagrees with what a file claims it **asks**,
+it does not decide. The suggestion comes marked as a suggestion.
 
-## 9. `/task-observer`: a bancada aprende com você
+## 8. `/close-session`: closing the day
 
-**Faça:** durante o trabalho, peça `/task-observer`, ou diga "observa essa sessão".
+**Do:** when you finish, `/close-session`. If something hurt, say it in your own words.
 
-**O que ela faz** (descrito na skill; **não foi exercitada ainda**): procura três sinais: uma skill que
-faltou, um passo repetido três vezes, uma correção que você fez duas vezes. Acrescenta uma linha por
-proposta em `vault/memory/observacoes.md` (data, o que viu, o que propõe). **Só propõe.** Ela nunca
-escreve em `perfil.md`, `padroes.md`, `decisoes.md` nem em `vault/notes/`, e **nunca cria skill**: a pauta
-é sua, e quem guia a criação é o `/adaptar-skill`.
-
-## 10. `/claude-corner`: o tempo que você está fora
-
-**Faça:** antes de sair, diga "vou sair por uma hora".
-
-**O que ela faz** (descrito na skill; **não foi exercitada ainda**): se você pediu algo antes de sair, esse
-pedido é feito **inteiro primeiro**. Depois, no tempo que você disser (no máximo 1h30), o Claude relê as
-notas, procura conexões reais, lê as dores e os projetos, e testa ideias num lugar descartável **fora de
-`vault/`**. Ele **só propõe**, em `vault/memory/corner/AAAA-MM-DD-<assunto>.md`: não afirma, não faz merge,
-não dá push, não instala nada fora do descartável e não manda mensagem a ninguém. Ao voltar você recebe
-um resumo curto e o caminho do arquivo.
-
-## 11. `/adaptar-skill` e as fichas: fazer a sua skill
-
-As skills `artigo`, `conselho`, `product-idea` e `consult-notes` **não vêm prontas**: vêm como
-**fichas** em `vault/skill-worksheets/`, que explicam o método por dentro. A ideia é que você decida se
-quer uma versão sua e a escreva, em vez de receber uma pronta que talvez não sirva.
-
-**Faça:** `/adaptar-skill`.
-
-**Você vê** (resposta real, abreviada):
+**You see** (example, in any language; abridged; we said "every time I create a new project I forget to add
+it to the index" and asked for a task):
 
 ```
-Alguma skill do catálogo chamou sua atenção? Uma skill é um roteiro que o Claude segue quando você o chama.
-Eu pergunto isso pra escolher qual ficha a gente lê junto.
+Files created (everything in vault/):
+- tasks/new-project-goes-in-the-index.md, open, on the project my-app.
+- memory/briefings/2026-10-03-project-my-app.md
+- memory/diary/2026-10-03.md
+- memory/ideas/_pains.md (1 line added)
 
-| skill | o que faz |
-| conselho | passa uma decisão com custo por vários ângulos que discordam e fecha num veredito |
-| artigo | leva uma tese ao texto sem citação inventada |
-| product-idea | acha dor real no que você já escreveu e devolve ideia |
-| consult-notes | responde só com o que suas notas dizem, citando cada nota |
+Verifiers: gate.py: 27 notes, 0 fail. ring.py --gate: no orphans.
 
-(...) Não li as fichas, e por isso não afirmo qual serviria melhor.
-Você pode escolher uma, pedir uma sugestão minha ou dizer "nenhuma serve hoje". (...) Qual delas?
+Finding: the my-app line in projects/_index.md landed after the "Possible statuses" paragraph, outside
+the table. (...) Do you want me to move the line into the table? After that, do you want me to commit?
 ```
 
-O caminho: **ler a ficha juntos → separar o método do que é só do autor → decidir se resolve uma dor
-sua → escrever com as suas respostas → testar num caso real → registrar o veredito** em
-`vault/memory/skills-avaliadas.md`. O Claude **nunca escreve a skill por você**, e **"não serve pra mim"
-é uma resposta válida** que fica registrada, com o motivo. Sem uma dor sua citada, a resposta é "não agora".
+What it does: the day's **diary**, one **briefing** per session (with a full-path link to the project root
+in the body, no `## Connections` block), the **pains** collected only from **your** words in
+`vault/memory/ideas/_pains.md` (`date | verbatim quote | source`; without a verbatim quote the line does
+not go in), **tasks** opened in the TaskNotes format, and it runs the gate and the ring. **It commits only
+if you tell it to and never pushes.** What it created passed the hook when committed, with no adjustments.
 
-Antes disso, leia `vault/skill-worksheets/anatomy-of-a-skill.md` (as sete partes de uma skill e pra que
-serve cada uma, em uns 5 minutos).
+## 9. `/task-observer`: the workbench learns from you
 
-## 12. Mapa de conexões com o graphify (opcional)
+**Do:** during the work, ask for `/task-observer`, or say "observe this session".
 
-O [graphify](https://github.com/Graphify-Labs/graphify) é um projeto público (licença Apache-2.0) que
-transforma uma pasta numa **rede de conceitos** que você pode consultar, em vez de reler os arquivos.
-Aqui ele ajuda a achar o que as suas notas têm em comum.
+**What it does** (described in the skill; **not exercised yet**): it looks for three signals: a skill that
+was missing, a step repeated three times, a correction you made twice. It adds one line per proposal to
+`vault/memory/observations.md` (date, what it saw, what it proposes). **It only proposes.** It never
+writes to `profile.md`, `patterns.md`, `decisions.md` or to `vault/notes/`, and **it never creates a
+skill**: the agenda is yours, and what guides skill creation is `/adapt-skill`.
 
-**Faça** (uma vez, no terminal):
+## 10. `/claude-corner`: the time you are away
+
+**Do:** before leaving, say "I'm leaving for an hour".
+
+**What it does** (described in the skill; **not exercised yet**): if you asked for something before
+leaving, that request is done **in full first**. Then, for the time you say (at most 1h30), Claude rereads
+your notes, looks for real connections, reads the pains and the projects, and tests ideas in a throwaway
+place **outside `vault/`**. It **only proposes**, in `vault/memory/corner/YYYY-MM-DD-<subject>.md`: it does
+not assert, does not merge, does not push, does not install anything outside the throwaway place and does
+not message anyone. When you return you get a short summary and the path of the file.
+
+## 11. `/adapt-skill` and the worksheets: make your own skill
+
+The skills `artigo`, `conselho`, `product-idea` and `consult-notes` **do not come ready-made**: they come
+as **worksheets** in `vault/skill-worksheets/`, which explain the method from the inside. The idea is that
+you decide whether you want a version of your own and write it, instead of receiving a finished one that
+may not fit.
+
+**Do:** `/adapt-skill`.
+
+**You see** (example, in any language; abridged):
+
+```
+Did any skill in the catalog catch your attention? A skill is a script Claude follows when you call it.
+I ask this to choose which worksheet we read together.
+
+| skill | what it does |
+| conselho | puts a costly decision through several angles that disagree and closes on a verdict |
+| artigo | takes a thesis to text with no invented citation |
+| product-idea | finds a real pain in what you already wrote and returns an idea |
+| consult-notes | answers only with what your notes say, citing each note |
+
+(...) I did not read the worksheets, so I do not claim which one would fit best.
+You can pick one, ask for a suggestion from me, or say "none fits today". (...) Which one?
+```
+
+The path: **read the worksheet together → separate the method from what is only the author's → decide
+whether it solves a pain of yours → write it with your answers → test it on a real case → record the
+verdict** in `vault/memory/skills-reviewed.md`. Claude **never writes the skill for you**, and **"it is not
+for me" is a valid answer** that gets recorded, with the reason. Without a pain of yours quoted, the
+answer is "not now".
+
+Before that, read `vault/skill-worksheets/anatomy-of-a-skill.md` (the seven parts of a skill and what
+each one is for, in about 5 minutes).
+
+## 12. Connection map with graphify (optional)
+
+[graphify](https://github.com/Graphify-Labs/graphify) is a public project (Apache-2.0 license) that turns
+a folder into a **network of concepts** you can query, instead of rereading the files. Here it helps
+find what your notes have in common.
+
+**Do** (once, in the terminal):
 
 ```sh
-uv tool install graphifyy     # ou: pipx install graphifyy
-graphify install              # registra a skill no seu Claude Code
+uv tool install graphifyy     # or: pipx install graphifyy
+graphify install              # registers the skill in your Claude Code
 ```
 
-O nome do pacote tem **dois `y`**: `graphifyy`. É o que o repositório oficial (Graphify-Labs/graphify)
-indica; confira sempre o endereço antes de instalar pacote de terceiros. `graphify install` grava a
-skill na pasta de configuração **do seu usuário** (vale pra todos os seus projetos); com
-`graphify install --project` ela vai para `.claude/skills/graphify/` deste repo.
+The package name has **two `y`**: `graphifyy`. That is what the official repository (Graphify-Labs/graphify)
+indicates; always check the address before installing a third-party package. `graphify install` writes the
+skill in the configuration folder **of your user** (it applies to all your projects); with
+`graphify install --project` it goes to `.claude/skills/graphify/` in this repo.
 
-Depois, no Claude Code, **na raiz do repo**:
+Then, in Claude Code, **at the repo root**:
 
 ```
 /graphify vault
 ```
 
-**Você vê:** uma pasta `graphify-out/` com `graph.html` (abra no navegador), `GRAPH_REPORT.md` (os
-conceitos mais ligados e as conexões que surpreendem) e `graph.json`. Para consultar:
-`/graphify query "<pergunta>"`, `/graphify path "A" "B"` e `/graphify explain "conceito"`.
+**You see:** a `graphify-out/` folder with `graph.html` (open it in the browser), `GRAPH_REPORT.md` (the
+most connected concepts and the surprising connections) and `graph.json`. To query:
+`/graphify query "<question>"`, `/graphify path "A" "B"` and `/graphify explain "concept"`.
 
-- `graphify-out/` **está no `.gitignore`**: o mapa é gerado das suas notas e não vai para o repo.
-- Se `graphify-out/GRAPH_REPORT.md` existir, o Claude lê antes de procurar conexões entre notas.
-- Segundo o projeto, o **código** é lido localmente; a leitura semântica de **notas e documentos** passa por
-  um modelo (o seu assistente, ou um backend que você configure). Se as suas notas são sensíveis, decida
-  isso antes de rodar.
-- **Não rodado aqui:** o `/graphify` sobre um vault. Instalamos o pacote num ambiente isolado e o
-  `graphify --help` listou os comandos (`install`, `path`, `explain`, entre outros).
+- `graphify-out/` **is in `.gitignore`**: the map is generated from your notes and does not go to the repo.
+- If `graphify-out/GRAPH_REPORT.md` exists, Claude reads it before looking for connections between notes.
+- According to the project, **code** is read locally; the semantic reading of **notes and documents** goes
+  through a model (your assistant, or a backend you configure). If your notes are sensitive, decide that
+  before running it.
+- **Not run here:** `/graphify` over a vault. We installed the package in an isolated environment and
+  `graphify --help` listed the commands (`install`, `path`, `explain`, among others).
 
-## 13. O hook bloqueou meu commit
+## 13. The hook blocked my commit
 
-| O que aparece | O que fazer |
+| What appears | What to do |
 |---|---|
-| `nota deste commit sem nenhuma aresta no grafo` | Ligue a nota a outra que **existe**, com `[[caminho/completo\|texto]]` no meio do texto. Ou jogue a captura em `vault/inbox/`. |
-| `vazamento de dado pessoal` + `arquivo:linha:tipo` | Tire o dado do arquivo (o hook não mostra o dado, só o lugar). |
-| `FORA DO INDICE <projeto>` (no `hub.py`) | Acrescente o projeto como linha dentro da tabela de `vault/projects/_index.md`. |
-| `NAO_VERIFICADO: lista negra privada ausente` | Não é erro. Crie `~/.config/cogiforge/negra.txt` se quiser checar a parte privada. |
-| `ILEGIVEL` / código 3 no portão | O arquivo não pôde ser lido (permissão ou não é texto UTF-8). Não é "limpo". |
-| `ERRO: ... está fora de vault` | O portão só confere o que está dentro de `vault/`. Copie o arquivo pra dentro. |
-| Quero commitar mesmo assim | `git commit --no-verify`. É o escape consciente; use sabendo o que está pulando. |
+| `a note in this commit has no edge in the graph` | Connect the note to another one that **exists**, with `[[full/path\|text]]` in the middle of the text. Or drop the capture in `vault/inbox/`. |
+| `personal data leak` + `file:line:type` | Remove the data from the file (the hook does not show the data, only the place). |
+| `NOT IN INDEX <project>` (from `hub.py`) | Add the project as a row inside the table in `vault/projects/_index.md`. |
+| `NOT_VERIFIED: private blocklist missing` | Not an error. Create `~/.config/cogiforge/blocklist.txt` if you want to check the private part. |
+| `UNREADABLE` / exit code 3 from the gate | The file could not be read (permission, or not UTF-8 text). It does not mean "clean". |
+| `ERROR: ... is outside vault` | The gate only checks what is inside `vault/`. Copy the file inside. |
+| I want to commit anyway | `git commit --no-verify`. It is the deliberate bypass; use it knowing what you are skipping. |
 
-## 14. Cola rápida
+## 14. Quick reference
 
-| Pra que | Comando |
+| For | Command |
 |---|---|
-| ativar o hook e provar que funciona | `sh instalar.sh` |
-| conferir links, áreas e cabeçalhos | `python3 nucleo/portao.py` |
-| listar notas órfãs | `python3 nucleo/anel.py` |
-| procurar dado pessoal | `python3 nucleo/vazamento.py .` |
-| regravar a lista de arquivos de cada projeto | `python3 ferramentas/hub.py` |
-| conferir se o hub está em dia | `python3 ferramentas/hub.py --check` |
-| rodar os testes do repo (precisa do `pytest`; rode **depois** do `sh instalar.sh`, senão o teste do hook falha de propósito) | `python3 -m pytest -q` |
-| quebrar cada check e exigir teste vermelho | `python3 tests/mutar.py` |
+| turn the hook on and prove it works | `sh install.sh` |
+| check links, areas and headers | `python3 core/gate.py` |
+| list orphan notes | `python3 core/ring.py` |
+| look for personal data | `python3 core/leak.py .` |
+| rewrite the file list of each project | `python3 tools/hub.py` |
+| check that the hub is up to date | `python3 tools/hub.py --check` |
+| run the repo tests (needs `pytest`; run **after** `sh install.sh`, otherwise the hook test fails on purpose) | `python3 -m pytest -q` |
+| break each check and require a red test | `python3 tests/mutate.py` |
 
-| Skill | Quando |
+| Skill | When |
 |---|---|
-| `/conhecer` | na primeira vez, e quando quiser atualizar o perfil |
-| `/abrir-sessao <projeto>` | ao começar o trabalho num projeto |
-| `/fechar-sessao` | ao terminar o dia |
-| `/task-observer` | durante o trabalho, pra a bancada propor melhorias |
-| `/claude-corner` | quando for sair |
-| `/adaptar-skill` | quando quiser uma skill sua a partir de uma ficha |
+| `/onboard` | the first time, and when you want to update the profile |
+| `/open-session <project>` | when you start working on a project |
+| `/close-session` | when you finish the day |
+| `/task-observer` | during the work, so the workbench proposes improvements |
+| `/claude-corner` | when you are about to leave |
+| `/adapt-skill` | when you want a skill of your own from a worksheet |
 
-Algo não bateu com este guia? Anote o passo, o que você esperava e o que apareceu, e mande.
+Something did not match this guide? Write down the step, what you expected and what appeared, and send it.

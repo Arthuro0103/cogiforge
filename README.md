@@ -5,15 +5,15 @@
 **cogiforge is a second brain on Obsidian + Claude Code that learns how you work, and writes nothing about you that you did not say.** *Cogi ergo sum*: a creative workbench for your head. It holds your work, your school and your personal life in one place, **organizes your projects, ideas and tasks, helps you write and plan, and gets better with you** as you use it.
 
 > **Status: alpha (v0.x).** Built from the author's own working vault and used, so far, only by the
-> author. Skills and notes are in **Portuguese** for now; this page is the English front door.
-> Português completo: [LEIA-ME.md](LEIA-ME.md). Passo a passo de cada parte (em português): [TUTORIAL.md](TUTORIAL.md).
+> author. Skills, docs and the vault template are in English. If you want to use it in Portuguese, see
+> docs/TRANSLATING.md (glossary and a checklist). Step by step for each part: [TUTORIAL.md](TUTORIAL.md).
 
 ## Why it exists
 
 cogiforge came out of using Claude on a real vault. Three decisions shaped it:
 
 1. **Claude does not decide who you are.** Nothing about you is written unless you said it. A line only enters your profile with your "yes", the date and your literal quote.
-2. **A rule stays only if a real failure justifies it.** Every rule in this repo comes from a dated mistake, and has a test that goes red without it. Examples from [POR-QUE.md](POR-QUE.md): a link checker that reported OK while 58 links were broken, a check that touched nothing and still said OK, a gate that was bypassed with `--no-verify` three times and then six.
+2. **A rule stays only if a real failure justifies it.** Every rule in this repo comes from a dated mistake, and has a test that goes red without it. Examples from [WHY.md](WHY.md): a link checker that reported OK while 58 links were broken, a check that touched nothing and still said OK, a gate that was bypassed with `--no-verify` three times and then six.
 3. **It proposes, you decide.** The skills write suggestions to files. Nothing changes behind your back.
 
 ![The author's own vault as a graph: every dot is a note, every line a link. File names are removed.](assets/vault-graph.png)
@@ -25,14 +25,14 @@ cogiforge came out of using Claude on a real vault. Three decisions shaped it:
 | Piece | What it does |
 |---|---|
 | `vault/` | The workbench: `inbox/` for quick capture, `notes/` for processed notes, `projects/` with one root file per project, `memory/` for what *you* told it, `tasks/` for tasks. Open this folder in Obsidian. |
-| `/conhecer` | Onboarding. Asks one question at a time, each following your last answer, and writes what **you said**, dated and quoted. It never guesses. |
-| `/abrir-sessao <project>` | Starts work on a project: reads its root file, the last diary entries and the open tasks, and tells you where you stopped. |
-| `/fechar-sessao` | Ends the day: diary, a briefing per session, the **pains you voiced** collected in one file, tasks opened for what is pending. It commits only if you say so and never pushes. |
+| `/onboard` | Onboarding. Asks one question at a time, each following your last answer, and writes what **you said**, dated and quoted. It never guesses. |
+| `/open-session <project>` | Starts work on a project: reads its root file, the last diary entries and the open tasks, and tells you where you stopped. |
+| `/close-session` | Ends the day: diary, a briefing per session, the **pains you voiced** collected in one file, tasks opened for what is pending. It commits only if you say so and never pushes. |
 | `/task-observer` | Watches how you work and **only proposes** improvements (a missing skill, a step you repeated three times, a correction you made twice). You decide. |
 | `/claude-corner` | When you say you are leaving, Claude uses that time to reread your notes, find real connections and test ideas in a throwaway place. It **only proposes**, in a file. |
-| Tasks (**TaskNotes**) | Tasks are notes in `vault/tasks/`, managed by the public [TaskNotes](https://github.com/callumalpass/tasknotes) Obsidian plugin (MIT). Not bundled: you install it from Obsidian's community plugin store. `abrir-sessao` and `fechar-sessao` read and write the same format. |
+| Tasks (**TaskNotes**) | Tasks are notes in `vault/tasks/`, managed by the public [TaskNotes](https://github.com/callumalpass/tasknotes) Obsidian plugin (MIT). Not bundled: you install it from Obsidian's community plugin store. `open-session` and `close-session` read and write the same format. |
 | Connection map (**graphify**, optional) | The public [graphify](https://github.com/Graphify-Labs/graphify) (Apache-2.0) maps your notes into a graph you can query. Install it yourself; its output folder is git-ignored. See the tutorial. |
-| `/adaptar-skill` | Helps you write **your own** skill from a worksheet in `vault/skill-worksheets/`. One question at a time; Claude never writes it for you, and "this is not for me" is a valid answer that gets recorded. |
+| `/adapt-skill` | Helps you write **your own** skill from a worksheet in `vault/skill-worksheets/`. One question at a time; Claude never writes it for you, and "this is not for me" is a valid answer that gets recorded. |
 
 ## How it improves with you
 
@@ -40,7 +40,7 @@ Three loops, and in all of them the decision stays with you:
 
 1. **Pains.** At the end of a session your own words about what hurt are saved, dated, in `vault/memory/ideas/_pains.md`.
 2. **Proposals.** `task-observer` and `claude-corner` write suggestions to files. Nothing is changed behind your back.
-3. **Your own skills.** The worksheets teach how a skill is built, and `adaptar-skill` walks you through making yours. You are not handed a finished one.
+3. **Your own skills.** The worksheets teach how a skill is built, and `adapt-skill` walks you through making yours. You are not handed a finished one.
 
 ![How cogiforge improves with you: your pains, its proposals, your decision, your own skills](assets/flow.svg)
 
@@ -55,12 +55,12 @@ repo's own tests you also need `pytest` (`python3 -m pip install pytest`); nothi
 ```sh
 git clone https://github.com/Arthuro0103/cogiforge.git
 cd cogiforge
-sh instalar.sh      # turns the pre-commit hook on and proves it works
+sh install.sh      # turns the pre-commit hook on and proves it works
 claude              # run Claude Code at the repo root
 ```
 
-Then, inside Claude Code, type `/conhecer`. Open `vault/` as a vault in Obsidian. When you have a
-project, `/abrir-sessao <name>` to start and `/fechar-sessao` to end the day. The example project
+Then, inside Claude Code, type `/onboard`. Open `vault/` as a vault in Obsidian. When you have a
+project, `/open-session <name>` to start and `/close-session` to end the day. The example project
 `vault/projects/example-my-first-project/` shows the shape. Tasks need the public TaskNotes plugin
 (install it from Obsidian's community plugins), and the optional connection map needs graphify: both are
 in the [tutorial](TUTORIAL.md).
@@ -70,20 +70,20 @@ in the [tutorial](TUTORIAL.md).
 This is the foundation under the workbench. It is deliberately small and runs on Python's standard library only.
 
 - **Orphan gate.** The pre-commit hook blocks a note that links to nothing and nothing links to. `inbox/` is exempt: if quick capture gets blocked, people uninstall the thing. Only notes in *that* commit are blocked; others just get a warning.
-- **Link check** (`nucleo/portao.py`). Dead links, broken links, a path that only matches by file name, a bad `area:`, unreadable files (reported as "could not read", never as OK).
-- **Leak scanner** (`nucleo/vazamento.py`). Blocks machine paths, e-mails, phone numbers, CPF and a **private list of terms that lives outside the repo**. Without that list it says `NAO_VERIFICADO`, never "clean".
+- **Link check** (`core/gate.py`). Dead links, broken links, a path that only matches by file name, a bad `area:`, unreadable files (reported as "could not read", never as OK).
+- **Leak scanner** (`core/leak.py`). Blocks machine paths, e-mails, phone numbers, CPF and a **private list of terms that lives outside the repo**. Without that list it says `NOT_VERIFIED`, never "clean".
 - **CI** (`.github/workflows/prova.yml`). Installs from a clean clone, runs the tests and the mutation check, and tries the orphan gate end to end.
 
 The hook can be bypassed on purpose with `git commit --no-verify`. Every rule here comes from a real,
-dated failure, and each one has a test that fails without it: see [POR-QUE.md](POR-QUE.md) (in Portuguese).
+dated failure, and each one has a test that fails without it: see [WHY.md](WHY.md).
 
 ## What is verified, and what is not
 
-Measured on 2026-10-06 at commit `2c4bf50`, on one machine (macOS), in a fresh clone:
+Measured on 2026-10-06, after the move to English, on one machine (macOS), in a fresh clone:
 
-- Tests: after `sh instalar.sh` and `python3 -m pip install pytest`, `python3 -m pytest -q` gave **191 passed, 2 skipped**. Run before `sh instalar.sh`, one test fails on purpose: it checks that the hook is active.
-- Mutation: `python3 tests/mutar.py` breaks every check one at a time and gave **105 of 105 mutants killed, 0 alive**.
-- CI: the [latest run](https://github.com/Arthuro0103/cogiforge/actions/runs/37326653651) (a weekly scheduled run, 2026-10-05, same commit) had **8 of 8 jobs green**, on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. Each job starts from a clean checkout, runs `instalar.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end.
+- Tests: after `sh install.sh` and `python3 -m pip install pytest`, `python3 -m pytest -q` gave **206 passed, 2 skipped**. Run before `sh install.sh`, one test fails on purpose: it checks that the hook is active.
+- Mutation: `python3 tests/mutate.py` breaks every check one at a time and gave **113 of 113 mutants killed, 0 alive**.
+- CI: the last run **before** the move to English ([run 37326653651](https://github.com/Arthuro0103/cogiforge/actions/runs/37326653651), 2026-10-05) had **8 of 8 jobs green**, on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. The run for the English version is in the [Actions tab](https://github.com/Arthuro0103/cogiforge/actions). Each job starts from a clean checkout, runs `install.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end.
 - Two tests compare this link checker with the author's private vault, which is not in this repo. They are **skipped** (reported as skipped, not as passed).
 - **Nobody other than the author has used it yet.** If you are the first, tell us where you got stuck: that is the most useful thing you can send.
 

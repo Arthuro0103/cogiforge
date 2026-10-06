@@ -1,0 +1,16 @@
+# Where Portuguese is deliberate. One `path: reason` per line. Add a file only with a reason.
+docs/TRANSLATING.md: the guide to translating back is about Portuguese on purpose
+tests/test_equivalence.py: translates the demo back to Portuguese to compare with the private checker
+tests/test_no_portuguese.py: it names the words it looks for
+demo/notes/life/leaked.md: a planted fixture with a Portuguese sentence and fake personal data
+core/leak.py: the old private-list name negra.txt is still read, with a warning
+tests/test_leak.py: tests of the negra.txt fallback
+tests/test_hook_e2e.py: a test of the negra.txt fallback through the hook
+tests/mutate.py: a mutant of the negra.txt fallback
+.gitignore: the old private-list name negra.txt must stay ignored
+.githooks/pre-commit: a comment about the old private-list name
+tests/test_ring.py: a note named with an accent, to prove NFD and NFC names are treated alike
+.claude/skills/claude-corner/SKILL.md: the description keeps one or two Portuguese trigger phrases
+.claude/skills/close-session/SKILL.md: the description keeps one or two Portuguese trigger phrases
+.claude/skills/open-session/SKILL.md: the description keeps one or two Portuguese trigger phrases
+.claude/skills/task-observer/SKILL.md: the description keeps one or two Portuguese trigger phrases
