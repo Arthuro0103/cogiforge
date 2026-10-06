@@ -1,4 +1,6 @@
-# the private blacklist lives outside the repo; never let a copy in
+# the private blocklist lives outside the repo; never let a copy in (blocklist.txt, and the old name negra.txt)
+blocklist.txt
+**/blocklist.txt
 negra.txt
 **/negra.txt
 __pycache__/
@@ -6,9 +8,9 @@ __pycache__/
 *.pyc
 .DS_Store
 
-# o mapa do graphify é gerado a partir das notas da pessoa: não vai pro repo
+# the graphify map is generated from the user's notes: it does not go into the repo
 graphify-out/
 
-# o Obsidian grava estado da janela aqui; só app.json é versionado
+# Obsidian writes window state here; only app.json is versioned
 vault/.obsidian/*
 !vault/.obsidian/app.json

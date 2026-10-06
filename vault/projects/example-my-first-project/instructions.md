@@ -1,35 +1,35 @@
 ---
-tipo: exemplo
-status: ativo
-declared_target: descreva em uma frase o que existe no mundo quando este projeto der certo
+type: example
+status: active
+declared_target: describe in one sentence what exists in the world when this project succeeds
 ---
 
-# Exemplo: meu primeiro projeto
+# Example: my first project
 
-Este arquivo é a **raiz** do projeto: o ponto onde tudo que nasce dele se liga. Copie a pasta, troque
-o nome, edite o frontmatter e as seções, e acrescente uma linha em `projects/_index.md`.
+This file is the project's **root**: the point where everything that comes out of it connects. Copy the
+folder, change the name, edit the frontmatter and the sections, and add a line to `projects/_index.md`.
 
-## Dados rápidos
+## Quick facts
 
 | | |
 |---|---|
-| onde mora o trabalho | pasta, repo ou link |
-| prazo | data, ou "sem prazo" |
-| próximo passo | uma ação concreta |
+| where the work lives | folder, repo or link |
+| deadline | date, or "no deadline" |
+| next step | one concrete action |
 
-## Por que isso importa
+## Why this matters
 
-Escreva com as suas palavras por que este projeto existe. É daqui que o Claude entende o que
-priorizar. Não escreva o que você acha que deveria sentir; escreva o que sente.
+Write in your own words why this project exists. This is where Claude understands what to
+prioritize. Do not write what you think you should feel; write what you feel.
 
-## Decisões dele
+## Your decisions
 
-Uma linha por decisão, com data e o motivo dito por você. Ex.: `2026-10-03: começar pela versão pequena, porque quero testar em uma semana.`
+One line per decision, with the date and the reason in your words. E.g. `2026-10-03: start with the small version, because I want to test it in a week.`
 
-## Em aberto
+## Open
 
-O que ainda não foi decidido ou descoberto. Quando fechar, mova para as decisões.
+What has not been decided or discovered yet. When it closes, move it to the decisions.
 
-<!-- hub:inicio -->
-_(nenhum outro arquivo ainda)_
-<!-- hub:fim -->
+<!-- hub:start -->
+_(no other file yet)_
+<!-- hub:end -->

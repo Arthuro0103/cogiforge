@@ -1,57 +1,59 @@
 #!/bin/sh
-# pre-commit — a torneira, e não o balde.
+# pre-commit — the tap, not the bucket.
 #
-# Dois guardas, os dois só olham o que ESTE commit leva (gate que reprova por coisa que você
-# não fez é gate que as pessoas aprendem a pular):
-#   1. anel      nota .md do vault/ sem nenhum link de entrada ou saída
-#   2. vazamento caminho de máquina, e-mail, telefone, CPF e a sua lista negra privada
+# Two guards, and both only look at what THIS commit carries (a gate that fails you for something you
+# did not do is a gate people learn to skip):
+#   1. ring   a vault/ .md note with no inbound or outbound link
+#   2. leak   machine path, e-mail, phone, CPF and your private blocklist
 #
-# Versionado em .githooks/ porque hook em .git/hooks/ some no próximo clone, e o
-# `core.hooksPath` é config LOCAL: depois de clonar, rode `sh instalar.sh`.
-# Escape consciente: git commit --no-verify
+# Versioned in .githooks/ because a hook in .git/hooks/ vanishes on the next clone, and
+# `core.hooksPath` is LOCAL config: after cloning, run `sh install.sh`.
+# Deliberate bypass: git commit --no-verify
 
-raiz=$(git rev-parse --show-toplevel) || exit 1
-cd "$raiz" || exit 1
+root=$(git rev-parse --show-toplevel) || exit 1
+cd "$root" || exit 1
 
-for f in nucleo/anel.py nucleo/vazamento.py; do
+for f in core/ring.py core/leak.py; do
     if [ ! -f "$f" ]; then
         echo "" >&2
-        echo "  ⛔ COMMIT BLOQUEADO — $f não existe: a instalação está incompleta." >&2
-        echo "     Rode: sh instalar.sh" >&2
+        echo "  ⛔ COMMIT BLOCKED — $f does not exist: the installation is incomplete." >&2
+        echo "     Run: sh install.sh" >&2
         echo "" >&2
         exit 1
     fi
 done
 
-saida=$(mktemp) || exit 1
-trap 'rm -f "$saida"' EXIT
-bloqueado=0
+out=$(mktemp) || exit 1
+trap 'rm -f "$out"' EXIT
+blocked=0
 
-# 1. o anel
+# 1. the ring
 if git diff --cached --name-only --diff-filter=ACMR | grep -q '\.md$'; then
-    if ! python3 nucleo/anel.py --vault vault --gate --stage >"$saida" 2>&1; then
+    if ! python3 core/ring.py --vault vault --gate --stage >"$out" 2>&1; then
         echo ""
-        echo "  ⛔ COMMIT BLOQUEADO — nota deste commit sem nenhuma aresta no grafo"
+        echo "  ⛔ COMMIT BLOCKED — a note in this commit has no edge in the graph"
         echo ""
-        sed 's/^/     /' "$saida" | head -20
-        bloqueado=1
-    elif grep -q '^AVISO' "$saida"; then
-        sed -n '/^AVISO/,/^$/p' "$saida" | sed 's/^/  /'
+        sed 's/^/     /' "$out" | head -20
+        blocked=1
+    elif grep -q '^WARNING' "$out"; then
+        sed -n '/^WARNING/,/^$/p' "$out" | sed 's/^/  /'
     fi
 fi
 
-# 2. o vazamento
-if ! python3 nucleo/vazamento.py --staged >"$saida" 2>&1; then
+# 2. the leak
+if ! python3 core/leak.py --staged >"$out" 2>&1; then
     echo ""
-    echo "  ⛔ COMMIT BLOQUEADO — vazamento de dado pessoal no que vai pro commit"
+    echo "  ⛔ COMMIT BLOCKED — personal data leak in what is going into the commit"
     echo ""
-    sed 's/^/     /' "$saida" | head -20
+    sed 's/^/     /' "$out" | head -20
     echo ""
-    echo "  Tire o dado do arquivo (a saída acima diz arquivo:linha:tipo, nunca o dado)."
-    bloqueado=1
-elif grep -q 'NAO_VERIFICADO' "$saida"; then
-    grep 'NAO_VERIFICADO' "$saida" | sed 's/^/  /'
+    echo "  Take the data out of the file (the output above says file:line:type, never the data)."
+    blocked=1
+elif grep -q 'NOT_VERIFIED' "$out"; then
+    grep 'NOT_VERIFIED' "$out" | sed 's/^/  /'
 fi
+# the leak scanner warns when the private list still has its old name (negra.txt)
+grep '^WARNING' "$out" | sed 's/^/  /' || true
 
-[ "$bloqueado" -eq 0 ] || { echo "  Escape consciente: git commit --no-verify"; echo ""; exit 1; }
+[ "$blocked" -eq 0 ] || { echo "  Deliberate bypass: git commit --no-verify"; echo ""; exit 1; }
 exit 0

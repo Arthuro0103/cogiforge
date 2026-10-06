@@ -1,14 +1,14 @@
 ---
-tipo: indice
+type: index
 ---
 
-# Projetos
+# Projects
 
-**Regra de admissão:** todo projeto aparece nesta tabela, com pasta própria em `projects/<nome>/` e
-um `instructions.md` como raiz. Projeto fora da tabela não existe para a bancada.
+**Admission rule:** every project appears in this table, with its own folder at `projects/<name>/` and
+an `instructions.md` as its root. A project outside the table does not exist for the workbench.
 
-| projeto | status | tipo | o que é |
+| project | status | type | what it is |
 |---|---|---|---|
-| [[projects/example-my-first-project/instructions\|example-my-first-project]] | ativo | exemplo | Modelo para copiar. Apague a linha e a pasta quando criar o seu primeiro projeto. |
+| [[projects/example-my-first-project/instructions\|example-my-first-project]] | active | example | Template to copy. Delete the line and the folder when you create your first project. |
 
-Status possíveis: `ativo`, `pausado`, `encerrado`. O tipo é livre (software, escola, trabalho, pessoal, escrita...).
+Possible statuses: `active`, `paused`, `closed`. The type is free (software, school, work, personal, writing...).

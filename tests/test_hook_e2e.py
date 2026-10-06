@@ -1,129 +1,139 @@
-"""Ponta a ponta: um clone temporário, `sh instalar.sh`, e commits de verdade."""
+"""End to end: a temporary clone, `sh install.sh`, and real commits."""
+import os
 import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
 
-RAIZ = Path(__file__).resolve().parent.parent
-LEAK = "/Users/" + "fulano"  # montado aqui para este arquivo não se acusar
+ROOT = Path(__file__).resolve().parent.parent
+LEAK = "/Users/" + "jdoe"  # assembled here so this file does not accuse itself
 
 
 def sh(cwd, *cmd, env=None):
-    import os
     return subprocess.run(list(cmd), cwd=cwd, capture_output=True, text=True,
-                          env={**os.environ, "VAZAMENTO_NEGRA": str(cwd / "sem-lista.txt"), **(env or {})})
+                          env={**os.environ, "LEAK_BLOCKLIST": str(cwd / "no-list.txt"), **(env or {})})
 
 
 @pytest.fixture
 def clone(tmp_path):
     repo = tmp_path / "clone"
     repo.mkdir()
-    for item in ("nucleo", ".githooks", "instalar.sh", "vault", ".gitignore"):
-        origem = RAIZ / item
-        if origem.is_dir():
-            shutil.copytree(origem, repo / item, ignore=shutil.ignore_patterns("__pycache__"))
+    for item in ("core", ".githooks", "install.sh", "vault", ".gitignore"):
+        source = ROOT / item
+        if source.is_dir():
+            shutil.copytree(source, repo / item, ignore=shutil.ignore_patterns("__pycache__"))
         else:
-            shutil.copy(origem, repo / item)
+            shutil.copy(source, repo / item)
     sh(repo, "git", "init", "-q")
-    sh(repo, "git", "config", "user.name", "teste")
-    sh(repo, "git", "config", "user.email", "teste@example.com")
-    r = sh(repo, "sh", "instalar.sh")
+    sh(repo, "git", "config", "user.name", "test")
+    sh(repo, "git", "config", "user.email", "test@example.com")
+    r = sh(repo, "sh", "install.sh")
     assert r.returncode == 0, r.stdout + r.stderr
     sh(repo, "git", "add", "-A")
-    r = sh(repo, "git", "commit", "-q", "-m", "esqueleto")
+    r = sh(repo, "git", "commit", "-q", "-m", "skeleton")
     assert r.returncode == 0, r.stdout + r.stderr
     return repo
 
 
-def commitar(repo, rel, texto, *extra):
+def commit(repo, rel, text, *extra, env=None):
     (repo / rel).parent.mkdir(parents=True, exist_ok=True)
-    (repo / rel).write_text(texto, encoding="utf-8")
+    (repo / rel).write_text(text, encoding="utf-8")
     sh(repo, "git", "add", rel)
-    return sh(repo, "git", "commit", "-q", "-m", "x", *extra)
+    return sh(repo, "git", "commit", "-q", "-m", "x", *extra, env=env)
 
 
-ORFA = "---\narea: vida\n---\n# Nota sem aresta\n\nTexto sem link.\n"
+ORPHAN = "---\narea: life\n---\n# Note without an edge\n\nText without a link.\n"
 
 
-def test_instalar_ativa_o_hookspath(clone):
+def test_install_activates_the_hookspath(clone):
     assert sh(clone, "git", "config", "--get", "core.hooksPath").stdout.strip() == ".githooks"
 
 
-def test_orfa_bloqueia_o_commit_e_ensina(clone):
-    r = commitar(clone, "vault/notes/life/orphan.md", ORFA)
+def test_orphan_blocks_the_commit_and_teaches(clone):
+    r = commit(clone, "vault/notes/life/orphan.md", ORPHAN)
     assert r.returncode == 1
-    assert "COMMIT BLOQUEADO" in r.stdout + r.stderr and "Como consertar" in r.stdout + r.stderr
+    assert "COMMIT BLOCKED" in r.stdout + r.stderr and "How to fix" in r.stdout + r.stderr
 
 
-def test_com_o_wikilink_o_commit_passa(clone):
-    r = commitar(clone, "vault/notes/life/orphan.md", ORFA + "\nVolta ao [[home]].\n")
+def test_with_the_wikilink_the_commit_passes(clone):
+    r = commit(clone, "vault/notes/life/orphan.md", ORPHAN + "\nBack to [[home]].\n")
     assert r.returncode == 0, r.stdout + r.stderr
 
 
-def test_sem_hookspath_o_hook_nao_dispara(clone):
+def test_without_hookspath_the_hook_does_not_fire(clone):
     sh(clone, "git", "config", "--unset", "core.hooksPath")
-    assert commitar(clone, "vault/notes/life/orphan.md", ORFA).returncode == 0
+    assert commit(clone, "vault/notes/life/orphan.md", ORPHAN).returncode == 0
 
 
-def test_no_verify_e_o_escape_consciente(clone):
-    assert commitar(clone, "vault/notes/life/orphan.md", ORFA, "--no-verify").returncode == 0
+def test_no_verify_is_the_deliberate_bypass(clone):
+    assert commit(clone, "vault/notes/life/orphan.md", ORPHAN, "--no-verify").returncode == 0
 
 
-def test_inbox_nunca_e_barrado(clone):
-    assert commitar(clone, "vault/inbox/ideia.md", "# ideia solta, sem link\n").returncode == 0
+def test_inbox_is_never_blocked(clone):
+    assert commit(clone, "vault/inbox/idea.md", "# loose idea, no link\n").returncode == 0
 
 
-def test_orfa_de_fora_do_commit_so_avisa(clone):
-    (clone / "vault/notes/life/velha.md").write_text(ORFA, encoding="utf-8")  # não entra no stage
-    r = commitar(clone, "vault/notes/life/ok.md", "---\narea: vida\n---\n# Ligada\n\n[[home]]\n")
-    assert r.returncode == 0 and "AVISO" in r.stdout + r.stderr and "velha.md" in r.stdout + r.stderr
+def test_orphan_outside_the_commit_only_warns(clone):
+    (clone / "vault/notes/life/old.md").write_text(ORPHAN, encoding="utf-8")  # does not enter the stage
+    r = commit(clone, "vault/notes/life/ok.md", "---\narea: life\n---\n# Linked\n\n[[home]]\n")
+    assert r.returncode == 0 and "WARNING" in r.stdout + r.stderr and "old.md" in r.stdout + r.stderr
 
 
-def test_vazamento_no_stage_bloqueia_qualquer_arquivo(clone):
-    r = commitar(clone, "docs/nota.txt", f"abri {LEAK}/x\n")
-    assert r.returncode == 1 and "vazamento" in (r.stdout + r.stderr).lower()
-    assert "fulano" not in r.stdout + r.stderr
+def test_leak_in_the_stage_blocks_any_file(clone):
+    r = commit(clone, "docs/note.txt", f"opened {LEAK}/x\n")
+    assert r.returncode == 1 and "leak" in (r.stdout + r.stderr).lower()
+    assert "jdoe" not in r.stdout + r.stderr
 
 
-def test_vazamento_em_md_do_vault_tambem_bloqueia(clone):
-    r = commitar(clone, "vault/notes/life/v.md", f"---\narea: vida\n---\n# V\n\n[[home]] {LEAK}\n")
+def test_leak_in_a_vault_md_also_blocks(clone):
+    r = commit(clone, "vault/notes/life/v.md", f"---\narea: life\n---\n# V\n\n[[home]] {LEAK}\n")
     assert r.returncode == 1
 
 
-def test_sem_lista_privada_avisa_nao_verificado_e_nao_bloqueia(clone):
-    r = commitar(clone, "docs/ok.txt", "limpo\n")
-    assert r.returncode == 0 and "NAO_VERIFICADO" in r.stdout + r.stderr
+def test_without_a_private_list_warns_not_verified_and_does_not_block(clone):
+    r = commit(clone, "docs/ok.txt", "clean\n")
+    assert r.returncode == 0 and "NOT_VERIFIED" in r.stdout + r.stderr
 
 
-def test_instalacao_incompleta_falha_alto(clone):
-    (clone / "nucleo" / "anel.py").unlink()
-    r = commitar(clone, "docs/ok.txt", "limpo\n")
-    assert r.returncode == 1 and "instalar.sh" in r.stdout + r.stderr
+def test_old_private_list_name_warns_in_the_hook_but_does_not_block(clone, tmp_path):
+    home = tmp_path / "home"
+    (home / ".config" / "cogiforge").mkdir(parents=True)
+    (home / ".config" / "cogiforge" / "negra.txt").write_text("zeta-quux\n", encoding="utf-8")
+    env = {"HOME": str(home), "LEAK_BLOCKLIST": ""}  # empty: falls back to the default location
+    r = commit(clone, "docs/ok.txt", "plausible clean text\n", env=env)
+    assert r.returncode == 0 and "WARNING" in r.stdout + r.stderr and "renamed" in r.stdout + r.stderr
+    r = commit(clone, "docs/bad.txt", "talks about zeta-quux\n", env=env)
+    assert r.returncode == 1
 
 
-# ---- instalar.sh falha alto ----------------------------------------------------
-
-def test_instalar_fora_de_repo_git_falha(tmp_path):
-    for item in ("nucleo", ".githooks", "instalar.sh"):
-        o = RAIZ / item
-        shutil.copytree(o, tmp_path / item, ignore=shutil.ignore_patterns("__pycache__")) if o.is_dir() else shutil.copy(o, tmp_path / item)
-    r = sh(tmp_path, "sh", "instalar.sh", env={"GIT_CEILING_DIRECTORIES": str(tmp_path.parent)})
-    assert r.returncode != 0 and "repositório git" in r.stdout + r.stderr
+def test_incomplete_installation_fails_loudly(clone):
+    (clone / "core" / "ring.py").unlink()
+    r = commit(clone, "docs/ok.txt", "clean\n")
+    assert r.returncode == 1 and "install.sh" in r.stdout + r.stderr
 
 
-def test_instalar_com_selftest_quebrado_falha(clone):
+# ---- install.sh fails loudly ---------------------------------------------------
+
+def test_install_outside_a_git_repo_fails(tmp_path):
+    for item in ("core", ".githooks", "install.sh"):
+        source = ROOT / item
+        shutil.copytree(source, tmp_path / item, ignore=shutil.ignore_patterns("__pycache__")) if source.is_dir() else shutil.copy(source, tmp_path / item)
+    r = sh(tmp_path, "sh", "install.sh", env={"GIT_CEILING_DIRECTORIES": str(tmp_path.parent)})
+    assert r.returncode != 0 and "git repository" in r.stdout + r.stderr
+
+
+def test_install_with_a_broken_selftest_fails(clone):
     sh(clone, "git", "config", "--unset", "core.hooksPath")
-    (clone / "nucleo" / "anel.py").write_text("import sys\nsys.exit(1)\n", encoding="utf-8")
-    r = sh(clone, "sh", "instalar.sh")
+    (clone / "core" / "ring.py").write_text("import sys\nsys.exit(1)\n", encoding="utf-8")
+    r = sh(clone, "sh", "install.sh")
     assert r.returncode != 0 and "selftest" in (r.stdout + r.stderr).lower()
 
 
-def test_instalar_com_python_antigo_falha(clone, tmp_path):
+def test_install_with_an_old_python_fails(clone, tmp_path):
     fake = tmp_path / "bin"
     fake.mkdir()
     (fake / "python3").write_text("#!/bin/sh\n[ \"$1\" = \"-c\" ] && exit 1\nexit 0\n", encoding="utf-8")
     (fake / "python3").chmod(0o755)
-    import os
-    r = sh(clone, "sh", "instalar.sh", env={"PATH": f"{fake}:{os.environ['PATH']}"})
+    r = sh(clone, "sh", "install.sh", env={"PATH": f"{fake}:{os.environ['PATH']}"})
     assert r.returncode != 0 and "3.10" in r.stdout + r.stderr

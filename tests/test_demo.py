@@ -1,25 +1,25 @@
-"""demo/ é a fixture: uma falha plantada por arquivo, e os controles passam limpos."""
-import contagem
+"""demo/ is the fixture: one planted failure per file, and the controls pass clean."""
+import counts
 
 
-def test_contagem_exata_por_check():
-    achados = contagem.contar()
-    for check, arquivo in contagem.ESPERADO.items():
-        assert sorted(achados[check]) == [arquivo], check
+def test_exact_count_per_check():
+    found = counts.count()
+    for check, file in counts.EXPECTED.items():
+        assert sorted(found[check]) == [file], check
 
 
-def test_nenhum_controle_reprova():
-    achados = contagem.contar()
-    reprovados = {a for c in contagem.ESPERADO for a in achados[c]}
-    assert reprovados == set(contagem.ESPERADO.values())
+def test_no_control_fails():
+    found = counts.count()
+    failed = {a for c in counts.EXPECTED for a in found[c]}
+    assert failed == set(counts.EXPECTED.values())
 
 
-def test_total_de_notas_e_isencao_do_inbox():
-    achados = contagem.contar()
-    assert achados["_total"] == contagem.TOTAL_NOTAS
-    assert achados["_isentas"] == contagem.ISENTAS_ANEL
+def test_total_notes_and_inbox_exemption():
+    found = counts.count()
+    assert found["_total"] == counts.TOTAL_NOTES
+    assert found["_exempt"] == counts.RING_EXEMPT
 
 
-def test_nenhum_check_inesperado():
-    achados = contagem.contar()
-    assert set(achados) - {"_total", "_isentas"} == set(contagem.ESPERADO)
+def test_no_unexpected_check():
+    found = counts.count()
+    assert set(found) - {"_total", "_exempt"} == set(counts.EXPECTED)
