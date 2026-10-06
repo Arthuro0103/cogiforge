@@ -1,12 +1,24 @@
-# cogiforge
+<p align="center">
+  <img src="assets/banner.svg" alt="cogiforge: a second brain that learns how you work. Obsidian and Claude Code. It writes nothing about you that you did not say." width="100%">
+</p>
 
-*cogi ergo sum*: a creative workbench for your head. A second brain on **Obsidian + Claude Code** that
-holds your work, your school and your personal life in one place, **organizes your projects, ideas
-and tasks, helps you write and plan, and gets better with you** as you use it.
+**cogiforge is a second brain on Obsidian + Claude Code that learns how you work, and writes nothing about you that you did not say.** *Cogi ergo sum*: a creative workbench for your head. It holds your work, your school and your personal life in one place, **organizes your projects, ideas and tasks, helps you write and plan, and gets better with you** as you use it.
 
 > **Status: alpha (v0.x).** Built from the author's own working vault and used, so far, only by the
 > author. Skills and notes are in **Portuguese** for now; this page is the English front door.
 > Português completo: [LEIA-ME.md](LEIA-ME.md). Passo a passo de cada parte (em português): [TUTORIAL.md](TUTORIAL.md).
+
+## Why it exists
+
+cogiforge came out of using Claude on a real vault. Three decisions shaped it:
+
+1. **Claude does not decide who you are.** Nothing about you is written unless you said it. A line only enters your profile with your "yes", the date and your literal quote.
+2. **A rule stays only if a real failure justifies it.** Every rule in this repo comes from a dated mistake, and has a test that goes red without it. Examples from [POR-QUE.md](POR-QUE.md): a link checker that reported OK while 58 links were broken, a check that touched nothing and still said OK, a gate that was bypassed with `--no-verify` three times and then six.
+3. **It proposes, you decide.** The skills write suggestions to files. Nothing changes behind your back.
+
+![The author's own vault as a graph: every dot is a note, every line a link. File names are removed.](assets/vault-graph.png)
+
+*The author's own vault, drawn as a graph. Every dot is a note and every line is a link between two notes. File names are removed.*
 
 ## What you get
 
@@ -29,6 +41,8 @@ Three loops, and in all of them the decision stays with you:
 1. **Pains.** At the end of a session your own words about what hurt are saved, dated, in `vault/memoria/ideias/_dores.md`.
 2. **Proposals.** `task-observer` and `claude-corner` write suggestions to files. Nothing is changed behind your back.
 3. **Your own skills.** The worksheets teach how a skill is built, and `adaptar-skill` walks you through making yours. You are not handed a finished one.
+
+![How cogiforge improves with you: your pains, its proposals, your decision, your own skills](assets/flow.svg)
 
 One hard rule runs through everything: **Claude does not write anything about you that you did not say.**
 It proposes; a line only enters your profile with your "yes", with the date and your literal quote.
@@ -65,9 +79,11 @@ dated failure, and each one has a test that fails without it: see [POR-QUE.md](P
 
 ## What is verified, and what is not
 
-- Tests: after `sh instalar.sh` and `python3 -m pip install pytest`, `python3 -m pytest -q` gave **191 passed, 2 skipped** on 03/10. Run before `sh instalar.sh`, one test fails on purpose: it checks that the hook is active.
-- Mutation: `python3 tests/mutar.py` breaks every check one at a time and gave **105 of 105 mutants killed, 0 alive** on 03/10.
-- CI: **8 of 8 jobs green** on 03/10 (commit `3734e39`), on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. Each job starts from a clean checkout, runs `instalar.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end.
+Measured on 2026-10-06 at commit `2c4bf50`, on one machine (macOS), in a fresh clone:
+
+- Tests: after `sh instalar.sh` and `python3 -m pip install pytest`, `python3 -m pytest -q` gave **191 passed, 2 skipped**. Run before `sh instalar.sh`, one test fails on purpose: it checks that the hook is active.
+- Mutation: `python3 tests/mutar.py` breaks every check one at a time and gave **105 of 105 mutants killed, 0 alive**.
+- CI: the [latest run](https://github.com/Arthuro0103/cogiforge/actions/runs/37326653651) (a weekly scheduled run, 2026-10-05, same commit) had **8 of 8 jobs green**, on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. Each job starts from a clean checkout, runs `instalar.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end.
 - Two tests compare this link checker with the author's private vault, which is not in this repo. They are **skipped** (reported as skipped, not as passed).
 - **Nobody other than the author has used it yet.** If you are the first, tell us where you got stuck: that is the most useful thing you can send.
 
