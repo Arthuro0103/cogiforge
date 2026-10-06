@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="cogiforge: a second brain that learns how you work. Obsidian and Claude Code. It writes nothing about you that you did not say." width="100%">
+  <img src="assets/banner-v2.svg" alt="cogiforge: a second brain that learns how you work. Obsidian and Claude Code. It writes nothing about you that you did not say." width="100%">
 </p>
 
 **cogiforge is a second brain on Obsidian + Claude Code that learns how you work, and writes nothing about you that you did not say.** *Cogi ergo sum*: a creative workbench for your head. It holds your work, your school and your personal life in one place, **organizes your projects, ideas and tasks, helps you write and plan, and gets better with you** as you use it.
