@@ -5,7 +5,7 @@
 <rect x="-38" y="-34" width="76" height="34" rx="6" fill="#4a4a4a" stroke="#161616" stroke-width="5"/><rect x="-34" y="-30" width="68" height="8" rx="3" fill="#6c6c6c"/>
 </g>
 <g stroke="#ff7a1a" stroke-width="6" stroke-linecap="round"><path d="M124,116 l-34,18"/><path d="M124,116 l-8,36"/><path d="M124,116 l26,28"/><path d="M124,116 l44,2"/><path d="M124,116 l-44,-6"/></g><circle cx="124" cy="116" r="9" fill="#ffd2a0"/><circle cx="124" cy="116" r="5" fill="#fff"/></svg>
-<text x="262" y="92" class="mono-s" fill="#ff7a1a">COGI ERGO SUM</text>
+<text x="262" y="92" class="mono-s" fill="#ff7a1a">COGITO, ERGO SUM</text>
 <text x="256" y="172" class="title" fill="#ececec">cogiforge</text>
 <text x="262" y="208" class="sub" fill="#ececec">A second brain that learns how you work.</text>
 <text x="262" y="234" class="sub2" fill="#8a8a8a">Obsidian + Claude Code. It writes nothing about you that you did not say.</text><rect x="262" y="262" width="119.19999999999999" height="30" rx="15" fill="none" stroke="#3a3a3a"/><text x="321.6" y="282" text-anchor="middle" class="chip">alpha · v0.x</text><rect x="391.2" y="262" width="50.8" height="30" rx="15" fill="none" stroke="#3a3a3a"/><text x="416.59999999999997" y="282" text-anchor="middle" class="chip">MIT</text><rect x="452.0" y="262" width="377.59999999999997" height="30" rx="15" fill="none" stroke="#3a3a3a"/><text x="640.8" y="282" text-anchor="middle" class="chip">191 tests, 105/105 mutants killed (2026-10-06)</text></svg>
