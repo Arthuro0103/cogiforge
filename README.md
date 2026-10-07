@@ -65,6 +65,13 @@ project, `/open-session <name>` to start and `/close-session` to end the day. Th
 (install it from Obsidian's community plugins), and the optional connection map needs graphify: both are
 in the [tutorial](TUTORIAL.md).
 
+## Guides
+
+- [AGENTS.md](AGENTS.md): the operating rules in a form any coding agent reads (Codex, Cursor, Gemini CLI, Copilot, Claude Code).
+- [docs/EXPORTING-CHATS.md](docs/EXPORTING-CHATS.md): export your chat history from claude.ai, ChatGPT or Gemini and bring it into the vault with `tools/import_chats.py`.
+- [docs/RESEARCH.md](docs/RESEARCH.md): research with the vault: your notes first, the internet second, every outside claim marked until checked.
+- [docs/USING-OTHER-MODELS.md](docs/USING-OTHER-MODELS.md): use the vault with agents other than Claude Code, and what you lose without its skills.
+
 ## What keeps it healthy
 
 This is the foundation under the workbench. It is deliberately small and runs on Python's standard library only.
