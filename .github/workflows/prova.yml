@@ -38,6 +38,13 @@ jobs:
           sh install.sh
           test "$(git config --get core.hooksPath)" = ".githooks"
 
+      - name: install.sh twice — the Claude Code read-deny rules from private.txt are there and not duplicated
+        run: |
+          python core/private.py --check
+          before=$(cat .claude/settings.json)
+          sh install.sh
+          test "$before" = "$(cat .claude/settings.json)"
+
       - name: exact count per check over demo/ (the fixture's meta-assertion)
         run: python tests/counts.py
 
@@ -84,3 +91,54 @@ jobs:
             echo "NOT_VERIFIED: equivalence with the Brain did not run (brain absent in this environment)."
           fi
           exit $rc
+
+  # Windows is INFORMATIONAL: continue-on-error means a red run here does not turn the proof red.
+  # [VERIFY] Nobody has confirmed this job green yet; see docs/WINDOWS.md for what is and is not known.
+  windows:
+    name: windows-latest / py3.12 (informational)
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: python -m pip install pytest
+
+      - name: git identity (only for the test commits)
+        run: |
+          git config --global user.name "ci"
+          git config --global user.email "ci@example.com"
+
+      - name: python3 has to resolve inside Git's sh (the hook calls it); add an alias if it does not
+        shell: bash
+        run: |
+          if ! python3 -c 'import sys' 2>/dev/null; then
+            dir=$(dirname "$(command -v python)")
+            cp "$dir/python.exe" "$dir/python3.exe"
+          fi
+          python3 -V
+
+      - name: install.ps1 in a clean clone — it has to activate hooksPath
+        shell: pwsh
+        run: |
+          if (git config --get core.hooksPath) { throw "hooksPath was already active: the clone is not clean" }
+          ./install.ps1
+          if ($LASTEXITCODE -ne 0) { throw "install.ps1 failed" }
+          if ((git config --get core.hooksPath) -ne ".githooks") { throw "hooksPath not set" }
+
+      - name: install.ps1 twice — the Claude Code deny rules must not duplicate
+        shell: bash
+        run: |
+          python core/private.py --check
+          before=$(cat .claude/settings.json)
+          powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1
+          test "$before" = "$(cat .claude/settings.json)"
+
+      - name: pytest
+        run: python -m pytest -q -rs
+
+      - name: leak.py on the repo itself
+        run: python core/leak.py .

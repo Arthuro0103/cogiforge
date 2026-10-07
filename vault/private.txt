@@ -1,0 +1,3 @@
+# One path or glob per line, relative to vault/. Claude Code is told not to READ these (see docs/PRIVATE.md).
+# Run `sh install.sh` (or install.ps1) after editing: it turns each line into a rule in .claude/settings.json.
+people/*/private/**

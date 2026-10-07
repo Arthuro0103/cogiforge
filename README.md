@@ -62,7 +62,7 @@ It proposes; a line only enters your profile with your "yes", with the date and 
 
 ## Quickstart
 
-You need `git`, Python 3.10+, Obsidian and Claude Code. macOS and Linux; Windows is untested. To run this
+You need `git`, Python 3.10+, Obsidian and Claude Code. macOS and Linux are what the CI proves. Windows has an installer (`install.ps1`) and an informational CI job that is not guaranteed green; see [docs/WINDOWS.md](docs/WINDOWS.md), where every unconfirmed claim is marked `[VERIFY]`. To run this
 repo's own tests you also need `pytest` (`python3 -m pip install pytest`); nothing else in the repo uses it.
 
 ```sh
@@ -97,6 +97,8 @@ nothing changes: solo mode is identical.
 - [AGENTS.md](AGENTS.md): the operating rules in a form any coding agent reads (Codex, Cursor, Gemini CLI, Copilot, Claude Code).
 - [docs/EXPORTING-CHATS.md](docs/EXPORTING-CHATS.md): export your chat history from claude.ai, ChatGPT or Gemini and bring it into the vault with `tools/import_chats.py`.
 - [docs/RESEARCH.md](docs/RESEARCH.md): research with the vault: your notes first, the internet second, every outside claim marked until checked.
+- [docs/PRIVATE.md](docs/PRIVATE.md): tell Claude Code not to read some folders (`vault/private.txt`), and the limit of that: it is not a boundary against Bash, other agents or whoever clones the repo.
+- [docs/WINDOWS.md](docs/WINDOWS.md): the native PowerShell path and the WSL path, with what is and is not verified.
 - [docs/USING-OTHER-MODELS.md](docs/USING-OTHER-MODELS.md): use the vault with agents other than Claude Code, and what you lose without its skills.
 - [docs/SYNC.md](docs/SYNC.md): keep the vault in sync without duplicates or conflicts, and what the commit guard catches.
 - [docs/STUDENTS.md](docs/STUDENTS.md): study what you want, the way you want, with `/cf-study <topic>`: recall questions, a mastery log and retests on another day.
