@@ -117,6 +117,57 @@ def test_gate_missing_vault_does_not_say_ok(tmp_path):
     assert r.returncode == 2 and "OK" not in r.stdout
 
 
+# ---- vault/gate.txt: orphan: block | warn ---------------------------------------
+
+LOOSE = {**PAIR, "loose.md": "nothing\n"}
+
+
+def test_default_without_gate_txt_blocks(tmp_path):
+    r = gate(vault(tmp_path, LOOSE))
+    assert r.returncode == 1 and "FAILS" in r.stdout
+
+
+def test_gate_txt_block_blocks(tmp_path):
+    r = gate(vault(tmp_path, {**LOOSE, "gate.txt": "# c\norphan: block\n"}))
+    assert r.returncode == 1 and "loose.md" in r.stdout
+
+
+def test_gate_txt_warn_passes_and_prints_the_same_report_as_warning(tmp_path):
+    r = gate(vault(tmp_path, {**LOOSE, "gate.txt": "# c\norphan: warn  # trailing comment\n"}))
+    assert r.returncode == 0 and "WARNING" in r.stdout and "loose.md" in r.stdout and "FAILS" not in r.stdout
+
+
+def test_gate_txt_warn_with_no_orphan_is_ok(tmp_path):
+    r = gate(vault(tmp_path, {**PAIR, "gate.txt": "orphan: warn\n"}))
+    assert r.returncode == 0 and r.stdout.startswith("OK")
+
+
+def test_gate_txt_with_only_comments_means_block(tmp_path):
+    assert gate(vault(tmp_path, {**LOOSE, "gate.txt": "# nothing set\n\n"})).returncode == 1
+
+
+@pytest.mark.parametrize("text", ["orphan: sometimes\n", "orphan:\n", "orphan\n", "orphan: \n", "color: warn\n",
+                                  "orphan: WARN\n"])
+def test_malformed_gate_txt_is_rc_2_even_with_no_orphan(tmp_path, text):
+    r = gate(vault(tmp_path, {**PAIR, "gate.txt": text}))
+    assert r.returncode == 2 and "ERROR" in r.stdout and "OK" not in r.stdout.replace("ERROR", "")
+
+
+def test_unreadable_gate_txt_is_rc_2(tmp_path):
+    v = vault(tmp_path, PAIR)
+    (v / "gate.txt").write_bytes(b"\xff\xfe orphan: warn\n")
+    r = gate(v)
+    assert r.returncode == 2 and "cannot be read" in r.stdout
+
+
+def test_warn_in_stage_mode_reports_the_orphan_in_the_commit_and_passes(tmp_path):
+    v = vault(tmp_path, {**LOOSE, "gate.txt": "orphan: warn\n"})
+    git(tmp_path, "init", "-q")
+    git(tmp_path, "add", "loose.md")
+    r = gate(v, "--stage")
+    assert r.returncode == 0 and "WARNING" in r.stdout and "loose.md" in r.stdout
+
+
 def git(cwd, *a):
     return subprocess.run(["git", *a], cwd=cwd, capture_output=True, text=True, check=True)
 

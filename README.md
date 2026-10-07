@@ -114,6 +114,7 @@ specific and in your own words.
 This is the foundation under the workbench. It is deliberately small and runs on Python's standard library only.
 
 - **Orphan gate.** The pre-commit hook blocks a note that links to nothing and nothing links to. `inbox/` is exempt: if quick capture gets blocked, people uninstall the thing. Only notes in *that* commit are blocked; others just get a warning.
+  Too strict for you? Put `orphan: warn` in `vault/gate.txt` and the same report becomes a warning that lets the commit through. The default is `block`, and a `gate.txt` the gate cannot understand blocks the commit instead of passing. The leak scanner never reads this file.
 - **Link check** (`core/gate.py`). Dead links, broken links, a path that only matches by file name, a bad `area:`, unreadable files (reported as "could not read", never as OK).
 - **Leak scanner** (`core/leak.py`). Blocks machine paths, e-mails, phone numbers, CPF and a **private list of terms that lives outside the repo**. Without that list it says `NOT_VERIFIED`, never "clean".
 - **No Portuguese by accident** (`tests/test_no_portuguese.py`). The repo moved to English in October 2026, and this test fails on accented letters, common Portuguese words and the old Portuguese folder and script names. The few deliberate exceptions are in `tests/pt_allowlist.txt`, one `path: reason` per line, and a second test fails when an exception no longer exists or no longer needs to be one.

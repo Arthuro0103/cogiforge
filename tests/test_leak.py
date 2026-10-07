@@ -363,3 +363,14 @@ def test_new_env_var_wins_over_the_old_one(tmp_path):
     (tmp_path / "x.md").write_text("zeta-quux\n", encoding="utf-8")
     r = run(["x.md"], tmp_path, env={"LEAK_BLOCKLIST": str(new), "VAZAMENTO_NEGRA": str(old)})
     assert r.returncode == 1 and "WARNING" not in r.stdout
+
+
+def test_leak_never_reads_gate_txt_and_blocks_whatever_it_says(tmp_path):
+    """gate.txt only configures the orphan check. A leak is always a failure, and the scanner ignores the file."""
+    assert "gate.txt" not in (Path(__file__).resolve().parent.parent / "core" / "leak.py").read_text(encoding="utf-8")
+    for setting in ("orphan: warn\n", "orphan: block\n", "garbage\n", "leak: off\n"):
+        (tmp_path / "gate.txt").write_text(setting, encoding="utf-8")
+        (tmp_path / "x.txt").write_text("opened /Users/" + "jdoe/x\n", encoding="utf-8")
+        r = subprocess.run([sys.executable, str(Path(__file__).resolve().parent.parent / "core" / "leak.py"), str(tmp_path)],
+                           capture_output=True, text=True, env={**__import__("os").environ, "LEAK_BLOCKLIST": str(tmp_path / "none.txt")})
+        assert r.returncode == 1, setting
