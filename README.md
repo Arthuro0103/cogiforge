@@ -166,6 +166,24 @@ one into `notes/` takes a named target and a link in the body: the `import-knowl
 Ignored and listed: `.git`, `.obsidian`, `.trash`, `node_modules`, `__pycache__` and hidden files. Skipped and
 listed: iCloud files that are not downloaded yet, unreadable files and symlinks.
 
+## Adopting a vault you already have
+
+If your notes already live in an Obsidian vault, you do not need to start from zero or copy them anywhere.
+`tools/adopt.py` works in place:
+
+```sh
+python3 tools/adopt.py ~/my-vault                  # dry run (the default): prints the plan, writes nothing
+python3 tools/adopt.py ~/my-vault --apply --yes    # writes only what the plan listed
+```
+
+The plan lists the areas it infers from your top-level folders (a proposed `areas.txt`), what it would install
+(a pre-commit hook that calls this repo's gate, ring and leak scan, plus a small config), and the **debt you have
+today**: orphan notes, dead links and notes without `area:`, saved as `.cogiforge/baseline.json`. The hook only
+judges the notes in each commit, so the old debt blocks nothing; it only stops new problems from entering.
+The dry run prints the full text of the hook, which runs on every commit and finds this repo through your local git config (never through a file in the vault). Adopt asks git itself to list a private copy of `.git/config` (running nothing) and accepts only what `git init` or `git clone` write (plus its own two keys); anything else, such as a filter, an alias, an include or a pager, blocks it with the line cited, so a vault received from someone else cannot run anything through its git config. Text that comes from the vault is shown with control characters escaped, so it cannot rewrite your terminal. It also refuses symlinks on the paths it writes and a `.githooks` folder that holds anything but its own hook. The hook trusts the cogiforge checkout you point it at (`cogiforge.home`): it checks that the three scripts exist there, not who wrote them, so use a clone of your own. If the vault already has a different `.githooks/pre-commit`, adopt refuses to activate it and applies nothing until you have read it and decided. An existing file is never overwritten (it becomes a conflict in the report), no note is ever touched, and the tool
+never runs `git init` for you. Notes that are iCloud placeholders not yet downloaded, or unreadable, are skipped
+and listed, never counted as fine. The `adopt` skill walks you through it.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
