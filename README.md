@@ -92,6 +92,31 @@ Measured on 2026-10-06, after the move to English, on one machine (macOS), in a 
 
 `artigo`, `conselho`, `product-idea` and `consult-notes` as real skills (their worksheets are in `vault/skill-worksheets/` today); a skill that turns one of your own failures into a rule plus a test.
 
+## Bringing an existing knowledge base
+
+A team, a school or a person usually starts with notes that already exist. The import is a copy plus a
+conversion: your originals are never touched, and nothing is dropped in silence.
+
+```sh
+python3 tools/import.py ~/old-wiki --dry-run          # plan: prints the report, writes nothing
+python3 tools/import.py ~/old-wiki [--person HANDLE]  # into vault/inbox/imported/old-wiki
+```
+
+It writes `_import-report.md` next to the copy: every file of the source is listed as converted, copied,
+unchanged, ignored or not converted, with the reason, and the count has to close. It then runs the leak
+scanner on the result and lists `file:line:type` (never the data); a leak does not stop the copy, but the
+commit is blocked until it is cleaned. Imported files land in an inbox, which the orphan gate exempts. Moving
+one into `notes/` takes a named target and a link in the body: the `import-knowledge` skill walks you through it.
+
+| Format | What happens |
+|---|---|
+| `.md`, `.txt`, `.html`, `.csv`, `.json`, images (`png jpg gif svg webp`) | **Direct**, standard library only: markdown is copied unchanged, `.txt` becomes `.md`, HTML becomes simple markdown, CSV becomes a table, JSON a code block, images are copied as they are |
+| `.pdf`, `.docx`, `.pptx`, `.xlsx` and similar | **With [docling](https://github.com/docling-project/docling)** (`python3 -m pip install docling`): converted to markdown. Without it they are copied to `_unconverted/` and listed with the install command |
+| Anything else (archives, audio, video, ...) | **Not supported**: copied to `_unconverted/` and listed, never discarded |
+
+Ignored and listed: `.git`, `.obsidian`, `.trash`, `node_modules`, `__pycache__` and hidden files. Skipped and
+listed: iCloud files that are not downloaded yet, unreadable files and symlinks.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
