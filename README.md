@@ -82,8 +82,8 @@ dated failure, and each one has a test that fails without it: see [WHY.md](WHY.m
 
 Measured on 2026-10-06, after the move to English, on one machine (macOS), in a fresh clone:
 
-- Tests: after `sh install.sh` and `python3 -m pip install pytest`, `python3 -m pytest -q` gave **206 passed, 2 skipped**. Run before `sh install.sh`, one test fails on purpose: it checks that the hook is active.
-- Mutation: `python3 tests/mutate.py` breaks every check one at a time and gave **113 of 113 mutants killed, 0 alive**. `python3 tests/mutate.py --dry` only checks, in seconds, that every mutant still applies (113 do, 0 inapplicable), so a rename that breaks one is caught before the long run.
+- Tests: after `sh install.sh` and `python3 -m pip install pytest`, `python3 -m pytest -q` gave **233 passed, 2 skipped**. Run before `sh install.sh`, one test fails on purpose: it checks that the hook is active.
+- Mutation: `python3 tests/mutate.py` breaks every check one at a time and gave **160 of 160 mutants killed, 0 alive**. `python3 tests/mutate.py --dry` only checks, in seconds, that every mutant still applies (160 do, 0 inapplicable), so a rename that breaks one is caught before the long run.
 - CI: the run for the English version ([run 37525945635](https://github.com/Arthuro0103/cogiforge/actions/runs/37525945635), 2026-10-06, commit `863cd21`) had **8 of 8 jobs green**, on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. Each job starts from a clean checkout, runs `install.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end.
 - Two tests compare this link checker with the author's private vault, which is not in this repo. They are **skipped** (reported as skipped, not as passed).
 - **Nobody other than the author has used it yet.** If you are the first, tell us where you got stuck: that is the most useful thing you can send.
