@@ -337,7 +337,6 @@ RISKY_CONFIGS = {
     "repeated-key": "[core]\n\tfilemode = true\n\tfilemode = {decoy}\n",
     "hookspath-dot-slash": "[core]\n\thooksPath = ./.githooks\n",
     "hookspath-normalizes": "[core]\n\thooksPath = .githooks/../../{decoy}\n",
-    "trailing-after-header": "[core] bare = false\n",
     "quoted-value": '[core]\n\tpager = "{decoy}"\n',
     "comment-backslash": "# harmless comment \\\n[core]\n\tfsmonitor = {decoy}\n",
     "extensions": "[extensions]\n\tworktreeConfig = true\n",
@@ -379,14 +378,15 @@ def test_the_validator_unit(tmp_path):
     ok = lambda text: not m.validate_git_config(text.encode())[1]  # noqa: E731
     assert ok("[core]\n\trepositoryformatversion = 0\n\tfilemode = true\n\tbare = false\n\tlogallrefupdates = true\n")
     assert ok("[core]\n\thooksPath = .githooks\n[cogiforge]\n\thome = " + str(ROOT) + "\n")
+    assert ok("[core]\n\tfilemode = true # a comment git itself understands\n")  # git says value=true, so it is judged as true
     assert not ok("[cogiforge]\n\thome = /somewhere/else\n")
     assert not ok("[core]\n\tfsmonitor = true\n")           # even the harmless-looking value: not in the allowlist
-    assert not ok("[core]\n\tfilemode = true # trailing\n")   # a comment after a value is not parsed
     assert not ok("[core]\n\tfilemode=TRUE\n")               # exact values only
-    assert not ok("\ufeff[core]\n\tfilemode = true\n")       # BOM
+    assert not ok("[core]\n\tfilemode\n")                    # key without a value
+    assert not ok("[core\n")                                  # git itself rejects it
     viol = m.validate_git_config(b"[core]\n\tfsmonitor = /x\n")[1]
-    assert viol and viol[0][0] == 2 and "fsmonitor" in viol[0][1]  # the line is cited
-    assert not m.validate_git_config(b"\xff\xfe")[0]
+    assert viol and viol[0][0] == "core.fsmonitor" and viol[0][1] == "/x"  # the entry is cited
+    assert not m.validate_git_config(b"\xff\xfe")[0] and m.validate_git_config(b"x" * 70000)[1]
 
 
 def test_each_variant_is_blocked_with_the_line_cited_and_nothing_executes(tmp_path):
@@ -399,7 +399,7 @@ def test_each_variant_is_blocked_with_the_line_cited_and_nothing_executes(tmp_pa
         assert str(tmp_path) in (v / ".git" / "config").read_text(encoding="utf-8") or "{decoy}" not in cfg, name
         before = tree(v)
         plan = adopt(v)
-        assert plan.returncode == 1 and "allowlist" in plan.stdout and "line " in plan.stdout, (name, plan.stdout[-600:])
+        assert plan.returncode == 1 and "allowlist" in plan.stdout and "entry" in plan.stdout, (name, plan.stdout[-600:])
         r = adopt(v, "--apply", "--yes")
         assert r.returncode == 1 and "NOT APPLIED" in r.stderr, (name, r.stderr)
         assert tree(v) == before and not marker.exists(), name
@@ -578,3 +578,193 @@ def test_a_note_with_a_newline_or_space_in_its_name_is_judged_by_the_hook(tmp_pa
         r = subprocess.run(["git", "-C", str(v), "commit", "-m", "n"], capture_output=True, text=True, env=env)
         assert r.returncode != 0 and "ghost-nl" in r.stdout + r.stderr, (name, r.stdout + r.stderr)
         subprocess.run(["git", "-C", str(v), "reset", "-q"], check=True)
+
+
+# ---------------------------------------------------------------- the parser is git itself: differential tests
+
+import random  # noqa: E402
+import re  # noqa: E402
+import unicodedata  # noqa: E402
+
+# Written here on purpose, independent of the allowlist in adopt.py: what the TEST believes git init/clone may carry.
+TEST_OK_KEY = re.compile(
+    r"core\.(repositoryformatversion|filemode|bare|logallrefupdates|ignorecase|precomposeunicode|symlinks|hookspath)"
+    r"|user\.(name|email)|cogiforge\.home|remote\.[^\s]+\.(url|fetch)|branch\.[^\s]+\.(remote|merge)")
+DANGEROUS = re.compile(r"fsmonitor|sshcommand|pager|editor|askpass|alias\.|filter\.|include|external|textconv|helper|"
+                       r"\.driver|\.command|\.process|\.clean|\.smudge|extensions|hookspath", re.I)
+
+
+def git_lists(text, tmp_path):
+    """What git itself says about this config text: ([(key, value)], error). An independent call, not adopt's."""
+    f = tmp_path / "cfg-under-test"
+    f.write_bytes(text.encode("utf-8", "surrogateescape"))
+    r = subprocess.run(["git", "config", "--file", str(f), "--list", "-z", "--no-includes"], capture_output=True,
+                       cwd=str(tmp_path), env={"PATH": os.environ["PATH"], "HOME": str(tmp_path),
+                                               "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null"})
+    if r.returncode != 0:
+        return None, r.stderr.decode()
+    pairs = []
+    for rec in r.stdout.decode("utf-8", "replace").split("\0"):
+        if rec:
+            k, nl, v = rec.partition("\n")
+            pairs.append((k, v if nl else None))
+    return pairs, None
+
+
+def check_differential(m, text, tmp_path):
+    pairs, err = git_lists(text, tmp_path)
+    entries, viol = m.validate_git_config(text.encode("utf-8", "surrogateescape"))
+    if pairs is None:
+        assert viol, ("git rejects it but adopt accepted", text)
+        return False
+    approved = not viol
+    if approved:
+        for k, v in pairs:  # NO approved config carries a key outside the allowlist, according to git
+            assert TEST_OK_KEY.fullmatch(k) and v is not None, ("approved but git lists", k, text)
+            assert not DANGEROUS.search(k) or k in ("core.hookspath",), (k, text)
+            if k == "core.hookspath":
+                assert v == ".githooks"
+    if any(not TEST_OK_KEY.fullmatch(k) for k, _ in pairs):
+        assert viol, ("git lists a key outside the allowlist, adopt approved", pairs, text)
+    return approved
+
+
+ESCAPES = [
+    "[core]\n\tfilemode = true\n",
+    '[core]\n\tfilemode = "true"\n',
+    "[core]\n\tfilemode = tr\\\nue\n",
+    "[core]\n\tfilemode = tr\\\n\tue\n",
+    "[user]\n\tname = A\\nB\n",
+    '[user]\n\tname = "x\\ty"\n',
+    "[user]\n\tname = a # c\n",
+    "[user]\n\tname = a ; c\n",
+    "[core.a.b]\n\tfsmonitor = /x\n",
+    '[core "a.b"]\n\tfsmonitor = /x\n',
+    "[a.b]\n\tc = 1\n",
+    '[a "b"]\n\tc = 1\n',
+    '[remote "o.p"]\n\turl = https://example.com/x.git\n',
+    "[remote.o]\n\turl = https://example.com/x.git\n",
+    '[remote "o"]\n\turl = ext::sh -c x\n',
+    '[branch "a/b.c"]\n\tremote = origin\n\tmerge = refs/heads/a/b.c\n',
+    "[core]\n\tbare\n",
+    "[core]\n\t=true\n",
+    "[core]\n\tfilemode = true\n\tfilemode = false\n",
+    "[core]\n\thooksPath = .githooks\n",
+    "[core]\n\thooksPath = ./.githooks\n",
+    "[CORE]\n\tFILEMODE = TRUE\n",
+    "﻿[core]\n\tfilemode = true\n",
+    "[core]\r\n\tfilemode = true\r\n",
+    "# only a comment\n",
+    "",
+    "[core]\n\tfilemode = true\n[include]\n\tpath = /x\n",
+    '[includeIf "gitdir:/"]\n\tpath = /x\n',
+    "[remote",
+    '[core "unterminated]\n',
+]
+
+
+def test_the_variants_and_escapes_agree_with_what_git_lists(tmp_path):
+    m = load_module()
+    texts = [cfg.format(decoy=tmp_path / "decoy.sh") for cfg in RISKY_CONFIGS.values()] + ESCAPES
+    approved = [check_differential(m, t, tmp_path) for t in texts]
+    assert any(approved) and not all(approved)  # the property is not vacuous: some pass, some do not
+
+
+def test_fuzz_no_approved_config_carries_a_key_outside_the_allowlist(tmp_path):
+    m = load_module()
+    decoy = tmp_path / "decoy.sh"
+    heads = ["[core]", "[CORE]", '[core "a.b"]', "[core.a.b]", '[remote "o"]', "[remote.o]", '[branch "main"]', "[user]",
+             "[include]", '[filter "x"]', "[a]", "[a.b]", '[a "b"]', "[cogiforge]", "[core]", "[user]", '[remote "o"]']
+    keys = ["\tfilemode = true", "\tFileMode=false", "\tbare = false", '\tbare = "false"', "\tbare = fal\\\nse",
+            "\turl = https://example.com/x.git", f"\turl = ext::{decoy}", "\tfetch = +refs/heads/*:refs/remotes/o/*",
+            "\tremote = origin", "\tmerge = refs/heads/main", "\tname = Ana", "\tname = A\\nB", '\tname = "x\\ty"',
+            "\temail = " + "a" + "@" + "b.co", f"\thome = {ROOT}", "\thookspath = .githooks", f"\tfsmonitor = {decoy}", f"\tpath = {decoy}",
+            f"\tclean = {decoy}", "\tkey", "\t# comment", "; comment", "\tfilemode = true ; c", "\trepositoryformatversion = 0",
+            "\tx.y = 1", f"\tpager = {decoy}", "\thooksPath = ./.githooks", "\tlogallrefupdates = true", "", "   "]
+    rnd = random.Random(20261007)
+    ok = 0
+    for _ in range(300):
+        lines = []
+        for _ in range(rnd.randint(1, 7)):
+            lines.append(rnd.choice(heads))
+            lines += [rnd.choice(keys) for _ in range(rnd.randint(0, 3))]
+        text = "\n".join(lines) + "\n"
+        ok += check_differential(m, text, tmp_path)
+    assert 20 < ok < 300, ok  # some accepted, some blocked: the property was exercised both ways
+
+
+def test_the_git_parser_executes_none_of_the_decoys(tmp_path):
+    m = load_module()
+    v = tmp_path / "v"
+    build(v, MINI)
+    git_init(v)
+    markers = []
+    for kind in ("fsmonitor", "alias", "filter", "diff-external", "credential", "pager", "sshcommand", "include"):
+        markers.append(plant_decoy(v, tmp_path, RISKY_CONFIGS[kind]))
+    data = (v / ".git" / "config").read_bytes()
+    entries, viol = m.validate_git_config(data)
+    assert viol and not any(mk.exists() for mk in markers)
+    assert adopt(v, "--apply", "--yes").returncode == 1 and not any(mk.exists() for mk in markers)
+    # (the control that plain git DOES run these decoys is test_controls_plain_git_does_run_the_decoy)
+
+
+# ---------------------------------------------------------------- terminal escapes
+
+BAD = "\x1b\x9b\x07\x7f‮⁦​‏ \ud800\x00"
+
+
+def raw_control(text):
+    return [c for c in text if c != "\n" and (unicodedata.category(c) in ("Cc", "Cf", "Zl", "Zp", "Cs") or ord(c) == 0x7F)]
+
+
+def test_safe_escapes_every_control_format_and_surrogate_character():
+    m = load_module()
+    for c in BAD:
+        out = m.safe("a" + c + "b")
+        assert not raw_control(out), repr(c)
+        assert "\\x" in out or "\\u" in out
+    assert m.safe("\x1b]0;x\x07") == "\\x1b]0;x\\x07" and m.safe("\x9b") == "\\x9b" and m.safe("‮") == "\\u202e"
+    assert m.safe("caf\u00e9 \u65e5\u672c") == "caf\u00e9 \u65e5\u672c"  # printable text is untouched
+    assert m.safe("\n") == "\\x0a"
+
+
+def test_untrusted_text_never_reaches_the_terminal_raw(tmp_path):
+    m = load_module()
+    esc = "\x1b]0;PWNED\x07"
+    v = tmp_path / "v"
+    build(v, {**MINI, f"n{esc}.md": "x\n", "b\u009b31m.md": "y\n", "r‮txt.md": "z\n", f"Dir{esc}/in.md": "w\n",
+              ".githooks/pre-commit": f"#!/bin/sh\necho {esc} hostile ‮\n"})
+    git_init(v)
+    with open(v / ".git" / "config", "a", encoding="utf-8") as fh:
+        fh.write(f"[core]\n\tpager = {esc}{tmp_path}/decoy.sh\n")
+    assert esc in (v / ".githooks" / "pre-commit").read_text(encoding="utf-8")  # control: the bait is really in the vault
+    for args in ((), ("--apply", "--yes"), ("--apply",)):
+        r = adopt(v, *args)
+        assert not raw_control(r.stdout + r.stderr), (args, [hex(ord(c)) for c in raw_control(r.stdout + r.stderr)])
+        assert "\\x1b" in r.stdout  # shown, visibly escaped
+    r = adopt(v, "--json")
+    assert not raw_control(r.stdout) and json.loads(r.stdout)["vault"]  # still valid JSON
+
+
+def test_the_json_output_is_ascii_and_valid_for_hostile_names(tmp_path):
+    build(tmp_path, {**MINI, "x\u009b‮.md": "z\n"})
+    r = adopt(tmp_path, "--json")
+    assert r.stdout.isascii() and any("\\u009b" in r.stdout or "\\u202e" in r.stdout for _ in [0]) and json.loads(r.stdout)
+
+
+def test_the_installed_hook_output_has_no_control_characters(tmp_path):
+    v = tmp_path / "v"
+    build(v, MINI)
+    git_init(v)
+    assert adopt(v, "--apply", "--yes").returncode == 0
+    env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+           "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com", "LEAK_BLOCKLIST": str(v / "absent.txt")}
+    note = v / "Ideas" / "esc.md"
+    note.write_text("---\narea: ideas\n---\nsee [[a]] and [[gh\x1b[31mo\x1b]0;PWNED\x07st]]\n", encoding="utf-8")
+    ctl = subprocess.run([sys.executable, str(ROOT / "core" / "gate.py"), "--vault", str(v), str(note)],
+                         capture_output=True, text=True, cwd=str(v))
+    assert "\x1b" in ctl.stdout  # control: the gate does echo the bait, so the hook has something to sanitize
+    subprocess.run(["git", "-C", str(v), "add", "Ideas/esc.md"], check=True)
+    r = subprocess.run(["git", "-C", str(v), "commit", "-m", "x"], capture_output=True, text=True, env=env)
+    out = r.stdout + r.stderr
+    assert r.returncode != 0 and "COMMIT BLOCKED" in out and not raw_control(out), [hex(ord(c)) for c in raw_control(out)]

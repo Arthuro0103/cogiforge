@@ -26,14 +26,17 @@ is not an absolute path to a folder holding core/ring.py, core/gate.py and core/
 
 THREAT MODEL (6 lines)
   1. DEFENDS: a vault received from a third party (zip, copy, sync) whose `.git`, `.githooks` or notes are hostile.
-  2. `.git/config` is read as BYTES and judged by an ALLOWLIST of what `git init`/`clone` write (core.repositoryformatversion,
+  2. `.git/config` is not parsed by adopt: git itself lists a private copy (`git config --file COPY --list -z --no-includes`,
+     clean environment, which runs nothing), and an ALLOWLIST judges the pairs git returned (core.repositoryformatversion,
      filemode, bare, logallrefupdates, ignorecase, precomposeunicode, symlinks; remote.*.url/fetch; branch.*.remote/merge;
-     user.name/email) plus the two keys adopt writes. Any other section, key, include, quote, continuation or line it cannot
-     parse blocks (rc 1, line cited, nothing written, no git run against the vault).
+     user.name/email) plus the two keys adopt writes. Any other key, an include, or a file git cannot parse blocks (rc 1,
+     entry cited, nothing written, no git run inside the vault). Size, NUL and UTF-8 are only extra belt checks.
   3. It refuses symlinks in any component of a path it would write, `.git` that is a symlink or a file, a `.githooks` that
      holds anything but the generated `pre-commit`, a different `pre-commit`, and a `cogiforge.home` that is not this checkout.
   4. The generated hook accepts `cogiforge.home` only as a canonical absolute path (no `.`/`..`, no symlink) with the three
-     scripts inside, and passes note names after `--`; names are shown with control characters neutralized.
+     scripts inside, and passes note names after `--`. Text from the vault never reaches the terminal raw: every output goes through one
+     function that shows control, format (bidi, zero-width), separator and surrogate characters as `\\xNN`/`\\uNNNN`, and the
+     hook filters what it quotes with `tr`. `--json` is ASCII-only.
   5. DOES NOT DEFEND: you pointing `cogiforge.home` at a clone you chose yourself (it checks the three scripts exist, not who
      wrote them), nor a hook you read and approved, nor a hostile global git config or `PATH` of your own account.
   6. When the allowlist blocks something you consider fine, the fix is to edit `.git/config` yourself; adopt never loosens it.
@@ -63,6 +66,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import unicodedata
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -82,6 +86,7 @@ HOOK_PEEK = 15
 HOOK_TEXT = """#!/bin/sh
 # pre-commit installed by cogiforge tools/adopt.py. It only judges what THIS commit carries.
 # The cogiforge checkout is read from the LOCAL git config (cogiforge.home), never from a file of the working tree.
+# Output that quotes names from the commit goes through `tr`: no control character reaches the terminal.
 # Deliberate bypass: git commit --no-verify
 
 root=$(git rev-parse --show-toplevel) || exit 1
@@ -107,19 +112,19 @@ blocked=0
 if git diff --cached --name-only --diff-filter=ACMR -z | grep -qz '\\.md$'; then
     if ! python3 "$home/core/ring.py" --vault . --gate --stage >"$out" 2>&1; then
         echo "  COMMIT BLOCKED: a note in this commit has no link"
-        sed 's/^/     /' "$out" | head -20
+        LC_ALL=C tr -c '[:print:]\\n' '?' < "$out" | sed 's/^/     /' | head -20
         blocked=1
     fi
     if ! git diff --cached --name-only --diff-filter=ACMR -z -- '*.md' | xargs -0 python3 "$home/core/gate.py" --vault . -- >"$out" 2>&1; then
         echo "  COMMIT BLOCKED: a note in this commit fails the gate"
-        sed 's/^/     /' "$out" | head -20
+        LC_ALL=C tr -c '[:print:]\\n' '?' < "$out" | sed 's/^/     /' | head -20
         blocked=1
     fi
 fi
 
 if ! python3 "$home/core/leak.py" --staged >"$out" 2>&1; then
     echo "  COMMIT BLOCKED: personal data in what is going into the commit"
-    sed 's/^/     /' "$out" | head -20
+    LC_ALL=C tr -c '[:print:]\\n' '?' < "$out" | sed 's/^/     /' | head -20
     blocked=1
 fi
 
@@ -152,113 +157,145 @@ def git_state(vault):
 
 
 # ALLOWLIST of what `git init` / `git clone` write into a repo's local config, plus the two keys adopt writes.
-# Anything else (another section, another key, a value outside the pattern, a continuation line, a quote, a line the
-# parser cannot read) is a violation: the vault is not touched and git is not run against it. When in doubt, block.
+# The config is NOT parsed here: git itself lists it (`git config --file COPY --list -z --no-includes`, which executes
+# nothing, proved by tests with fsmonitor, alias, filter and diff.external decoys), so what git understands is what is
+# judged. The allowlist applies to the (key, value) pairs git returned, key as git normalizes it (section and name in
+# lowercase, subsection kept), value exact. Any other key (include.path and includeIf too) blocks.
 BOOLV = r"true|false"
 _PATH = r"[A-Za-z0-9_./+~ -]*"
-ALLOWED = {
-    ("core", None): {"repositoryformatversion": r"0", "filemode": BOOLV, "bare": r"false", "logallrefupdates": r"true",
-                     "ignorecase": BOOLV, "precomposeunicode": BOOLV, "symlinks": BOOLV, "hookspath": r"\.githooks"},
-    ("remote", "name"): {
-        "url": r"(?:(?:https?|ssh|git)://[A-Za-z0-9][A-Za-z0-9_.~%+@:/-]*"
-               r"|[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+:[A-Za-z0-9_.~/+-]*|/" + _PATH + r"|\.{1,2}/" + _PATH + ")",
-        "fetch": r"\+?[A-Za-z0-9_./*-]+:[A-Za-z0-9_./*-]+"},
-    ("branch", "name"): {"remote": r"\.|[A-Za-z0-9_.-]+", "merge": r"refs/[A-Za-z0-9_./-]+"},
-    ("user", None): {"name": r"[\w.@+' ,()-]{1,100}", "email": r"[\w.@+'-]{1,100}"},
-    ("cogiforge", None): {"home": None},  # compared with the checkout path below, not by pattern
-}
-HEADER = re.compile(r'^\[([A-Za-z]+)(?: "([A-Za-z0-9_./-]+)")?\]$')
-KEYLINE = re.compile(r"^([A-Za-z][A-Za-z0-9-]*)[ \t]*=[ \t]*(.*)$")
+_NAME = r"(?:(?!\.\.)[A-Za-z0-9_./-])+"
+ALLOWED_KEYS = [
+    (r"core\.repositoryformatversion", r"0"), (r"core\.filemode", BOOLV), (r"core\.bare", r"false"),
+    (r"core\.logallrefupdates", r"true"), (r"core\.ignorecase", BOOLV), (r"core\.precomposeunicode", BOOLV),
+    (r"core\.symlinks", BOOLV), (r"core\.hookspath", r"\.githooks"),
+    (r"remote\." + _NAME + r"\.url", r"(?:(?:https?|ssh|git)://[A-Za-z0-9][A-Za-z0-9_.~%+@:/-]*"
+                                      r"|[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+:[A-Za-z0-9_.~/+-]*|/" + _PATH + r"|\.{1,2}/" + _PATH + ")"),
+    (r"remote\." + _NAME + r"\.fetch", r"\+?[A-Za-z0-9_./*-]+:[A-Za-z0-9_./*-]+"),
+    (r"branch\." + _NAME + r"\.remote", r"\.|[A-Za-z0-9_.-]+"), (r"branch\." + _NAME + r"\.merge", r"refs/[A-Za-z0-9_./-]+"),
+    (r"user\.name", r"[\w.@+' ,()-]{1,100}"), (r"user\.email", r"[\w.@+'-]{1,100}"),
+    (r"cogiforge\.home", None),  # compared with the checkout path, not by pattern
+]
 ROOT_SAFE = re.compile(r"^/[A-Za-z0-9_./+@~ -]+$")  # a path adopt can write to the config and read back exactly
+MAX_CONFIG_BYTES = 64 * 1024
+CLEAN_GIT_ENV_KEEP = ("PATH",)
 
 
-def validate_git_config(data):
-    """(entries, violations). `data` is the config file as BYTES. entries = [(section, sub, key, value)] of what passed
-    (lowercase section and key); violations = [(line number, shown line, reason)]. Reads text only: no git, no includes."""
-    try:
-        text = data.decode("utf-8")
-    except UnicodeDecodeError:
-        return [], [(0, "(file)", "not valid UTF-8")]
-    if "\x00" in text:
-        return [], [(0, "(file)", "NUL byte")]
-    entries, bad, sect = [], [], None
-    for n, raw in enumerate(text.split("\n"), 1):
-        line = raw.rstrip("\r").strip()
-        shown = shown_text(line)[:80]
-        if not line:
-            continue
-        if "\\" in line or ('"' in line and not HEADER.match(line)):
-            bad.append((n, shown, "backslash, quote or continuation (not parsed, so not trusted)"))
-            sect = None
-            continue
-        if any(ord(c) < 32 and c != "\t" for c in line):
-            bad.append((n, shown, "control character"))
-            continue
-        if line[0] in "#;":
-            continue
-        m = HEADER.match(line)
-        if m:
-            sec, sub = m.group(1).lower(), m.group(2)
-            kind = (sec, "name" if sub else None)
-            if kind not in ALLOWED or (sub and ".." in sub):
-                bad.append((n, shown, "section not in the allowlist of what git init/clone writes"))
-                sect = None
-            else:
-                sect = (sec, sub, kind)
-            continue
-        if sect is None:
-            bad.append((n, shown, "line outside an allowed section, or not parseable"))
-            continue
-        k = KEYLINE.match(line)
-        if not k:
-            bad.append((n, shown, "not a `key = value` line"))
-            continue
-        key, val = k.group(1).lower(), k.group(2).rstrip()
-        allowed = ALLOWED[sect[2]]
-        if key not in allowed:
-            bad.append((n, shown, f"key `{sect[0]}.{key}` not in the allowlist"))
-        elif sect[:2] == ("cogiforge", None):
-            if val != str(ROOT):
-                bad.append((n, shown, "cogiforge.home is not this checkout"))
-            else:
-                entries.append((sect[0], sect[1], key, val))
-        elif not re.fullmatch(allowed[key], val):
-            bad.append((n, shown, f"value of `{sect[0]}.{key}` outside the accepted pattern"))
+def clean_git_env(home):
+    """An environment that gives git nothing to read or run beyond the file it is pointed at."""
+    env = {k: os.environ[k] for k in CLEAN_GIT_ENV_KEEP if k in os.environ}
+    env.update({"HOME": str(home), "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null",
+                "GIT_CONFIG_SYSTEM": "/dev/null", "GIT_TERMINAL_PROMPT": "0"})
+    return env
+
+
+def git_list(path, home):
+    """[(key, value|None)] exactly as git lists the file at `path`, or raises ValueError(why)."""
+    r = subprocess.run(["git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "config", "--file", str(path),
+                        "--list", "-z", "--no-includes"], capture_output=True, cwd=str(home), env=clean_git_env(home))
+    if r.returncode != 0:
+        raise ValueError("git could not parse it: " + r.stderr.decode("utf-8", "replace").strip().splitlines()[0][:120]
+                         if r.stderr.strip() else "git could not parse it")
+    out = []
+    for rec in r.stdout.decode("utf-8", "surrogateescape").split("\0"):
+        if rec:
+            key, nl, val = rec.partition("\n")
+            out.append((key, val if nl else None))
+    return out
+
+
+def judge(pairs):
+    """(entries, violations) of git's own (key, value) list against the allowlist."""
+    entries, bad = [], []
+    for key, val in pairs:
+        why = None
+        for kre, vre in ALLOWED_KEYS:
+            if re.fullmatch(kre, key):
+                if val is None:
+                    why = "key without a value"
+                elif key == "cogiforge.home":
+                    why = None if val == str(ROOT) else "cogiforge.home is not this checkout"
+                elif not re.fullmatch(vre, val):
+                    why = "value outside the accepted pattern"
+                break
         else:
-            entries.append((sect[0], sect[1], key, val))
+            why = "key not in the allowlist of what git init/clone writes"
+        if why:
+            bad.append((key, val, why))
+        else:
+            entries.append((key, val))
     return entries, bad
 
 
-def shown_text(s):
-    """Text for the screen: control characters (newline, escape) never reach the terminal as such."""
-    return "".join("?" if (ord(c) < 32 or ord(c) == 127) else c for c in str(s))
+def validate_git_config(data):
+    """(entries, violations) for a config given as BYTES. Belt checks on the bytes (not the source of truth), then git
+    lists a private COPY of exactly these bytes and the allowlist judges what git returned."""
+    if len(data) > MAX_CONFIG_BYTES:
+        return [], [("(file)", None, f"larger than {MAX_CONFIG_BYTES} bytes")]
+    if b"\x00" in data:
+        return [], [("(file)", None, "NUL byte")]
+    try:
+        data.decode("utf-8")
+    except UnicodeDecodeError:
+        return [], [("(file)", None, "not valid UTF-8")]
+    if not shutil.which("git"):
+        return [], [("(git)", None, "git is not installed, so the config cannot be parsed")]
+    with tempfile.TemporaryDirectory(prefix="adopt-cfg-") as td:
+        copy = Path(td) / "config"
+        copy.write_bytes(data)
+        try:
+            pairs = git_list(copy, td)
+        except ValueError as e:
+            return [], [("(file)", None, str(e))]
+    return judge(pairs)
 
 
 def read_repo_config(vault):
-    """(entries, violations) of the local config of the repo, read as BYTES and judged by the allowlist."""
+    """(entries, violations) of the local config of the repo."""
     cfg = Path(vault) / ".git" / "config"
     if cfg.is_symlink():
-        return [], [(0, ".git/config", "is a symlink")]
+        return [], [(".git/config", None, "is a symlink")]
     if not cfg.exists():
         return [], []
     if not cfg.is_file():
-        return [], [(0, ".git/config", "is not a regular file")]
+        return [], [(".git/config", None, "is not a regular file")]
     try:
         return validate_git_config(cfg.read_bytes())
     except OSError as e:
-        return [], [(0, ".git/config", f"unreadable ({type(e).__name__})")]
+        return [], [(".git/config", None, f"unreadable ({type(e).__name__})")]
 
 
-def safe_git(vault, *args):
-    """git with the vault's own config unable to run anything on the way: only used to WRITE two keys."""
-    env = {**os.environ, "GIT_CONFIG_NOSYSTEM": "1"}
-    return subprocess.run(["git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-C", str(vault), *args],
-                          capture_output=True, text=True, env=env, check=True)
+def write_local_config(vault, key, value):
+    """Writes one key to the vault's own .git/config through git, with no repo discovery in the vault and no env."""
+    with tempfile.TemporaryDirectory(prefix="adopt-w-") as td:
+        subprocess.run(["git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "config", "--file",
+                        str(Path(vault) / ".git" / "config"), key, value],
+                       capture_output=True, cwd=td, env=clean_git_env(td), check=True)
 
 
-def lookup(entries, section, key):
-    vals = [v for sec, sub, k, v in entries if sec == section and not sub and k == key]
+def lookup(entries, key):
+    vals = [v for k, v in entries if k == key]
     return vals[-1] if vals else ""
+
+
+# Text that did not come from this file (names, config lines, hook lines, git's own messages) never reaches the terminal
+# raw: every control, format, separator and surrogate character is shown as a visible \xNN / \uNNNN escape.
+def safe(s):
+    out = []
+    for c in str(s):
+        o = ord(c)
+        if unicodedata.category(c) in ("Cc", "Cf", "Zl", "Zp", "Cs", "Co", "Cn") or o == 0x7F:
+            out.append(f"\\x{o:02x}" if o < 0x100 else (f"\\u{o:04x}" if o < 0x10000 else f"\\U{o:08x}"))
+        else:
+            out.append(c)
+    return "".join(out)
+
+
+shown_text = safe  # the one function; the old name stays so call sites read the same
+
+
+def emit(text="", file=None):
+    """The ONLY way adopt writes text to a stream: line by line through safe()."""
+    print("\n".join(safe(line) for line in str(text).split("\n")), file=file or sys.stdout)
 
 
 def unsafe_path(vault, rel):
@@ -292,7 +329,7 @@ def guard(vault):
         if violations:
             blocking.append("the repo's .git/config has content outside the allowlist of what `git init` writes, so adopt "
                             "will not run git against this vault. Read .git/config, remove what is not yours, then adopt again: "
-                            + "; ".join(f"line {n} `{l}` ({why})" for n, l, why in violations[:8]))
+                            + "; ".join(f"entry `{safe(k)}{'' if v is None else ' = ' + safe(v)[:80]}` ({why})" for k, v, why in violations[:8]))
     if not ROOT_SAFE.match(str(ROOT)):
         blocking.append("the path of this cogiforge checkout has characters adopt cannot verify safely: move the checkout")
     for rel in (AREAS, HOOK, BASELINE):
@@ -312,7 +349,7 @@ def guard(vault):
         else:
             hook_state = "foreign"
             try:
-                existing_hook = [shown_text(l) for l in hp.read_text(encoding="utf-8", errors="replace").splitlines()[:HOOK_PEEK]]
+                existing_hook = [safe(l)[:200] for l in hp.read_text(encoding="utf-8", errors="replace").splitlines()[:HOOK_PEEK]]
             except OSError:
                 existing_hook = ["(could not read it)"]
             blocking.append(f"{HOOK} exists and is NOT the generated hook: it would run on every commit. Read it, "
@@ -424,7 +461,7 @@ def build_plan(vault):
         items.append({"path": HOOK, "what": "pre-commit hook: ring, gate and leak scan on the notes of the commit",
                       "status": "create"})
     item(BASELINE, "debt measured today, saved as the baseline")
-    hooks_path, home_cfg = lookup(entries, "core", "hookspath"), lookup(entries, "cogiforge", "home")
+    hooks_path, home_cfg = lookup(entries, "core.hookspath"), lookup(entries, "cogiforge.home")
     items.append({"path": "git config cogiforge.home", "what": f"where the cogiforge checkout lives: {ROOT}",
                   "status": "already set" if home_cfg else "set"})
     if blocking:
@@ -482,7 +519,7 @@ def render(plan):
         out += [f"       | {l}" for l in plan["hook_text"].splitlines()]
     if plan["pending"]:
         out += ["", "pending:"] + [f"   - {p}" for p in plan["pending"]]
-    return "\n".join(shown_text(x) for x in out)
+    return "\n".join(safe(x) for x in out)
 
 
 class Blocked(Exception):
@@ -505,7 +542,7 @@ def apply(plan, vault):
         AREAS: "# proposed by tools/adopt.py from your top-level folders; edit freely\n"
                + "".join(f"{f}: {a}\n" for f, a in plan["areas"].items()),
         HOOK: HOOK_TEXT,
-        BASELINE: json.dumps(baseline, ensure_ascii=False, indent=2) + "\n",
+        BASELINE: json.dumps(baseline, ensure_ascii=True, indent=2) + "\n",
     }
     for i in plan["items"]:
         rel = i["path"]
@@ -523,11 +560,11 @@ def apply(plan, vault):
             (vault / HOOK).chmod(0o755)  # same bytes as ours; only makes sure git can run it
     for i in plan["items"]:
         if i["path"] == "git config cogiforge.home" and i["status"] == "set":
-            safe_git(vault, "config", "--local", "cogiforge.home", str(ROOT))
+            write_local_config(vault, "cogiforge.home", str(ROOT))
             written.append("git config cogiforge.home")
     for i in plan["items"]:
         if i["path"] == "git config core.hooksPath" and i["status"] == "set":
-            safe_git(vault, "config", "--local", "core.hooksPath", ".githooks")
+            write_local_config(vault, "core.hooksPath", ".githooks")
             written.append("git config core.hooksPath")
     return written
 
@@ -535,33 +572,33 @@ def apply(plan, vault):
 def run(args):
     vault = Path(args.vault)
     if not vault.is_dir():
-        print(f"ERROR: vault is not a folder or unreadable: {vault}", file=sys.stderr)
+        emit(f"ERROR: vault is not a folder or unreadable: {vault}", file=sys.stderr)
         return 3
     plan = build_plan(vault)
     if args.json:
-        print(json.dumps(plan, ensure_ascii=False, indent=2))
+        emit(json.dumps(plan, ensure_ascii=True, indent=2))
     else:
-        print(render(plan))
+        emit(render(plan))
     if not args.apply:
         return 1 if plan["pending"] else 0
     # --apply: the plan is already on the screen
     if plan["blocking"]:
-        print("\nNOT APPLIED, nothing was written: " + "; ".join(plan["blocking"]), file=sys.stderr)
+        emit("\nNOT APPLIED, nothing was written: " + "; ".join(plan["blocking"]), file=sys.stderr)
         return 1
     if not args.yes:
         if not sys.stdin.isatty():
-            print("\nNOT APPLIED: --apply needs --yes (or an interactive terminal). Nothing was written.", file=sys.stderr)
+            emit("\nNOT APPLIED: --apply needs --yes (or an interactive terminal). Nothing was written.", file=sys.stderr)
             return 2
         if input("\nApply this plan? Type 'yes': ").strip().lower() != "yes":
-            print("NOT APPLIED: no confirmation. Nothing was written.", file=sys.stderr)
+            emit("NOT APPLIED: no confirmation. Nothing was written.", file=sys.stderr)
             return 2
     try:
         written = apply(plan, vault)
     except Blocked as e:
-        print("\nNOT APPLIED, the vault changed since the plan and now fails: " + "; ".join(e.args[0]), file=sys.stderr)
+        emit("\nNOT APPLIED, the vault changed since the plan and now fails: " + "; ".join(e.args[0]), file=sys.stderr)
         return 1
-    print("\nAPPLIED:" + "".join(f"\n   {w}" for w in written or ["(nothing to create: everything existed)"]))
-    print("Existing notes were not touched. Test it: add a note with no link and run git commit.")
+    emit("\nAPPLIED:" + "".join(f"\n   {w}" for w in written or ["(nothing to create: everything existed)"]))
+    emit("Existing notes were not touched. Test it: add a note with no link and run git commit.")
     return 1 if plan["pending"] else 0
 
 
@@ -570,7 +607,7 @@ def selftest():
 
     def check(label, ok):
         results.append(ok)
-        print(("ok   " if ok else "FAIL ") + label)
+        emit(("ok   " if ok else "FAIL ") + label)
 
     def call(*argv):
         keep, sys.stdin = sys.stdin, io.StringIO("")  # never a tty: the selftest must not wait for an answer
@@ -612,7 +649,7 @@ def selftest():
         (empty / ".obsidian").mkdir(parents=True)
         check("empty vault: rc 1, 'nothing to adopt'", call(str(empty)) == 1
               and "nothing to adopt" in render(build_plan(empty)))
-    print("selftest:", "OK" if all(results) else "FAILED")
+    emit("selftest: " + ("OK" if all(results) else "FAILED"))
     return 0 if all(results) else 1
 
 
@@ -627,6 +664,11 @@ def parser():
 
 
 def main(argv=None):
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(errors="backslashreplace")
+        except (AttributeError, ValueError):
+            pass
     ap = parser()
     args = ap.parse_args(argv)
     if args.selftest:
@@ -635,7 +677,7 @@ def main(argv=None):
         ap.print_usage(sys.stderr)
         return 2
     if args.yes and not args.apply:
-        print("ERROR: --yes only makes sense with --apply", file=sys.stderr)
+        emit("ERROR: --yes only makes sense with --apply", file=sys.stderr)
         return 2
     return run(args)
 
