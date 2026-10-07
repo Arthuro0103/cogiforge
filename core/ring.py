@@ -9,7 +9,7 @@
 
 Edge = wikilink `[[x]]` or link `[t](x.md)` that RESOLVES to another .md note. A dead link, a link
 to itself, a link inside code and a link to an image do not count.
-`inbox/` and `tasks/` are exempt from failing: quick capture cannot be blocked, because
+`inbox/`, `people/<handle>/inbox/` (team mode) and `tasks/` are exempt from failing: quick capture cannot be blocked, because
 whoever is blocked at capture uninstalls, and `tasks/` is where the TaskNotes plugin writes tasks created in the
 interface, without asking for a link. Notes in those folders still count as the end of an edge.
 rc: 0 ok · 1 fails · 2 could not verify (vault does not exist, git unavailable)
@@ -30,6 +30,7 @@ from urllib.parse import unquote
 from gate import Index, mask, wikilinks
 
 DEPOSITS = ("inbox", "tasks")  # quick capture and the TaskNotes plugin: blocking here makes people uninstall
+PEOPLE_INBOX = re.compile(r"^people/[^/]+/inbox(/|$)")  # team mode: each person's quick capture is exempt too
 MDLINK = re.compile(r"(?<!!)\[[^\]\n]*\]\(([^)\s]+?\.md)(?:#[^)]*)?\)")
 
 
@@ -38,7 +39,7 @@ def nfc(s):
 
 
 def is_deposit(rel):
-    return any(rel == d or rel.startswith(d + "/") for d in DEPOSITS)
+    return any(rel == d or rel.startswith(d + "/") for d in DEPOSITS) or bool(PEOPLE_INBOX.match(rel))
 
 
 def analyze(vault):

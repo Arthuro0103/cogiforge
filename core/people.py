@@ -125,7 +125,7 @@ def run(vault, changes, email, prefix="vault"):
         return 0  # solo mode: silent
     try:
         roles = parse_roles(roles_file.read_text(encoding="utf-8"))
-    except OSError as e:
+    except (OSError, UnicodeDecodeError) as e:
         print(f"NOT_VERIFIED: roles.txt could not be read ({e.__class__.__name__}); nothing was judged.")
         return 3
     except RolesError as e:
