@@ -1,0 +1,16 @@
+name: Improvement request
+description: Ask for a change to something that already exists
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is the problem today
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you change
+    validations:
+      required: true

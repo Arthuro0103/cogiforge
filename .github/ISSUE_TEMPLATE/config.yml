@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Share an idea
+    url: https://github.com/Arthuro0103/cogiforge/discussions/new?category=ideas
+    about: Open-ended ideas and questions go to Discussions.
