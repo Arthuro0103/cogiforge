@@ -29,6 +29,13 @@ and the good answers come from questions that follow what the user just said.
 
 ## The steps
 
+### 0. Shared mode (only if `vault/roles.txt` exists)
+
+Find who is talking: `git config user.email`, matched against `vault/roles.txt`. If there is no line, stop and say
+they must ask an admin to add one. Otherwise ask which handle they want to be called by only if the line is
+ambiguous, and from here on use `vault/people/<handle>/memory/` wherever this skill says `vault/memory/`
+(and `vault/people/<handle>/_questions_about_me.md` is not created: answer in the chat). Never open another person's folder.
+
 ### 1. Before asking (you, Claude)
 
 ```bash

@@ -65,6 +65,18 @@ project, `/open-session <name>` to start and `/close-session` to end the day. Th
 (install it from Obsidian's community plugins), and the optional connection map needs graphify: both are
 in the [tutorial](TUTORIAL.md).
 
+## Teams and schools
+
+One vault for a group, one folder per person: `vault/people/<handle>/` (memory, inbox, diary). Turn it on with
+`sh install.sh --team <your-handle>`: it writes `vault/roles.txt` with you as admin (your `git config user.email`)
+and copies `vault/people/_template/`. Add people as lines `handle  admin|member  email`. Without `roles.txt`
+nothing changes: solo mode is identical.
+
+- **admin** passes everything. **member** works in their own folder, in `notes/`, and in existing projects; the pre-commit hook blocks a member who touches another person's folder, `roles.txt`, `areas.txt`, or creates a project, and blocks an author who is not in `roles.txt`.
+- **The honest limit:** git has no permission per folder. The roles are a convention plus a local hook, and `git commit --no-verify` skips it. Real enforcement is the host: add a `CODEOWNERS` file (for example `vault/roles.txt @your-org/admins` and `vault/people/ana/ @ana`) and turn on branch protection with required reviews.
+- **Everyone who clones reads everything.** What is intimate goes in `vault/people/<handle>/private/`, which is gitignored and never leaves your machine.
+- `install.sh --team` lists `vault/roles.txt` in `.leakignore`, because the e-mails there are deliberate.
+
 ## What keeps it healthy
 
 This is the foundation under the workbench. It is deliberately small and runs on Python's standard library only.
