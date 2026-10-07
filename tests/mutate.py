@@ -143,7 +143,9 @@ PIECES = {
         ("incomplete installation passes", 'if [ ! -f "$f" ]; then', 'if false; then'),
         ("people guard does not run", 'python3 core/people.py --vault vault --staged', 'true'),
         ("people guard does not block", 'real enforcement is CODEOWNERS."\n    blocked=1', 'real enforcement is CODEOWNERS."'),
-        ("people guard ignores rc 1", 'if [ "$rc" -eq 1 ]; then', 'if false; then'),
+        ("people guard ignores rc 1",
+         'python3 core/people.py --vault vault --staged >"$out" 2>&1\nrc=$?\nif [ "$rc" -eq 1 ]; then',
+         'python3 core/people.py --vault vault --staged >"$out" 2>&1\nrc=$?\nif false; then'),
         ("people could-not-judge passes", 'if [ "$rc" -ge 2 ]; then', 'if false; then'),
     ]),
     "people": dict(file="core/people.py", suite=["tests/test_people.py"], texts=[
