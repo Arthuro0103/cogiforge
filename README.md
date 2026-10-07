@@ -98,6 +98,7 @@ nothing changes: solo mode is identical.
 - [docs/EXPORTING-CHATS.md](docs/EXPORTING-CHATS.md): export your chat history from claude.ai, ChatGPT or Gemini and bring it into the vault with `tools/import_chats.py`.
 - [docs/RESEARCH.md](docs/RESEARCH.md): research with the vault: your notes first, the internet second, every outside claim marked until checked.
 - [docs/USING-OTHER-MODELS.md](docs/USING-OTHER-MODELS.md): use the vault with agents other than Claude Code, and what you lose without its skills.
+- [docs/STUDENTS.md](docs/STUDENTS.md): study what you want, the way you want, with `/study <topic>`: recall questions, a mastery log and retests on another day.
 
 ## Context, worksheets and pains
 

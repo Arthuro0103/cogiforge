@@ -98,6 +98,7 @@ on its own; a note in `notes/` only shows up there through the link in the body.
 | `adapt-skill` | when the user wants a skill of their own from a worksheet in `skill-worksheets/`; Claude does not write the skill alone |
 | `import-knowledge` | when the user brings an existing base (another vault, a folder, documents): runs `tools/import.py`, reads the report, then proposes the triage from the inbox to `notes/`, target first; the user approves |
 | `know-my-product` | when the user wants Claude to understand their product and pains: one question at a time, fills `projects/<name>/product.md` in their words, proposes the pain ranking |
+| `study` | when the user wants to learn something their way: one question at a time on what, why, deadline, how and time; three level questions; a plan; then explain, recall, log. `mastered` only after a retest on another day, never without proof |
 
 How context loads and how to keep it small: `docs/CONTEXT.md`.
 
