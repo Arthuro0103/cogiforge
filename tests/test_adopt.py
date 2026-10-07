@@ -31,6 +31,11 @@ def git_init(vault):
     subprocess.run(["git", "init", "-q"], cwd=vault, check=True)
 
 
+def local_cfg(vault, key):
+    return subprocess.run(["git", "-C", str(vault), "config", "--local", "--get", key],
+                          capture_output=True, text=True).stdout.strip()
+
+
 def tree(root):
     return {p.relative_to(root).as_posix(): p.read_bytes() for p in Path(root).rglob("*")
             if p.is_file() and ".git/" not in p.as_posix()}
@@ -115,11 +120,13 @@ def test_apply_yes_installs_and_leaves_notes_alone(tmp_path):
     assert r.returncode == 0, r.stdout + r.stderr
     after = tree(tmp_path)
     assert all(after[k] == v for k, v in before.items())
-    assert {k for k in after} - set(before) == {"areas.txt", ".githooks/pre-commit", ".cogiforge/home",
-                                                 ".cogiforge/.gitignore", ".cogiforge/baseline.json"}
+    assert {k for k in after} - set(before) == {"areas.txt", ".githooks/pre-commit",
+                                                 ".cogiforge/baseline.json"}
     assert os.access(tmp_path / ".githooks" / "pre-commit", os.X_OK)
     base = json.loads((tmp_path / ".cogiforge" / "baseline.json").read_text())
     assert len(base["orphans"]) == 3
+    assert str(tmp_path) not in json.dumps(base) and str(ROOT) not in json.dumps(base)  # no absolute path
+    assert local_cfg(tmp_path, "cogiforge.home") == str(ROOT)
     hp = subprocess.run(["git", "-C", str(tmp_path), "config", "--local", "core.hooksPath"],
                         capture_output=True, text=True).stdout.strip()
     assert hp == ".githooks"
@@ -143,16 +150,96 @@ def test_the_installed_hook_blocks_a_new_orphan_and_ignores_old_debt(tmp_path):
     assert r.returncode != 0 and "COMMIT BLOCKED" in r.stdout + r.stderr
 
 
-def test_never_overwrites_an_existing_file(tmp_path):
-    build(tmp_path, {**MINI, "areas.txt": "mine: mine\n", ".githooks/pre-commit": "#!/bin/sh\necho mine\n"})
+def test_never_overwrites_an_existing_areas_file(tmp_path):
+    build(tmp_path, {**MINI, "areas.txt": "mine: mine\n"})
     git_init(tmp_path)
-    plan = adopt(tmp_path)
-    assert plan.stdout.count("CONFLICT") >= 2 and plan.returncode == 1
+    assert "CONFLICT" in adopt(tmp_path).stdout
     r = adopt(tmp_path, "--apply", "--yes")
     assert r.returncode == 1
     assert (tmp_path / "areas.txt").read_text() == "mine: mine\n"
-    assert (tmp_path / ".githooks" / "pre-commit").read_text() == "#!/bin/sh\necho mine\n"
     assert (tmp_path / ".cogiforge" / "baseline.json").is_file()  # the free items are still installed
+
+
+FOREIGN = "#!/bin/sh\necho third-party hook runs\n"
+
+
+def test_a_foreign_hook_is_not_activated_and_blocks_the_apply(tmp_path):
+    build(tmp_path, {**MINI, ".githooks/pre-commit": FOREIGN})
+    git_init(tmp_path)
+    plan = adopt(tmp_path)
+    assert plan.returncode == 1 and "third-party hook runs" in plan.stdout and "Read it" in plan.stdout
+    before = tree(tmp_path)
+    r = adopt(tmp_path, "--apply", "--yes")
+    assert r.returncode == 1 and "NOT APPLIED" in r.stderr
+    assert tree(tmp_path) == before
+    assert local_cfg(tmp_path, "core.hooksPath") == "" and local_cfg(tmp_path, "cogiforge.home") == ""
+
+
+def test_an_identical_hook_is_kept_and_activated(tmp_path):
+    mod = load_module()
+    build(tmp_path, {**MINI, ".githooks/pre-commit": mod.HOOK_TEXT})
+    git_init(tmp_path)
+    r = adopt(tmp_path, "--apply", "--yes")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert (tmp_path / ".githooks" / "pre-commit").read_text() == mod.HOOK_TEXT
+    assert local_cfg(tmp_path, "core.hooksPath") == ".githooks"
+
+
+def test_the_dry_run_prints_the_full_hook_text(tmp_path):
+    build(tmp_path, MINI)
+    git_init(tmp_path)
+    out = adopt(tmp_path).stdout
+    for line in load_module().HOOK_TEXT.splitlines():
+        assert line in out
+
+
+def test_a_planted_cogiforge_home_file_is_never_followed(tmp_path):
+    evil = tmp_path / "evil"
+    for f in ("ring", "gate", "leak"):
+        build(evil / "core", {f"{f}.py": "import pathlib; pathlib.Path(__file__).parent.parent.joinpath('PWNED').write_text('x')\n"})
+    v = tmp_path / "v"
+    build(v, {**MINI, ".cogiforge/home": str(evil) + "\n"})
+    git_init(v)
+    assert adopt(v, "--apply", "--yes").returncode == 0
+    env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+           "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com", "LEAK_BLOCKLIST": str(v / "absent.txt")}
+    subprocess.run(["git", "-C", str(v), "add", "Ideas/a.md"], check=True)
+    subprocess.run(["git", "-C", str(v), "commit", "-m", "x"], capture_output=True, env=env)
+    assert not (evil / "PWNED").exists()  # the hook ran the real cogiforge, not the planted one
+
+
+def _hook_run(v, home_value):
+    env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+           "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com", "LEAK_BLOCKLIST": str(v / "absent.txt")}
+    if home_value is None:
+        subprocess.run(["git", "-C", str(v), "config", "--local", "--unset", "cogiforge.home"], check=True)
+    else:
+        subprocess.run(["git", "-C", str(v), "config", "--local", "cogiforge.home", home_value], check=True)
+    subprocess.run(["git", "-C", str(v), "add", "Ideas/a.md"], check=True)
+    return subprocess.run(["git", "-C", str(v), "commit", "-m", "x"], capture_output=True, text=True, env=env)
+
+
+def test_the_hook_refuses_an_invalid_cogiforge_home(tmp_path):
+    v = tmp_path / "v"
+    build(v, MINI)
+    git_init(v)
+    assert adopt(v, "--apply", "--yes").returncode == 0
+    empty = tmp_path / "emptydir"
+    empty.mkdir()
+    some_file = tmp_path / "f"
+    some_file.write_text("x")
+    for bad in (None, "relative/path", str(tmp_path / "missing"), str(some_file), str(empty)):
+        r = _hook_run(v, bad)
+        assert r.returncode != 0 and "COMMIT BLOCKED" in r.stdout + r.stderr, (bad, r.stdout, r.stderr)
+    assert _hook_run(v, str(ROOT)).returncode == 0  # the valid value passes
+
+
+def test_a_vault_with_a_different_cogiforge_home_in_git_config_blocks_the_apply(tmp_path):
+    build(tmp_path, MINI)
+    git_init(tmp_path)
+    subprocess.run(["git", "-C", str(tmp_path), "config", "--local", "cogiforge.home", str(tmp_path / "other")], check=True)
+    r = adopt(tmp_path, "--apply", "--yes")
+    assert r.returncode == 1 and not (tmp_path / ".githooks").exists()
 
 
 def test_not_a_git_repo_is_pending_and_never_runs_git_init(tmp_path):

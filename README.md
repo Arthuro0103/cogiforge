@@ -177,7 +177,7 @@ The plan lists the areas it infers from your top-level folders (a proposed `area
 (a pre-commit hook that calls this repo's gate, ring and leak scan, plus a small config), and the **debt you have
 today**: orphan notes, dead links and notes without `area:`, saved as `.cogiforge/baseline.json`. The hook only
 judges the notes in each commit, so the old debt blocks nothing; it only stops new problems from entering.
-An existing file is never overwritten (it becomes a conflict in the report), no note is ever touched, and the tool
+The dry run prints the full text of the hook, which runs on every commit and finds this repo through your local git config (never through a file in the vault). If the vault already has a different `.githooks/pre-commit`, adopt refuses to activate it and applies nothing until you have read it and decided. An existing file is never overwritten (it becomes a conflict in the report), no note is ever touched, and the tool
 never runs `git init` for you. Notes that are iCloud placeholders not yet downloaded, or unreadable, are skipped
 and listed, never counted as fine. The `adopt` skill walks you through it.
 

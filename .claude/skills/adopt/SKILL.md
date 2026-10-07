@@ -17,7 +17,8 @@ and the old ones are not touched.**
 1. **No vault path, no run.** Ask which folder is the vault. Never guess a path and never search the disk for one.
 2. **Dry run first, always.** `python3 tools/adopt.py <vault>` writes nothing. Do not run `--apply` before the user has seen the plan.
 3. **Read the plan before saying anything.** Every statement points to a line of the output. If you did not read it, you do not claim it.
-4. **Say what is pending first.** Not a git repository (the tool never runs `git init`; tell the user to run it themselves and try again), a CONFLICT (an existing file is kept as it is), skipped notes (iCloud placeholders not downloaded, unreadable, symlinks: they were NOT measured, which is not the same as fine), or "nothing to adopt".
+4. **Say what is pending first.** Not a git repository (the tool never runs `git init`; tell the user to run it themselves and try again), a CONFLICT (an existing file is kept as it is), skipped notes (iCloud placeholders not downloaded, unreadable, symlinks: they were NOT measured, which is not the same as fine), or "nothing to adopt". A DIFFERENT `.githooks/pre-commit` already in the vault is code from someone else that would run on every commit: the tool refuses to activate it and applies nothing. Show the user the lines the plan prints, tell them to read that hook and decide; never delete, replace or activate it for them.
+   Also read the full hook text the plan prints and tell the user it will run on every commit.
 5. **Ask, then apply.** Only after a clear "yes" to "do you want to apply this?" run `python3 tools/adopt.py <vault> --apply --yes`. A "maybe" or silence is a no.
 6. **The tool writes, you do not.** Do not edit the user's notes, `areas.txt`, hooks or baseline by hand. Never touch an existing note.
 7. **No invented links, nothing about the person.** Do not propose links to lower the debt unless the user asks and you can point at the sentence that justifies each one. Do not infer who they are from their folder names.
@@ -56,5 +57,5 @@ Suggest a test: add a note with no link and run `git commit`; the hook should bl
 ## Never
 
 - Run `git init`, `--no-verify`, or `--apply` before the plan was read and confirmed.
-- Overwrite or edit an existing note or config file.
+- Overwrite or edit an existing note or config file, or activate a hook you did not generate.
 - Call a vault "fine" when notes were skipped, or when it was empty ("nothing to adopt" is not OK).

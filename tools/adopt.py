@@ -10,12 +10,19 @@ RUN: it prints the plan and writes nothing. The plan has four parts:
                   Hidden folders, `.obsidian`, `.git`, `.trash`, attachment folders and deposits (`inbox`,
                   `tasks`, templates) are not areas.
   2. install      what `--apply` would create: `.githooks/pre-commit` (calls the cogiforge gate, ring and
-                  leak scanner from this checkout), `.cogiforge/home` (where that checkout is; kept out of git by `.cogiforge/.gitignore`), `areas.txt`,
-                  `.cogiforge/baseline.json`, and `git config core.hooksPath .githooks`. A file that already
+                  leak scanner from this checkout; the full hook text is printed), `areas.txt`,
+                  `.cogiforge/baseline.json`, and two entries of the LOCAL git config: `cogiforge.home` (where
+                  this checkout lives; the hook reads it from `.git/config`, never from a file in the working tree, so a
+                  vault received from outside cannot redirect it) and `core.hooksPath .githooks`. A file that already
                   exists is NEVER overwritten: it becomes a CONFLICT item in the report.
   3. debt         measured today: orphan notes, dead wikilinks, notes in an area folder without `area:`
                   (and notes whose frontmatter the gate cannot parse). It is saved as the baseline.
   4. the warning  the hook only judges the notes IN THE COMMIT, so the old debt blocks nobody.
+
+`core.hooksPath` is only activated when `.githooks/pre-commit` does not exist or is byte for byte the generated one;
+a different hook (someone else's code) is a BLOCKING conflict: the plan shows its first lines, `--apply` writes
+nothing, and you have to read that hook and decide. The hook refuses to run (blocks the commit) if `cogiforge.home`
+is not an absolute path to a folder holding core/ring.py, core/gate.py and core/leak.py.
 
 `--apply` runs only after the plan was printed, and needs `--yes` or an interactive "yes". It writes only what the
 plan listed and never touches an existing note. It never runs `git init`: a vault that is not a git repository
@@ -51,24 +58,27 @@ import ring  # noqa: E402
 NOT_AREAS = {"inbox", "tasks", "templates", "template", "_templates", "attachments", "_attachments", "assets",
              "attach", "files", "images", "img", "media", "resources", "_resources", "excalidraw"}
 HOOK = ".githooks/pre-commit"
-HOME = ".cogiforge/home"
-HOME_IGNORE = ".cogiforge/.gitignore"
 BASELINE = ".cogiforge/baseline.json"
 AREAS = "areas.txt"
 LIST_CAP = 50
+HOOK_PEEK = 15
 
 HOOK_TEXT = """#!/bin/sh
 # pre-commit installed by cogiforge tools/adopt.py. It only judges what THIS commit carries.
-# Where the cogiforge checkout lives is in .cogiforge/home. Deliberate bypass: git commit --no-verify
+# The cogiforge checkout is read from the LOCAL git config (cogiforge.home), never from a file of the working tree.
+# Deliberate bypass: git commit --no-verify
 
 root=$(git rev-parse --show-toplevel) || exit 1
 cd "$root" || exit 1
-home=$(cat .cogiforge/home 2>/dev/null)
+home=$(git config --local --get cogiforge.home)
+block() { echo "  COMMIT BLOCKED: $1" >&2; echo "  Fix: git config --local cogiforge.home <absolute path of your cogiforge checkout>" >&2; exit 1; }
+case "$home" in
+    /*) ;;
+    *) block "cogiforge.home is not set to an absolute path." ;;
+esac
+[ -d "$home" ] || block "cogiforge.home is not a folder."
 for f in core/gate.py core/ring.py core/leak.py; do
-    if [ ! -f "$home/$f" ]; then
-        echo "  COMMIT BLOCKED: $home/$f does not exist (fix .cogiforge/home)." >&2
-        exit 1
-    fi
+    [ -f "$home/$f" ] || block "cogiforge.home does not contain $f."
 done
 out=$(mktemp) || exit 1
 trap 'rm -f "$out"' EXIT
@@ -195,7 +205,7 @@ def build_plan(vault):
     state, top = git_state(vault)
     areas = infer_areas(s["areas"])
     debt = measure(vault, s["notes"]) if s["notes"] else None
-    items, conflicts = [], []
+    items, conflicts, blocking = [], [], []
 
     def item(rel, what):
         if (vault / rel).exists() or (vault / rel).is_symlink():
@@ -204,16 +214,44 @@ def build_plan(vault):
         else:
             items.append({"path": rel, "what": what, "status": "create"})
 
+    def local_config(key):
+        return subprocess.run(["git", "-C", str(vault), "config", "--local", "--get", key],
+                              capture_output=True, text=True).stdout.strip()
+
+    hook_ok, existing_hook = True, None
     item(AREAS, "proposed areas, one `folder: area` per line")
-    item(HOOK, "pre-commit hook: ring, gate and leak scan on the notes of the commit")
-    item(HOME, "where the cogiforge checkout lives (read by the hook)")
-    item(HOME_IGNORE, "keeps `home` out of git (it is a machine path, and the leak scan would block it)")
+    hp = vault / HOOK
+    if hp.exists() or hp.is_symlink():
+        if hp.is_file() and not hp.is_symlink() and hp.read_bytes() == HOOK_TEXT.encode("utf-8"):
+            items.append({"path": HOOK, "what": "pre-commit hook (already the generated one)", "status": "identical (kept)"})
+        else:
+            hook_ok = False
+            try:
+                existing_hook = hp.read_text(encoding="utf-8", errors="replace").splitlines()[:HOOK_PEEK]
+            except OSError:
+                existing_hook = ["(could not read it)"]
+            items.append({"path": HOOK, "what": "pre-commit hook", "status": "CONFLICT, NOT ACTIVATED (a different hook)"})
+            blocking.append(f"{HOOK} exists and is NOT the generated hook: it would run on every commit. Read it, "
+                            f"then decide (delete or move it, or keep it and wire the cogiforge by hand). Nothing was activated.")
+    else:
+        items.append({"path": HOOK, "what": "pre-commit hook: ring, gate and leak scan on the notes of the commit",
+                      "status": "create"})
     item(BASELINE, "debt measured today, saved as the baseline")
-    hooks_path = ""
+    hooks_path = home_cfg = ""
     if state == "ok":
-        hooks_path = subprocess.run(["git", "-C", str(vault), "config", "--local", "core.hooksPath"],
-                                    capture_output=True, text=True).stdout.strip()
-    if hooks_path and hooks_path != ".githooks":
+        hooks_path = local_config("core.hooksPath")
+        home_cfg = local_config("cogiforge.home")
+    if home_cfg and home_cfg != str(ROOT):
+        items.append({"path": "git config cogiforge.home", "what": "where the cogiforge checkout lives",
+                      "status": f"CONFLICT (already set to another path, kept as it is)"})
+        blocking.append("`cogiforge.home` is already set to a different path in this repo's git config: the hook would "
+                        "run code from there. Check it (`git config --local cogiforge.home`) and unset it if it is not yours.")
+    else:
+        items.append({"path": "git config cogiforge.home", "what": f"where the cogiforge checkout lives: {ROOT}",
+                      "status": "set" if not home_cfg else "already set"})
+    if not hook_ok:
+        items.append({"path": "git config core.hooksPath", "what": "activate the hook", "status": "NOT set (see the hook conflict)"})
+    elif hooks_path and hooks_path != ".githooks":
         conflicts.append("git config core.hooksPath")
         items.append({"path": "git config core.hooksPath", "what": "activate the hook",
                       "status": f"CONFLICT (already '{hooks_path}', kept as it is)"})
@@ -223,17 +261,22 @@ def build_plan(vault):
     pending = []
     if not s["notes"]:
         pending.append("nothing to adopt: the vault has no readable note")
+        blocking.append(pending[-1])
     if state == "no-git":
         pending.append("the vault is not a git repository: run `git init` yourself, then adopt again")
     elif state == "nested":
         pending.append(f"the vault is inside another git repository ({top.name}): adopt needs the vault to be the repo root")
     elif state == "no-binary":
         pending.append("git is not installed")
+    if state != "ok":
+        blocking.append(pending[-1])
+    pending += [b for b in blocking if b not in pending]
     pending += [f"conflict: {c} already exists, adopt keeps it" for c in conflicts]
     if s["skipped"]:
         pending.append(f"{len(s['skipped'])} note(s) skipped and NOT measured (see the list)")
     return {"vault": str(vault), "git": state, "notes": len(s["notes"]), "skipped": s["skipped"], "areas": areas,
-            "items": items, "debt": debt, "pending": pending, "conflicts": conflicts}
+            "items": items, "debt": debt, "pending": pending, "conflicts": conflicts, "blocking": blocking,
+            "existing_hook": existing_hook, "hook_text": HOOK_TEXT}
 
 
 def render(plan):
@@ -265,6 +308,12 @@ def render(plan):
     out += ["", "4. the hook only judges the notes IN THE COMMIT: the old debt above blocks nobody; it only stops",
             "   new orphans, dead links and personal data from entering. Clean the old debt when you want to.",
             "   (The area check of the gate applies under notes/; elsewhere the area numbers are information.)"]
+    if plan["existing_hook"] is not None:
+        out += ["", f"the EXISTING {HOOK} is not the generated one. Its first lines (read all of it before deciding):"]
+        out += [f"       | {l}" for l in plan["existing_hook"]]
+    if plan["git"] == "ok" and plan["existing_hook"] is None:
+        out += ["", f"the FULL text of {HOOK} that would be installed (read it: it runs on every commit):", ""]
+        out += [f"       | {l}" for l in plan["hook_text"].splitlines()]
     if plan["pending"]:
         out += ["", "pending:"] + [f"   - {p}" for p in plan["pending"]]
     return "\n".join(out)
@@ -283,8 +332,6 @@ def apply(plan, vault):
         AREAS: "# proposed by tools/adopt.py from your top-level folders; edit freely\n"
                + "".join(f"{f}: {a}\n" for f, a in plan["areas"].items()),
         HOOK: HOOK_TEXT,
-        HOME: str(ROOT) + "\n",
-        HOME_IGNORE: "home\n",
         BASELINE: json.dumps(baseline, ensure_ascii=False, indent=2) + "\n",
     }
     for i in plan["items"]:
@@ -298,6 +345,13 @@ def apply(plan, vault):
         if rel == HOOK:
             p.chmod(0o755)
         written.append(rel)
+    for i in plan["items"]:
+        if i["path"] == HOOK and i["status"] == "identical (kept)":
+            (vault / HOOK).chmod(0o755)  # same bytes as ours; only makes sure git can run it
+    for i in plan["items"]:
+        if i["path"] == "git config cogiforge.home" and i["status"] == "set":
+            subprocess.run(["git", "-C", str(vault), "config", "--local", "cogiforge.home", str(ROOT)], check=True)
+            written.append("git config cogiforge.home")
     for i in plan["items"]:
         if i["path"] == "git config core.hooksPath" and i["status"] == "set":
             subprocess.run(["git", "-C", str(vault), "config", "--local", "core.hooksPath", ".githooks"], check=True)
@@ -318,9 +372,8 @@ def run(args):
     if not args.apply:
         return 1 if plan["pending"] else 0
     # --apply: the plan is already on the screen
-    blocking = [p for p in plan["pending"] if not p.startswith(("conflict:", f"{len(plan['skipped'])} note(s) skipped"))]
-    if blocking:
-        print("\nNOT APPLIED: " + "; ".join(blocking), file=sys.stderr)
+    if plan["blocking"]:
+        print("\nNOT APPLIED, nothing was written: " + "; ".join(plan["blocking"]), file=sys.stderr)
         return 1
     if not args.yes:
         if not sys.stdin.isatty():
@@ -372,7 +425,7 @@ def selftest():
         before = snap(v)
         check("--apply without --yes (no tty): rc 2, writes nothing", call(str(v), "--apply") == 2 and snap(v) == before)
         check("--apply --yes: rc 0", call(str(v), "--apply", "--yes") == 0)
-        check("hook and baseline exist", (v / HOOK).is_file() and (v / BASELINE).is_file())
+        check("hook and baseline exist", (v / HOOK).is_file() and (v / BASELINE).is_file() and not (v / '.cogiforge' / 'home').exists())
         check("existing notes are byte for byte the same",
               all(snap(v)[k] == b for k, b in before.items() if k.endswith(".md")))
         (v / AREAS).write_text("mine: mine\n")
