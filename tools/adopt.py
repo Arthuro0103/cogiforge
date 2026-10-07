@@ -31,7 +31,10 @@ THREAT MODEL (6 lines)
      filemode, bare, logallrefupdates, ignorecase, precomposeunicode, symlinks; remote.*.url/fetch; branch.*.remote/merge;
      user.name/email) plus the two keys adopt writes. Any other key, an include, or a file git cannot parse blocks (rc 1,
      entry cited, nothing written, no git run inside the vault). Size, NUL and UTF-8 are only extra belt checks.
-  3. It refuses symlinks in any component of a path it would write, `.git` that is a symlink or a file, a `.githooks` that
+  3. `.git` is judged as a whole, default-deny: only the names of a plain repository (HEAD, config, description, index, packed-refs,
+     hooks of `*.sample`, info/exclude, objects, refs, logs, ...). `commondir`, `config.worktree`, `info/attributes`, alternates,
+     modules, worktrees, shallow, rebase/sequencer state, a hook of yours or any symlink block: git reads them too.
+     It also refuses symlinks in any component of a path it would write, `.git` that is a symlink or a file, a `.githooks` that
      holds anything but the generated `pre-commit`, a different `pre-commit`, and a `cogiforge.home` that is not this checkout.
   4. The generated hook accepts `cogiforge.home` only as a canonical absolute path (no `.`/`..`, no symlink) with the three
      scripts inside, and passes note names after `--`. Text from the vault never reaches the terminal raw: every output goes through one
@@ -168,8 +171,10 @@ ALLOWED_KEYS = [
     (r"core\.repositoryformatversion", r"0"), (r"core\.filemode", BOOLV), (r"core\.bare", r"false"),
     (r"core\.logallrefupdates", r"true"), (r"core\.ignorecase", BOOLV), (r"core\.precomposeunicode", BOOLV),
     (r"core\.symlinks", BOOLV), (r"core\.hookspath", r"\.githooks"),
-    (r"remote\." + _NAME + r"\.url", r"(?:(?:https?|ssh|git)://[A-Za-z0-9][A-Za-z0-9_.~%+@:/-]*"
-                                      r"|[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+:[A-Za-z0-9_.~/+-]*|/" + _PATH + r"|\.{1,2}/" + _PATH + ")"),
+    (r"remote\." + _NAME + r"\.url", r"(?:(?:https?|ssh|git)://(?:[A-Za-z0-9_][A-Za-z0-9_.~%+-]*@)?[A-Za-z0-9][A-Za-z0-9_.-]*"
+                                      r"(?::[0-9]{1,5})?(?:/[A-Za-z0-9_.~%+@:/-]*)?"
+                                      r"|(?:[A-Za-z0-9_][A-Za-z0-9_.-]*@)?[A-Za-z0-9][A-Za-z0-9_.-]*:(?!//)[A-Za-z0-9_.~/+-]*"
+                                      r"|/" + _PATH + r"|\.{1,2}/" + _PATH + ")"),
     (r"remote\." + _NAME + r"\.fetch", r"\+?[A-Za-z0-9_./*-]+:[A-Za-z0-9_./*-]+"),
     (r"branch\." + _NAME + r"\.remote", r"\.|[A-Za-z0-9_.-]+"), (r"branch\." + _NAME + r"\.merge", r"refs/[A-Za-z0-9_./-]+"),
     (r"user\.name", r"[\w.@+' ,()-]{1,100}"), (r"user\.email", r"[\w.@+'-]{1,100}"),
@@ -268,7 +273,7 @@ def write_local_config(vault, key, value):
     """Writes one key to the vault's own .git/config through git, with no repo discovery in the vault and no env."""
     with tempfile.TemporaryDirectory(prefix="adopt-w-") as td:
         subprocess.run(["git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "config", "--file",
-                        str(Path(vault) / ".git" / "config"), key, value],
+                        str(Path(os.path.abspath(vault)) / ".git" / "config"), key, value],
                        capture_output=True, cwd=td, env=clean_git_env(td), check=True)
 
 
@@ -298,6 +303,87 @@ def emit(text="", file=None):
     print("\n".join(safe(line) for line in str(text).split("\n")), file=file or sys.stdout)
 
 
+# A plain repository, as `git init` and ordinary use leave it. Git consults MORE than `.git/config` (commondir points
+# its config, hooks and objects elsewhere; config.worktree, info/attributes, alternates, modules, worktrees, shallow and the
+# rebase/sequencer state can all change what runs or what is read), so the layout is default-deny too: a name that is not
+# in these sets, a symlink, or a file of the wrong kind blocks.
+GIT_TOP_FILES = {"HEAD", "config", "description", "index", "packed-refs", "COMMIT_EDITMSG", "ORIG_HEAD", "FETCH_HEAD"}
+GIT_TOP_DIRS = {"hooks", "info", "objects", "refs", "logs"}
+GIT_INFO_OK = {"exclude", "refs"}  # refs: the dumb-http index git gc writes; data, no execution
+GIT_OBJECTS_INFO_OK = {"packs", "commit-graph", "commit-graphs"}
+HEAD_OK = re.compile(r"^(?:ref: refs/heads/[A-Za-z0-9_./-]+|[0-9a-f]{40}|[0-9a-f]{64})\n?$")
+HEX2 = re.compile(r"^[0-9a-f]{2}$")
+WALK_CAP = 200000
+
+
+def git_dir_violations(vault):
+    """[(path inside .git, why)]. Reads the directory only: no git is run."""
+    g = Path(vault) / ".git"
+    bad = []
+
+    def kind(path, want_dir):
+        st = os.lstat(path)
+        if stat.S_ISLNK(st.st_mode):
+            return "is a symlink"
+        if want_dir and not stat.S_ISDIR(st.st_mode):
+            return "is not a folder"
+        if not want_dir and not stat.S_ISREG(st.st_mode):
+            return "is not a regular file"
+        return None
+
+    try:
+        top = sorted(os.listdir(g))
+    except OSError as e:
+        return [(".git", f"unreadable ({type(e).__name__})")]
+    for name in top:
+        if name in GIT_TOP_FILES or name in GIT_TOP_DIRS:
+            why = kind(g / name, name in GIT_TOP_DIRS)
+            if why:
+                bad.append((name, why))
+        else:
+            bad.append((name, "not part of a plain repository: git may read config, hooks or objects through it"))
+    if "HEAD" in top and not kind(g / "HEAD", False):
+        try:
+            if not HEAD_OK.match((g / "HEAD").read_bytes()[:300].decode("utf-8", "replace")):
+                bad.append(("HEAD", "is not a plain branch reference or object id"))
+        except OSError:
+            bad.append(("HEAD", "unreadable"))
+    if "hooks" in top and not kind(g / "hooks", True):
+        for n in sorted(os.listdir(g / "hooks")):
+            if not n.endswith(".sample") or kind(g / "hooks" / n, False):
+                bad.append((f"hooks/{n}", "a hook of yours: core.hooksPath would silently stop it; move it out and adopt again"))
+    if "info" in top and not kind(g / "info", True):
+        for n in sorted(os.listdir(g / "info")):
+            if n not in GIT_INFO_OK or kind(g / "info" / n, False):
+                bad.append((f"info/{n}", "git reads it (attributes, grafts, sparse-checkout...): only info/exclude and info/refs are accepted"))
+    if "objects" in top and not kind(g / "objects", True):
+        for n in sorted(os.listdir(g / "objects")):
+            if n in ("pack", "info"):
+                why = kind(g / "objects" / n, True)
+            elif HEX2.match(n):
+                why = kind(g / "objects" / n, True)
+            else:
+                why = "not an object folder"
+            if why:
+                bad.append((f"objects/{n}", why))
+        if (g / "objects" / "info").is_dir() and not (g / "objects" / "info").is_symlink():
+            for n in sorted(os.listdir(g / "objects" / "info")):
+                if n not in GIT_OBJECTS_INFO_OK:
+                    bad.append((f"objects/info/{n}", "alternates make git read objects from elsewhere"))
+    for d in ("refs", "logs"):
+        if d in top and not kind(g / d, True):
+            seen = 0
+            for dirpath, dirs, files in os.walk(g / d):
+                for n in dirs + files:
+                    seen += 1
+                    if os.path.islink(os.path.join(dirpath, n)):
+                        bad.append((str(Path(dirpath, n).relative_to(g)), "is a symlink"))
+                if seen > WALK_CAP:
+                    bad.append((d, "too many entries to verify"))
+                    break
+    return bad
+
+
 def unsafe_path(vault, rel):
     """Why writing `rel` under the vault would leave it (a symlink in ANY component, or a non-folder parent), or None."""
     cur = Path(vault)
@@ -313,7 +399,7 @@ def unsafe_path(vault, rel):
 def guard(vault):
     """Everything that must hold before ANY write, judged from disk and from text (no git is run against the vault).
     -> {state, detail, entries, blocking, existing_hook, hook_state}. Called by the plan and again by apply."""
-    vault = Path(vault)
+    vault = Path(os.path.abspath(vault))
     state, detail = git_state(vault)
     blocking, entries, existing_hook, hook_state = [], [], None, "create"
     if state == "no-git":
@@ -325,6 +411,11 @@ def guard(vault):
     elif state == "unsafe":
         blocking.append(f"unsafe repository layout: {detail}")
     if state == "ok":
+        layout = git_dir_violations(vault)
+        if layout:
+            blocking.append("the .git folder is not a plain repository, so adopt will not run git against this vault ("
+                            + "; ".join(f"`.git/{safe(n)}` {why}" for n, why in layout[:8])
+                            + "). Point adopt at a clean repository, or clean these up yourself; adopt never edits .git beyond two config keys.")
         entries, violations = read_repo_config(vault)
         if violations:
             blocking.append("the repo's .git/config has content outside the allowlist of what `git init` writes, so adopt "
@@ -436,7 +527,7 @@ def measure(vault, notes):
 
 
 def build_plan(vault):
-    vault = Path(vault)
+    vault = Path(os.path.abspath(vault))
     s = scan(vault)
     g = guard(vault)
     state, entries = g["state"], g["entries"]
@@ -528,7 +619,7 @@ class Blocked(Exception):
 
 def apply(plan, vault):
     """Writes exactly the plan's `create`/`set` items. Returns the list written."""
-    vault = Path(vault)
+    vault = Path(os.path.abspath(vault))
     again = guard(vault)  # the disk may have changed since the plan was printed
     if again["blocking"]:
         raise Blocked(again["blocking"])
@@ -544,6 +635,11 @@ def apply(plan, vault):
         HOOK: HOOK_TEXT,
         BASELINE: json.dumps(baseline, ensure_ascii=True, indent=2) + "\n",
     }
+    # order: the config key first (if git fails, nothing else was written), the files, and the activation LAST
+    for i in plan["items"]:
+        if i["path"] == "git config cogiforge.home" and i["status"] == "set":
+            write_local_config(vault, "cogiforge.home", str(ROOT))
+            written.append("git config cogiforge.home")
     for i in plan["items"]:
         rel = i["path"]
         if i["status"] != "create" or rel not in contents:
@@ -559,10 +655,6 @@ def apply(plan, vault):
         if i["path"] == HOOK and i["status"] == "identical (kept)":
             (vault / HOOK).chmod(0o755)  # same bytes as ours; only makes sure git can run it
     for i in plan["items"]:
-        if i["path"] == "git config cogiforge.home" and i["status"] == "set":
-            write_local_config(vault, "cogiforge.home", str(ROOT))
-            written.append("git config cogiforge.home")
-    for i in plan["items"]:
         if i["path"] == "git config core.hooksPath" and i["status"] == "set":
             write_local_config(vault, "core.hooksPath", ".githooks")
             written.append("git config core.hooksPath")
@@ -570,7 +662,7 @@ def apply(plan, vault):
 
 
 def run(args):
-    vault = Path(args.vault)
+    vault = Path(os.path.abspath(args.vault))
     if not vault.is_dir():
         emit(f"ERROR: vault is not a folder or unreadable: {vault}", file=sys.stderr)
         return 3
@@ -596,6 +688,15 @@ def run(args):
         written = apply(plan, vault)
     except Blocked as e:
         emit("\nNOT APPLIED, the vault changed since the plan and now fails: " + "; ".join(e.args[0]), file=sys.stderr)
+        return 1
+    except (subprocess.CalledProcessError, OSError) as e:
+        emit(f"\nAPPLY FAILED ({type(e).__name__}); some files may have been written, see `git status` in the vault. "
+             "Nothing was activated unless it is listed above.", file=sys.stderr)
+        return 1
+    after = guard(vault)  # what was just written must still pass: catches a vault that changed during the apply
+    if after["blocking"]:
+        emit("\nWARNING: the vault changed while adopt was writing and now fails its checks: " + "; ".join(after["blocking"]),
+             file=sys.stderr)
         return 1
     emit("\nAPPLIED:" + "".join(f"\n   {w}" for w in written or ["(nothing to create: everything existed)"]))
     emit("Existing notes were not touched. Test it: add a note with no link and run git commit.")

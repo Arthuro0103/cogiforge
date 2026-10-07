@@ -768,3 +768,158 @@ def test_the_installed_hook_output_has_no_control_characters(tmp_path):
     r = subprocess.run(["git", "-C", str(v), "commit", "-m", "x"], capture_output=True, text=True, env=env)
     out = r.stdout + r.stderr
     assert r.returncode != 0 and "COMMIT BLOCKED" in out and not raw_control(out), [hex(ord(c)) for c in raw_control(out)]
+
+
+# ---------------------------------------------------------------- .git is judged as a whole (reproduced on main: commondir)
+
+def make_evil_gitdir(tmp_path, name="evil"):
+    """A real repository whose config makes git run the decoy (absolute path, already expanded)."""
+    e = tmp_path / name
+    e.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=e, check=True)
+    marker = plant_decoy(e, tmp_path, "[core]\n\tfsmonitor = {decoy}\n")
+    return e / ".git", marker
+
+
+def run_plain_git(v):
+    env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+           "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com"}
+    for args in (("status",), ("add", "Ideas/a.md"), ("commit", "-qm", "x"), ("diff",)):
+        subprocess.run(["git", "-C", str(v), *args], capture_output=True, env=env)
+
+
+def test_commondir_indirection_is_blocked_and_plain_git_does_run_through_it(tmp_path):
+    for how in ("absolute", "relative"):
+        v = tmp_path / ("v-" + how)
+        build(v, MINI)
+        git_init(v)
+        evil, marker = make_evil_gitdir(tmp_path, "evil-" + how)
+        target = str(evil) if how == "absolute" else os.path.relpath(evil, v / ".git")
+        (v / ".git" / "commondir").write_text(target + "\n")
+        # CONTROL: this is the hole. Plain git, on this very layout, executes the decoy from the other repository's config.
+        run_plain_git(v)
+        assert marker.exists(), how
+        marker.unlink()
+        before = tree(v)
+        plan = adopt(v)
+        assert plan.returncode == 1 and "commondir" in plan.stdout, how
+        r = adopt(v, "--apply", "--yes")
+        assert r.returncode == 1 and "NOT APPLIED" in r.stderr and tree(v) == before, how
+        assert not marker.exists() and not (v / ".githooks").exists(), how
+
+
+def _w(path, text="x\n"):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+
+
+EXTRAS = {
+    "config.worktree": lambda g, t: _w(g / "config.worktree", "[core]\n\tfsmonitor = x\n"),
+    "modules": lambda g, t: (g / "modules").mkdir(),
+    "worktrees": lambda g, t: (g / "worktrees").mkdir(),
+    "shallow": lambda g, t: _w(g / "shallow"),
+    "gitdir": lambda g, t: _w(g / "gitdir", "/elsewhere/.git\n"),
+    "rebase-merge": lambda g, t: _w(g / "rebase-merge" / "git-rebase-todo", "exec echo hostile\n"),
+    "MERGE_HEAD": lambda g, t: _w(g / "MERGE_HEAD", "0" * 40 + "\n"),
+    "sequencer": lambda g, t: _w(g / "sequencer" / "todo", "exec echo hostile\n"),
+    "info/attributes": lambda g, t: _w(g / "info" / "attributes", "* filter=x\n"),
+    "info/grafts": lambda g, t: _w(g / "info" / "grafts"),
+    "objects/info/alternates": lambda g, t: _w(g / "objects" / "info" / "alternates", str(t) + "\n"),
+    "hooks/pre-commit": lambda g, t: (_w(g / "hooks" / "pre-commit", "#!/bin/sh\nexit 0\n"), (g / "hooks" / "pre-commit").chmod(0o755)),
+    "refs symlink": lambda g, t: (g / "refs" / "heads" / "link").symlink_to(t),
+    "HEAD hostile": lambda g, t: _w(g / "HEAD", "ref: refs/heads/x\ncore.fsmonitor\n"),
+    "stray file": lambda g, t: _w(g / "whatever"),
+    "index.lock": lambda g, t: _w(g / "index.lock"),
+    "top symlink": lambda g, t: (g / "description").unlink() or (g / "description").symlink_to(t),
+}
+
+
+def test_every_extra_thing_in_dot_git_blocks_and_nothing_is_written(tmp_path):
+    for name, setup in EXTRAS.items():
+        v = tmp_path / name.replace("/", "_").replace(" ", "_")
+        build(v, MINI)
+        git_init(v)
+        setup(v / ".git", tmp_path)
+        before = tree(v)
+        r = adopt(v, "--apply", "--yes")
+        assert r.returncode == 1 and "NOT APPLIED" in r.stderr and "plain repository" in r.stderr, (name, r.stderr[-500:])
+        assert tree(v) == before and local_cfg(v, "core.hooksPath") == "", name
+
+
+def test_a_plain_repository_with_history_is_accepted(tmp_path):
+    v = tmp_path / "v"
+    build(v, MINI)
+    git_init(v)
+    env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+           "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com"}
+    subprocess.run(["git", "-C", str(v), "add", "-A"], check=True)
+    subprocess.run(["git", "-C", str(v), "commit", "-qm", "one"], check=True, env=env)
+    subprocess.run(["git", "-C", str(v), "commit", "-q", "--amend", "-m", "two"], check=True, env=env)
+    subprocess.run(["git", "-C", str(v), "gc", "-q"], check=True, env=env)
+    (v / ".git" / "info").mkdir(exist_ok=True)
+    (v / ".git" / "info" / "exclude").write_text("*.tmp\n")
+    r = adopt(v, "--apply", "--yes")
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_a_relative_vault_path_works_from_inside_the_vault(tmp_path):
+    """Reproduced on main: `adopt .` crashed after writing files (the config path was relative to a temp folder)."""
+    v = tmp_path / "v"
+    build(v, MINI)
+    git_init(v)
+    for arg, cwd in (("." , v), ("v", tmp_path)):
+        r = subprocess.run([sys.executable, ADOPT, arg, "--apply", "--yes"], capture_output=True, text=True, cwd=str(cwd),
+                           env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}, stdin=subprocess.DEVNULL)
+        assert r.returncode == 0 and "Traceback" not in r.stderr, (arg, r.stdout[-300:], r.stderr)
+        assert local_cfg(v, "core.hooksPath") == ".githooks" and local_cfg(v, "cogiforge.home") == str(ROOT)
+        subprocess.run(["git", "-C", str(v), "config", "--local", "--remove-section", "cogiforge"], check=True)
+        subprocess.run(["git", "-C", str(v), "config", "--local", "--unset", "core.hooksPath"], check=True)
+        for f in ("areas.txt", ".githooks", ".cogiforge"):
+            p = v / f
+            if p.is_dir():
+                import shutil
+                shutil.rmtree(p)
+            else:
+                p.unlink()
+
+
+def test_if_git_fails_the_config_is_written_first_so_nothing_else_is(tmp_path, monkeypatch):
+    v = tmp_path / "v"
+    build(v, MINI)
+    git_init(v)
+    m = load_module()
+
+    def boom(*a, **k):
+        raise subprocess.CalledProcessError(1, "git")
+    monkeypatch.setattr(m, "write_local_config", boom)
+    before = tree(v)
+    rc = m.run(m.parser().parse_args([str(v), "--apply", "--yes"]))
+    assert rc == 1 and tree(v) == before
+
+
+def test_a_vault_that_changes_during_the_apply_is_reported(tmp_path, monkeypatch):
+    v = tmp_path / "v"
+    build(v, MINI)
+    git_init(v)
+    evil, marker = make_evil_gitdir(tmp_path)
+    m = load_module()
+    real = m.apply
+
+    def apply_then_tamper(plan, vault):
+        out = real(plan, vault)
+        (Path(vault) / ".git" / "commondir").write_text(str(evil) + "\n")
+        return out
+    monkeypatch.setattr(m, "apply", apply_then_tamper)
+    assert m.run(m.parser().parse_args([str(v), "--apply", "--yes"])) == 1
+    assert not marker.exists()
+
+
+def test_remote_urls_that_could_smuggle_an_ssh_option_are_not_accepted():
+    m = load_module()
+    ok = lambda u: not m.validate_git_config(f'[remote "o"]\n\turl = {u}\n'.encode())[1]  # noqa: E731
+    for good in ("https://example.com/x.git", "ssh://git@example.com:22/x.git", "git@example.com:x/y.git",
+                 "git://example.com/x.git", "./sub", "/abs/sub"):
+        assert ok(good), good
+    for bad in ("-Fevil@h:p", "-ofoo@h:p", "ssh://x@-Fevil/p", "ssh://-Fevil/p", "x@-Fevil:p", "_x@-h:p", "ext::sh -c x",
+                "file:///x", "https://h/--upload-pack=x", "ssh://h/--upload-pack=x", "-oProxyCommand=x"):
+        assert not ok(bad), bad

@@ -59,7 +59,7 @@ Suggest a test: add a note with no link and run `git commit`; the hook should bl
 
 1. Defends: a vault received from a third party (zip, copy, sync) with a hostile `.git/config`, symlinks, extra hooks or malicious note names.
 2. `.git/config` is listed by git itself (on a private copy, in a clean environment, running nothing), and only what `git init`/`clone` write (core basics, remote url/fetch, branch remote/merge, user name/email) plus adopt's own two keys passes; anything else blocks with the entry cited, and no git runs inside the vault.
-3. Symlinks in any component of a path it would write, a `.git` that is a file or symlink, a `.githooks` with any other file, and a different `pre-commit` all block, and nothing is written.
+3. `.git` must be a plain repository (default-deny layout: `commondir`, `config.worktree`, `info/attributes`, alternates, modules, worktrees, shallow, rebase state and hooks of the user all block). Symlinks in any component of a path it would write, a `.git` that is a file or symlink, a `.githooks` with any other file, and a different `pre-commit` all block, and nothing is written.
 4. The hook only runs a cogiforge checkout given as a canonical absolute path with the three scripts inside.
 5. Does NOT defend: the user pointing `cogiforge.home` at a clone they chose (adopt checks the scripts exist, not who wrote them), or a hook they read and approved. Say so in one sentence when you explain the plan.
 6. If the allowlist blocks something the user considers fine, they edit `.git/config` themselves; you never edit it for them and adopt never loosens it.
@@ -68,7 +68,7 @@ Suggest a test: add a note with no link and run `git commit`; the hook should bl
 
 1. That the cogiforge checkout is trustworthy: it checks that three scripts exist at `cogiforge.home`, not who wrote them.
 2. That a hook you approved, or a vault you cleaned by hand after a block, is safe: it judges what it sees at that moment.
-3. That `.git` is free of other mechanisms (alternates, `info/attributes`, `hooks/`, `config.worktree`): it only validates `config`, and `.githooks`.
+3. That a plain-looking `.git` holds no hostile object, ref or index data: it validates the LAYOUT (default-deny names, no symlinks) and `config`, not the repository contents.
 4. That your global git config, your `PATH`, your shell or your terminal are not hostile.
 5. That `core/*.py` print safely when you run them by hand: only adopt and the generated hook filter their output.
 6. That the debt numbers are complete: skipped, unreadable and non-UTF-8 notes are listed, not measured, and links are resolved by the gate's rules, not Obsidian's.
