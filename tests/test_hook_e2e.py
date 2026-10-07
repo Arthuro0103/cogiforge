@@ -80,6 +80,46 @@ def test_orphan_outside_the_commit_only_warns(clone):
     assert r.returncode == 0 and "WARNING" in r.stdout + r.stderr and "old.md" in r.stdout + r.stderr
 
 
+def set_gate(repo, text):
+    (repo / "vault" / "gate.txt").write_text(text, encoding="utf-8")
+    sh(repo, "git", "add", "vault/gate.txt")
+    sh(repo, "git", "commit", "-q", "--no-verify", "-m", "gate config")
+
+
+def test_shipped_gate_txt_is_block(clone):
+    text = (clone / "vault" / "gate.txt").read_text(encoding="utf-8")
+    assert "orphan: block" in text.splitlines()
+    assert commit(clone, "vault/notes/life/orphan.md", ORPHAN).returncode == 1
+
+
+def test_gate_txt_removed_still_blocks(clone):
+    (clone / "vault" / "gate.txt").unlink()
+    assert commit(clone, "vault/notes/life/orphan.md", ORPHAN).returncode == 1
+
+
+def test_orphan_warn_lets_the_commit_through_and_prints_the_warning(clone):
+    set_gate(clone, "orphan: warn\n")
+    r = commit(clone, "vault/notes/life/orphan.md", ORPHAN)
+    out = r.stdout + r.stderr
+    assert r.returncode == 0, out
+    assert "WARNING" in out and "orphan.md" in out and "COMMIT BLOCKED" not in out
+
+
+def test_malformed_gate_txt_blocks_the_commit(clone):
+    set_gate(clone, "orphan: maybe\n")
+    r = commit(clone, "vault/notes/life/ok.md", "---\narea: life\n---\n# Linked\n\n[[home]]\n")
+    out = r.stdout + r.stderr
+    assert r.returncode == 1 and "COMMIT BLOCKED" in out and "gate.txt" in out
+
+
+def test_leak_still_blocks_with_orphan_warn(clone):
+    set_gate(clone, "orphan: warn\n")
+    r = commit(clone, "vault/notes/life/v.md", f"---\narea: life\n---\n# V\n\n[[home]] {LEAK}\n")
+    assert r.returncode == 1 and "leak" in (r.stdout + r.stderr).lower()
+    r = commit(clone, "docs/note.txt", f"opened {LEAK}/x\n")
+    assert r.returncode == 1
+
+
 def test_leak_in_the_stage_blocks_any_file(clone):
     r = commit(clone, "docs/note.txt", f"opened {LEAK}/x\n")
     assert r.returncode == 1 and "leak" in (r.stdout + r.stderr).lower()

@@ -4,6 +4,7 @@
     ring.py [--vault vault]                lists the orphans (rc 0)
     ring.py --gate                         rc 1 if there is an orphan; this is what the hook runs
     ring.py --gate --stage                 only fails orphans that are IN THIS commit; the others become a WARNING
+    vault/gate.txt                         optional `orphan: block` (default) or `orphan: warn` (report, never block)
     ring.py --json                         {"total", "orphans", "exempt"}
     ring.py --selftest                     proves it fails when it should (orphan -> rc 1, cure -> rc 0)
 
@@ -12,7 +13,7 @@ to itself, a link inside code and a link to an image do not count.
 `inbox/`, `people/<handle>/inbox/` (team mode) and `tasks/` are exempt from failing: quick capture cannot be blocked, because
 whoever is blocked at capture uninstalls, and `tasks/` is where the TaskNotes plugin writes tasks created in the
 interface, without asking for a link. Notes in those folders still count as the end of an edge.
-rc: 0 ok · 1 fails · 2 could not verify (vault does not exist, git unavailable)
+rc: 0 ok · 1 fails · 2 could not verify (vault does not exist, git unavailable, gate.txt unreadable or malformed)
 """
 import argparse
 import collections
@@ -82,9 +83,41 @@ Deliberate bypass: git commit --no-verify
 """
 
 
+ORPHAN_MODES = ("block", "warn")
+
+
+def orphan_mode(vault):
+    """`block` or `warn`, from vault/gate.txt. Absent file = block. An existing file that cannot be read or
+    understood raises ValueError: a check that did not understand its config must never pass as OK."""
+    f = Path(vault) / "gate.txt"
+    if not f.exists():
+        return "block"
+    try:
+        lines = f.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError) as e:
+        raise ValueError(f"vault/gate.txt exists but cannot be read ({type(e).__name__})")
+    mode = "block"
+    for n, raw in enumerate(lines, 1):
+        line = raw.split("#", 1)[0].strip()
+        if not line:
+            continue
+        key, sep, value = line.partition(":")
+        if key.strip() != "orphan" or not sep:
+            raise ValueError(f"vault/gate.txt line {n}: expected `orphan: block` or `orphan: warn`")
+        mode = value.strip()
+        if mode not in ORPHAN_MODES:
+            raise ValueError(f"vault/gate.txt line {n}: unknown orphan value '{mode}' (use block or warn)")
+    return mode
+
+
 def gate(vault, stage_only=False):
     if not Path(vault).is_dir():
         print(f"NOT_VERIFIED: the vault '{vault}' does not exist; the gate judged nothing.")
+        return 2
+    try:
+        mode = orphan_mode(vault)
+    except ValueError as e:
+        print(f"ERROR: {e}. The gate judged nothing, so the commit is blocked until it is fixed.")
         return 2
     notes, degree = analyze(vault)
     orphans = chk_orphans(notes, degree)
@@ -100,6 +133,10 @@ def gate(vault, stage_only=False):
     if outside:
         print(f"WARNING — {len(outside)} orphan(s) OUTSIDE this commit (does not block):")
         print("".join(f"   {o}\n" for o in outside))
+    if orphans and mode == "warn":
+        print(f"WARNING — {len(orphans)} note(s) with no inbound or outbound link (vault/gate.txt: orphan: warn, does not block):")
+        print("".join(f"   {o}\n" for o in orphans))
+        return 0
     if orphans:
         print(f"FAILS — {len(orphans)} note(s) with no inbound or outbound link:")
         print("".join(f"   {o}\n" for o in orphans) + TEACH)
@@ -138,6 +175,15 @@ def selftest():
         write("dead.md", "only points to [[does-not-exist]]\n")
         check("dead link is not an edge: orphan (rc 1)", rc() == 1)
         os.remove(tmp / "dead.md")
+        write("loose.md", "still no link\n")
+        write("gate.txt", "# comment\norphan: warn\n")
+        check("orphan: warn lets an orphan pass (rc 0)", rc() == 0)
+        write("gate.txt", "orphan: sometimes\n")
+        check("malformed gate.txt cannot pass (rc 2)", rc() == 2)
+        write("gate.txt", "orphan: block\n")
+        check("orphan: block fails an orphan (rc 1)", rc() == 1)
+        os.remove(tmp / "gate.txt")
+        write("loose.md", "now linked to [[a]]\n")
         if shutil.which("git"):
             subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
             write("new.md", "orphan in the commit\n")

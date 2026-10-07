@@ -57,6 +57,8 @@ Obsidian interface; you (Claude) can also write the file directly, in the same f
 is exempt from the orphan gate and the gate does not judge the YAML there (the plugin adds its own fields), but
 a dead link inside a task still fails.
 
+The orphan gate blocks by default. `vault/gate.txt` (`orphan: block` or `orphan: warn`) is the user's setting: never change it yourself, and the leak scanner ignores it either way.
+
 ## Connection map (optional)
 
 If the user installed **graphify** (public, Apache-2.0) and ran `/graphify vault` at the repo root,

@@ -1,0 +1,9 @@
+# gate.txt: what the pre-commit hook does when a note in your commit has no link at all.
+#
+#   orphan: block   the commit is refused until the note is linked (the default; same as no file)
+#   orphan: warn    the same report is printed as a WARNING and the commit goes through
+#
+# Only the orphan check reads this file. The personal-data scanner (core/leak.py) never does:
+# it always blocks, and no setting turns it off. A line this file cannot understand blocks the
+# commit with an error, so a typo never silently disables the check.
+orphan: block
