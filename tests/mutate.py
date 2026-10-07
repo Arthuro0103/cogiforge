@@ -230,6 +230,29 @@ PIECES = {
         ("unreadable file aborts instead of being skipped", 'except (OSError, UnicodeDecodeError) as e:\n            skipped', 'except OSError as e:\n            skipped'),
         ("skipped files are silent", 'print(f"skipped {s}", file=sys.stderr)\n    if not chunks:\n        print("NOT_VERIFIED: the vault has no readable chunks, so nothing', 'pass\n    if not chunks:\n        print("NOT_VERIFIED: the vault has no readable chunks, so nothing'),
     ]),
+    "conflicts": dict(file="core/conflicts.py", suite=["tests/test_conflicts.py"], texts=[
+        ("iCloud placeholder not found", 'if name.endswith(".icloud"):', 'if False:'),
+        ("Syncthing conflict not found", 'if SYNCTHING_RE.search(name):', 'if False:'),
+        ("conflicted copy not found", 'if COPY_RE.search(name):', 'if False:'),
+        ("case conflict not found", 'if CASE_RE.search(name):', 'if False:'),
+        ("`name (1)` duplicate not found", 'for rx in (PAREN_RE, SPACE_RE):', 'for rx in (SPACE_RE,):'),
+        ("`name 2` duplicate not found", 'for rx in (PAREN_RE, SPACE_RE):', 'for rx in (PAREN_RE,):'),
+        ("duplicate without a sibling flagged (false positive)", 'if m and exists(str(p.with_name(m.group("base") + ext))):', 'if m:'),
+        ("sibling extension ignored", 'm.group("base") + ext', 'm.group("base")'),
+        ("sibling looked up outside the folder", 'str(p.with_name(m.group("base") + ext))', 'm.group("base") + ext'),
+        ("staged scans the whole index", 'names = git_list("diff", "--cached", "--name-only", "--diff-filter=ACMR")', 'names = git_list("ls-files")'),
+        ("unreadable is not rc 3", 'return 3', 'return 0'),
+        ("finding does not fail", 'return 1 if found else 0', 'return 0'),
+        ("NOT_VERIFIED becomes OK", 'print(f"NOT_VERIFIED: {len(unreadable)} folder(s)', 'print(f"OK: {len(unreadable)} folder(s)'),
+        ("missing path is not rc 2", "nothing was scanned: {', '.join(missing)}\", file=sys.stderr)\n            return 2", "nothing was scanned: {', '.join(missing)}\", file=sys.stderr)\n            return 0"),
+    ]),
+    "hook-sync": dict(file=".githooks/pre-commit", suite=["tests/test_conflicts.py"], texts=[
+        ("sync guard does not run", 'python3 core/conflicts.py --staged', 'true'),
+        ("sync guard passes on any rc", 'if [ "$rc" -ne 0 ]; then', 'if false; then'),
+        ("sync guard does not teach", 'How to fix: compare', 'Fix: compare'),
+        ("sync guard does not block", '    fi\n    blocked=1\nfi\n\n[ "$blocked"', '    fi\nfi\n\n[ "$blocked"'),
+        ("conflicts.py missing passes", 'core/people.py core/conflicts.py; do', 'core/people.py; do'),
+    ]),
 }
 
 
