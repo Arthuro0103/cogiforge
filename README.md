@@ -8,6 +8,10 @@
 > author. Skills, docs and the vault template are in English. If you want to use it in Portuguese, see
 > docs/TRANSLATING.md (glossary and a checklist). Step by step for each part: [TUTORIAL.md](TUTORIAL.md).
 
+<p align="center">
+  <img src="assets/brain-graph.svg" alt="A brain drawn as a graph of notes and links, with one lit path from an idea to the note that uses it." width="100%">
+</p>
+
 ## Why it exists
 
 cogiforge came out of using Claude on a real vault. Three decisions shaped it:
@@ -32,7 +36,16 @@ cogiforge came out of using Claude on a real vault. Three decisions shaped it:
 | `/claude-corner` | When you say you are leaving, Claude uses that time to reread your notes, find real connections and test ideas in a throwaway place. It **only proposes**, in a file. |
 | Tasks (**TaskNotes**) | Tasks are notes in `vault/tasks/`, managed by the public [TaskNotes](https://github.com/callumalpass/tasknotes) Obsidian plugin (MIT). Not bundled: you install it from Obsidian's community plugin store. `open-session` and `close-session` read and write the same format. |
 | Connection map (**graphify**, optional) | The public [graphify](https://github.com/Graphify-Labs/graphify) (Apache-2.0) maps your notes into a graph you can query. Install it yourself; its output folder is git-ignored. See the tutorial. |
+| `/brainstorm` | Brainstorming for any product, project, study, event or loose idea. Checks what the vault already says, proposes **three genuinely different paths**, compares them on criteria you choose, recommends one **without choosing for you**, and stops at a brief you approve. No code and no plan before your "yes". |
+| `/extract-routine` | Gets a real routine out of your head by interview, one question at a time. What you do not know stays `[CONFIRM]`; Claude never invents a step. It can reach `ready-for-human-review`; `validated` needs a second person who follows the order without guessing. |
+| `/whats-real` | Keeps, per project, what **works (with proof)**, what is **simulated or a demo**, and what is **unknown**. An item moves to "works" only with proof run again. |
+| `/know-my-product` | Interviews you about your product and collects your pains with your literal words and the date, then proposes a ranking. You approve before anything is saved. |
+| `/import-knowledge` | Brings an existing base (another vault, a folder, documents, chat exports) into the inbox and walks you through the triage, target first. See *Bringing an existing knowledge base*. |
 | `/adapt-skill` | Helps you write **your own** skill from a worksheet in `vault/skill-worksheets/`. One question at a time; Claude never writes it for you, and "this is not for me" is a valid answer that gets recorded. |
+
+![An Obsidian window on the vault: file tree, a note whose link sits inside the argument, the local graph, and Claude Code opening a project session below.](assets/workbench.svg)
+
+*The workbench in use: Obsidian on `vault/`, Claude Code at the repo root.*
 
 ## How it improves with you
 
@@ -110,6 +123,8 @@ Measured on 2026-10-06, after the move to English, on one machine (macOS), in a 
 `artigo`, `conselho`, `product-idea` and `consult-notes` as real skills (their worksheets are in `vault/skill-worksheets/` today); a skill that turns one of your own failures into a rule plus a test.
 
 ## Bringing an existing knowledge base
+
+![Other vaults, folders, documents and chat exports go through the import into the inbox; you triage with a named target; linked, gated notes land in notes/.](assets/import.svg)
 
 A team, a school or a person usually starts with notes that already exist. The import is a copy plus a
 conversion: your originals are never touched, and nothing is dropped in silence.

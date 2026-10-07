@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="480" viewBox="0 0 900 480" role="img" aria-label="An Obsidian window on the cogiforge vault: file tree on the left, a note with a link in the middle, the local graph on the right, and Claude Code running below.">
+<style>
+.f{font:400 13px -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;fill:#8a8a8a}
+.fb{font:600 13px -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;fill:#ececec}
+.h{font:800 20px -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;fill:#ececec}
+.b{font:400 14px -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;fill:#b8b8b8}
+.m{font:500 12.5px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;fill:#b8b8b8}
+.o{fill:#ff7a1a}
+</style>
+<rect width="900" height="480" fill="#0d0d0d"/>
+<rect x="20" y="20" width="860" height="330" rx="10" fill="#141414" stroke="#2e2e2e" stroke-width="1.5"/>
+<circle cx="42" cy="40" r="5" fill="#3a3a3a"/><circle cx="60" cy="40" r="5" fill="#3a3a3a"/><circle cx="78" cy="40" r="5" fill="#3a3a3a"/>
+<text x="450" y="45" text-anchor="middle" class="f">vault/ · Obsidian</text>
+<line x1="20" y1="58" x2="880" y2="58" stroke="#2e2e2e"/>
+<line x1="200" y1="58" x2="200" y2="350" stroke="#2e2e2e"/>
+<line x1="640" y1="58" x2="640" y2="350" stroke="#2e2e2e"/>
+<!-- file tree -->
+<text x="36" y="86" class="fb">vault</text>
+<text x="48" y="110" class="f">▸ inbox</text>
+<text x="48" y="132" class="f">▾ notes</text>
+<text x="64" y="154" class="f">▾ learning</text>
+<rect x="60" y="162" width="132" height="22" rx="4" fill="#232323"/>
+<text x="78" y="178" class="fb">how to link a note</text>
+<text x="78" y="200" class="f">one note per idea</text>
+<text x="48" y="224" class="f">▾ projects</text>
+<text x="64" y="246" class="f">my-first-project</text>
+<text x="48" y="270" class="f">▸ memory</text>
+<text x="48" y="292" class="f">▸ tasks</text>
+<text x="48" y="314" class="f">▸ people</text>
+<!-- note -->
+<text x="228" y="92" class="h">A link lives inside the argument</text>
+<text x="228" y="122" class="f">area: learning · project: my-first-project</text>
+<rect x="228" y="140" width="380" height="8" rx="4" fill="#232323"/>
+<text x="228" y="176" class="b">A note without a link is a file nobody will find.</text>
+<text x="228" y="200" class="b">The link goes in the middle of the sentence, like in</text>
+<text x="228" y="224" class="b"><tspan class="o">[[projects/my-first-project/instructions]]</tspan>,</text>
+<text x="228" y="248" class="b">not in a list at the bottom.</text>
+<rect x="228" y="270" width="340" height="8" rx="4" fill="#232323"/>
+<rect x="228" y="290" width="240" height="8" rx="4" fill="#232323"/>
+<text x="228" y="332" class="f">backlinks: 3  ·  gate: passed</text>
+<!-- local graph -->
+<text x="660" y="86" class="fb">Local graph</text>
+<g stroke="#3a3a3a" stroke-width="1.2">
+<line x1="760" y1="200" x2="700" y2="140"/><line x1="760" y1="200" x2="830" y2="150"/><line x1="760" y1="200" x2="690" y2="250"/><line x1="760" y1="200" x2="820" y2="270"/><line x1="760" y1="200" x2="760" y2="310"/>
+<line x1="700" y1="140" x2="672" y2="112"/><line x1="830" y1="150" x2="855" y2="118"/><line x1="690" y1="250" x2="665" y2="300"/><line x1="820" y1="270" x2="858" y2="310"/>
+</g>
+<line x1="760" y1="200" x2="830" y2="150" stroke="#ff7a1a" stroke-width="2"/>
+<circle cx="760" cy="200" r="11" fill="#ff7a1a"/>
+<circle cx="830" cy="150" r="8" fill="#d8d8d8"/><circle cx="700" cy="140" r="8" fill="#d8d8d8"/><circle cx="690" cy="250" r="8" fill="#d8d8d8"/><circle cx="820" cy="270" r="8" fill="#d8d8d8"/><circle cx="760" cy="310" r="8" fill="#d8d8d8"/>
+<circle cx="672" cy="112" r="5" fill="#6a6a6a"/><circle cx="855" cy="118" r="5" fill="#6a6a6a"/><circle cx="665" cy="300" r="5" fill="#6a6a6a"/><circle cx="858" cy="310" r="5" fill="#6a6a6a"/>
+<!-- terminal -->
+<rect x="20" y="368" width="860" height="92" rx="10" fill="#101010" stroke="#2e2e2e" stroke-width="1.5"/>
+<text x="40" y="396" class="m"><tspan fill="#6a6a6a">$</tspan> claude</text>
+<text x="40" y="420" class="m"><tspan class="o">/open-session</tspan> my-first-project</text>
+<text x="40" y="444" class="m" style="fill:#8a8a8a">reads the root, the last diary entries and the open tasks, then tells you where you stopped</text>
+</svg>

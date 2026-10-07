@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="300" viewBox="0 0 900 300" role="img" aria-label="Bringing an existing knowledge base in: other vaults, folders, documents and chat exports go through the import tool into the inbox, you triage with a target, and linked notes land in notes.">
+<style>
+.st{font:800 14px -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;letter-spacing:1.5px}
+.sd{font:400 13px -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;fill:#8a8a8a}
+.m{font:500 12.5px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;fill:#b8b8b8}
+</style>
+<rect width="900" height="300" fill="#0d0d0d"/>
+<g fill="#1c1c1c" stroke="#3a3a3a" stroke-width="2">
+<rect x="20" y="28" width="170" height="44" rx="8"/><rect x="20" y="84" width="170" height="44" rx="8"/><rect x="20" y="140" width="170" height="44" rx="8"/><rect x="20" y="196" width="170" height="44" rx="8"/>
+</g>
+<text x="105" y="55" text-anchor="middle" class="m">another vault</text>
+<text x="105" y="111" text-anchor="middle" class="m">folders · md · html</text>
+<text x="105" y="167" text-anchor="middle" class="m">pdf · docx · pptx</text>
+<text x="105" y="223" text-anchor="middle" class="m">chat exports (zip)</text>
+<g stroke="#3a3a3a" stroke-width="1.5"><line x1="190" y1="50" x2="240" y2="134"/><line x1="190" y1="106" x2="240" y2="134"/><line x1="190" y1="162" x2="240" y2="150"/><line x1="190" y1="218" x2="240" y2="160"/></g>
+<path d="M240,110 L360,110 L384,142 L360,174 L240,174 L264,142 Z" fill="#1c1c1c" stroke="#3a3a3a" stroke-width="2"/>
+<text x="312" y="147" text-anchor="middle" class="st" fill="#ececec">IMPORT</text>
+<text x="312" y="200" text-anchor="middle" class="sd">copies and converts;</text><text x="312" y="218" text-anchor="middle" class="sd">a report lists every file</text>
+<line x1="384" y1="142" x2="430" y2="142" stroke="#3a3a3a" stroke-width="2"/>
+<rect x="430" y="112" width="120" height="60" rx="8" fill="#1c1c1c" stroke="#3a3a3a" stroke-width="2"/>
+<text x="490" y="147" text-anchor="middle" class="m">inbox/</text>
+<text x="490" y="200" text-anchor="middle" class="sd">raw, exempt from</text><text x="490" y="218" text-anchor="middle" class="sd">the link rule</text>
+<line x1="550" y1="142" x2="596" y2="142" stroke="#3a3a3a" stroke-width="2"/>
+<path d="M596,110 L716,110 L740,142 L716,174 L596,174 L620,142 Z" fill="#1c1c1c" stroke="#ff7a1a" stroke-width="2"/>
+<text x="668" y="147" text-anchor="middle" class="st" fill="#ff7a1a">YOU TRIAGE</text>
+<text x="668" y="200" text-anchor="middle" class="sd">name the target first;</text><text x="668" y="218" text-anchor="middle" class="sd">Claude proposes, you say yes</text>
+<line x1="740" y1="142" x2="770" y2="142" stroke="#3a3a3a" stroke-width="2"/>
+<rect x="770" y="100" width="110" height="84" rx="8" fill="#1c1c1c" stroke="#3a3a3a" stroke-width="2"/>
+<text x="825" y="136" text-anchor="middle" class="m">notes/</text>
+<g stroke="#3a3a3a"><line x1="800" y1="158" x2="825" y2="150"/><line x1="825" y1="150" x2="850" y2="160"/></g>
+<circle cx="800" cy="158" r="5" fill="#d8d8d8"/><circle cx="825" cy="150" r="5" fill="#d8d8d8"/><circle cx="850" cy="160" r="5" fill="#d8d8d8"/>
+<text x="825" y="200" text-anchor="middle" class="sd">linked, gated</text>
+<text x="450" y="274" text-anchor="middle" class="sd">the leak scan reads the import too: personal data blocks the commit, never the copy</text>
+</svg>
