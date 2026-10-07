@@ -1,12 +1,13 @@
 #!/bin/sh
 # pre-commit — the tap, not the bucket.
 #
-# Three guards, and all only look at what THIS commit carries (a gate that fails you for something you
+# Four guards, and all only look at what THIS commit carries (a gate that fails you for something you
 # did not do is a gate people learn to skip):
 #   1. ring   a vault/ .md note with no inbound or outbound link
 #   2. leak   machine path, e-mail, phone, CPF and your private blocklist
 #   3. people team mode only (vault/roles.txt exists): a member touching another person's folder,
 #             roles.txt, areas.txt, or creating a project. Without roles.txt it is silent.
+#   4. sync   a sync-tool conflict or duplicate file (`x (1).md`, conflicted copy, .sync-conflict-, .icloud)
 #
 # Versioned in .githooks/ because a hook in .git/hooks/ vanishes on the next clone, and
 # `core.hooksPath` is LOCAL config: after cloning, run `sh install.sh`.
@@ -15,7 +16,7 @@
 root=$(git rev-parse --show-toplevel) || exit 1
 cd "$root" || exit 1
 
-for f in core/ring.py core/leak.py core/people.py; do
+for f in core/ring.py core/leak.py core/people.py core/conflicts.py; do
     if [ ! -f "$f" ]; then
         echo "" >&2
         echo "  ⛔ COMMIT BLOCKED — $f does not exist: the installation is incomplete." >&2
@@ -74,6 +75,26 @@ if [ "$rc" -ge 2 ]; then
     echo "  ⛔ COMMIT BLOCKED — team mode could not be verified (vault/roles.txt unreadable, empty or malformed)"
     echo ""
     sed 's/^/     /' "$out" | head -20
+    blocked=1
+fi
+
+# 4. the sync leftovers. rc 1 = a conflict file is in this commit; rc 2/3 = it could not judge, and not judging is not OK
+python3 core/conflicts.py --staged >"$out" 2>&1
+rc=$?
+if [ "$rc" -ne 0 ]; then
+    echo ""
+    if [ "$rc" -eq 1 ]; then
+        echo "  ⛔ COMMIT BLOCKED — a sync tool left a conflict or duplicate file in this commit"
+    else
+        echo "  ⛔ COMMIT BLOCKED — the sync-conflict check could not run"
+    fi
+    echo ""
+    sed 's/^/     /' "$out" | head -20
+    if [ "$rc" -eq 1 ]; then
+        echo ""
+        echo "  How to fix: compare the copy with the original (diff), keep the one you want,"
+        echo "  delete the other, then commit again. See docs/SYNC.md."
+    fi
     blocked=1
 fi
 

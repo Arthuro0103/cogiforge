@@ -101,6 +101,8 @@ on its own; a note in `notes/` only shows up there through the link in the body.
 
 How context loads and how to keep it small: `docs/CONTEXT.md`.
 
+Sync conflicts and duplicate files (`x (1).md`, conflicted copy): `docs/SYNC.md`.
+
 ## Never
 
 Write outside `vault/`. Delete a note without being asked. Fill `memory/` without the user's words.
