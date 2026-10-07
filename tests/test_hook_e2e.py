@@ -19,7 +19,7 @@ def sh(cwd, *cmd, env=None):
 def clone(tmp_path):
     repo = tmp_path / "clone"
     repo.mkdir()
-    for item in ("core", ".githooks", "install.sh", "vault", ".gitignore"):
+    for item in ("core", ".githooks", "install.sh", "vault", ".gitignore", ".leakignore"):
         source = ROOT / item
         if source.is_dir():
             shutil.copytree(source, repo / item, ignore=shutil.ignore_patterns("__pycache__"))
@@ -105,6 +105,12 @@ def test_old_private_list_name_warns_in_the_hook_but_does_not_block(clone, tmp_p
     assert r.returncode == 0 and "WARNING" in r.stdout + r.stderr and "renamed" in r.stdout + r.stderr
     r = commit(clone, "docs/bad.txt", "talks about zeta-quux\n", env=env)
     assert r.returncode == 1
+
+
+def test_solo_mode_ignores_people_folders(clone):
+    # no vault/roles.txt: the people guard is silent, whoever commits and wherever
+    r = commit(clone, "vault/people/_template/memory/extra.md", "# x\n\n[[home]]\n")
+    assert r.returncode == 0, r.stdout + r.stderr
 
 
 def test_incomplete_installation_fails_loudly(clone):

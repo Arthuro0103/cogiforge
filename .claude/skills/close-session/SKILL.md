@@ -60,7 +60,9 @@ corrected* (the quoted words) · *What is still standing* (pending item with nex
 
 ### 3. Write or append the diary (you)
 
-`vault/memory/diary/YYYY-MM-DD.md`. If it already exists, **append** a section; never rewrite what is
+`vault/memory/diary/YYYY-MM-DD.md`. In shared mode (`vault/roles.txt` exists) it is
+`vault/people/<handle>/diary/YYYY-MM-DD.md`, with `<handle>` found by matching `git config user.email` in `roles.txt`;
+never write in another person's folder. If it already exists, **append** a section; never rewrite what is
 there. Three to five lines per project: what moved, what got stuck, a full-path link to the briefing
 (`memory/briefings/...`).
 

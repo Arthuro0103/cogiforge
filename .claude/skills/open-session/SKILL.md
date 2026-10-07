@@ -44,6 +44,9 @@ Open `vault/projects/<name>/instructions.md` up to the hub marker. From the fron
 
 ### 3. Read the diary (you)
 
+Shared mode (`vault/roles.txt` exists): the diary is `vault/people/<handle>/diary/`, where `<handle>` comes from
+`git config user.email` matched in `roles.txt`. Never read another person's diary.
+
 ```bash
 ls -t vault/memory/diary/*.md 2>/dev/null | head -3
 ```

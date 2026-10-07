@@ -11,6 +11,17 @@ you run at the repo root and read and write **only inside `vault/`**.
    frontmatter (`type`, `status`, `declared_target`) and add the line to `projects/_index.md`.
 3. Run `python3 tools/hub.py` so the project lists its files.
 
+## Shared mode (teams, schools)
+
+Shared mode is on only when `roles.txt` exists in this folder; without it, ignore this section.
+`roles.txt` has one line per person: `handle  admin|member  email`.
+
+- **Who am I talking to:** the e-mail from `git config user.email`, looked up in `roles.txt`. Not listed: say so and tell them to ask an admin for a line; write nothing.
+- **Memory rule:** the rule below ("nothing claims something about the user that they did not say") applies to `people/<handle>/` of whoever is talking, which replaces `memory/` for them (`people/<handle>/memory/{profile,patterns,decisions}.md`, `inbox/`, `diary/`).
+- **Never read another person's folder** (`people/<other>/`) to answer a question, not even to "help". `people/<handle>/private/` is gitignored: it is the only place for what is intimate.
+- **Tasks** stay in the shared `tasks/`, with an `owner: <handle>` field in the header.
+- **Roles:** a member does not edit `roles.txt` or `areas.txt`, nor create a `projects/<new>/instructions.md`; the pre-commit hook blocks it. That is a convention, not security: real enforcement is CODEOWNERS plus branch protection on the host.
+
 ## Folders
 
 `inbox/` raw capture · `notes/<area>/` processed notes (the folder is set by the note's `area:`;

@@ -27,3 +27,8 @@ def test_the_hook_calls_the_ring_and_the_leak_scanner():
     text = (ROOT / ".githooks" / "pre-commit").read_text(encoding="utf-8")
     assert "core/ring.py" in text and "--gate --stage" in text
     assert "core/leak.py" in text and "--staged" in text
+
+
+def test_the_hook_calls_the_people_guard():
+    text = (ROOT / ".githooks" / "pre-commit").read_text(encoding="utf-8")
+    assert "core/people.py" in text and "--staged" in text

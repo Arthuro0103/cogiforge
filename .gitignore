@@ -14,3 +14,6 @@ graphify-out/
 # Obsidian writes window state here; only app.json is versioned
 vault/.obsidian/*
 !vault/.obsidian/app.json
+
+# team mode: what is intimate stays on the person's machine (git has no permission per folder)
+vault/people/*/private/

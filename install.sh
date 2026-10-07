@@ -6,6 +6,18 @@
 
 cd "$(dirname "$0")" || exit 1
 
+# `sh install.sh --team <handle>` also turns on team mode (see README, "Teams and schools"); without the
+# flag nothing here changes.
+TEAM=""
+if [ "$1" = "--team" ]; then
+    TEAM="$2"
+    printf '%s' "$TEAM" | LC_ALL=C grep -Eq '^[a-z0-9][a-z0-9_-]*$' \
+        || { echo "ERROR: --team needs a handle of lowercase letters, digits, - or _ (starting with a letter or digit)." >&2; exit 1; }
+elif [ -n "$1" ]; then
+    echo "ERROR: unknown argument '$1'. Usage: sh install.sh [--team <handle>]" >&2
+    exit 1
+fi
+
 fail() {
     echo "" >&2
     echo "ERROR: $*" >&2
@@ -26,6 +38,21 @@ git config core.hooksPath .githooks || fail "could not write core.hooksPath."
 
 python3 core/ring.py --selftest >/dev/null 2>&1 \
     || { python3 core/ring.py --selftest >&2; fail "the ring selftest failed: the gate does not catch an orphan."; }
+
+if [ -n "$TEAM" ]; then
+    email=$(git config user.email)
+    [ -n "$email" ] || fail "team mode needs your git e-mail: git config user.email you@example.com"
+    [ -f vault/roles.txt ] && fail "vault/roles.txt already exists: team mode is on. Ask an admin to add your line."
+    [ -d vault/people/_template ] || fail "vault/people/_template does not exist."
+    mkdir -p vault/people
+    [ -e "vault/people/$TEAM" ] || cp -R vault/people/_template "vault/people/$TEAM" || fail "could not create vault/people/$TEAM."
+    printf '# handle  admin|member  e-mail (matched against git config user.email)\n%s admin %s\n' "$TEAM" "$email" > vault/roles.txt \
+        || fail "could not write vault/roles.txt."
+    # the e-mails in roles.txt are deliberate: the leak scanner would block the file, so it is exempted by name
+    grep -qxF 'vault/roles.txt' .leakignore 2>/dev/null || printf 'vault/roles.txt\n' >> .leakignore
+    echo "OK — team mode on: you ($TEAM) are the admin in vault/roles.txt; your folder is vault/people/$TEAM/."
+    echo "Add members as lines in vault/roles.txt. Intimate material goes in vault/people/$TEAM/private/ (gitignored)."
+fi
 
 echo "OK — hook active (core.hooksPath=.githooks) and the ring selftest passed."
 echo "Test it yourself: create a note without a link in vault/notes/ and run git commit."
