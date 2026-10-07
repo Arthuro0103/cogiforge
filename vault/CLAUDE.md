@@ -81,6 +81,9 @@ on its own; a note in `notes/` only shows up there through the link in the body.
 | `task-observer` | during the work: sees what repeats or was corrected and **only proposes** improvements |
 | `claude-corner` | when the user says they are leaving: Claude rereads, connects and tests outside `vault/`, and **only proposes** |
 | `onboard` | the first time and when the user wants to update the profile: one question at a time, the output is the user's own words |
+| `extract-routine` | when a routine lives only in someone's head: one question at a time until another person could follow it; the agent never declares it `validated` |
+| `brainstorm` | when an idea is still loose: three different paths, a comparison by criteria you pick, and a brief; nothing is built before your explicit yes |
+| `whats-real` | before a demo, delivery or launch: what works (with proof), what is simulated, what is unknown; checked again afterwards |
 | `adapt-skill` | when the user wants a skill of their own from a worksheet in `skill-worksheets/`; Claude does not write the skill alone |
 
 ## Never
