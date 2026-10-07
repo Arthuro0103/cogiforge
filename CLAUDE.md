@@ -27,6 +27,7 @@ rules and the commands. Each rule has the mistake that originated it in [POR-QUE
 | list orphan notes | `python3 core/ring.py` |
 | look for personal data | `python3 core/leak.py .` |
 | rewrite each project's file-list block | `python3 tools/hub.py` |
+| find passages in the vault / check an answer's citations exist | `python3 tools/ask.py search "<question>"` · `python3 tools/ask.py cite <answer.md>` |
 | connection map (optional, needs graphify installed) | `/graphify vault` at the repo root |
 | run the tests (needs `pytest`; after `sh install.sh`) | `python3 -m pytest -q` |
 | break each check and require a red test | `python3 tests/mutate.py` |
@@ -35,7 +36,7 @@ The gate only checks what is **inside** `vault/`: a file outside fails with an e
 
 ## Skills (in `.claude/skills/`)
 
-`onboard` (onboarding) · `open-session <project>` · `close-session` · `task-observer` (only proposes) ·
+`onboard` (onboarding) · `open-session <project>` · `ask <question>` (answers only from the notes, citations checked) · `close-session` · `task-observer` (only proposes) ·
 `claude-corner` (when the user leaves; only proposes) · `adapt-skill` (the user makes their own skill from
 a worksheet; you do not write the skill alone). The worksheets live in `vault/skill-worksheets/`.
 
