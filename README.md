@@ -99,6 +99,7 @@ nothing changes: solo mode is identical.
 - [docs/RESEARCH.md](docs/RESEARCH.md): research with the vault: your notes first, the internet second, every outside claim marked until checked.
 - [docs/USING-OTHER-MODELS.md](docs/USING-OTHER-MODELS.md): use the vault with agents other than Claude Code, and what you lose without its skills.
 - [docs/SYNC.md](docs/SYNC.md): keep the vault in sync without duplicates or conflicts, and what the commit guard catches.
+- [docs/STUDENTS.md](docs/STUDENTS.md): study what you want, the way you want, with `/study <topic>`: recall questions, a mastery log and retests on another day.
 
 ## Context, worksheets and pains
 
