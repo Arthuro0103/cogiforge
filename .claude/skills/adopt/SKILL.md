@@ -18,6 +18,7 @@ and the old ones are not touched.**
 2. **Dry run first, always.** `python3 tools/adopt.py <vault>` writes nothing. Do not run `--apply` before the user has seen the plan.
 3. **Read the plan before saying anything.** Every statement points to a line of the output. If you did not read it, you do not claim it.
 4. **Say what is pending first.** Not a git repository (the tool never runs `git init`; tell the user to run it themselves and try again), a CONFLICT (an existing file is kept as it is), skipped notes (iCloud placeholders not downloaded, unreadable, symlinks: they were NOT measured, which is not the same as fine), or "nothing to adopt". A DIFFERENT `.githooks/pre-commit` already in the vault is code from someone else that would run on every commit: the tool refuses to activate it and applies nothing. Show the user the lines the plan prints, tell them to read that hook and decide; never delete, replace or activate it for them.
+   A BLOCKING item about `.git/config`, a symlink or a `.git` file means the vault may not be trusted: report the listed keys as they are, do not edit that file yourself, and let the user decide.
    Also read the full hook text the plan prints and tell the user it will run on every commit.
 5. **Ask, then apply.** Only after a clear "yes" to "do you want to apply this?" run `python3 tools/adopt.py <vault> --apply --yes`. A "maybe" or silence is a no.
 6. **The tool writes, you do not.** Do not edit the user's notes, `areas.txt`, hooks or baseline by hand. Never touch an existing note.
@@ -53,6 +54,10 @@ python3 tools/adopt.py <vault> --apply --yes
 
 Read its output and report what was written. Exit codes: `0` ok · `1` something pending · `2` usage or no confirmation · `3` vault unreadable.
 Suggest a test: add a note with no link and run `git commit`; the hook should block it. Commit nothing yourself unless asked.
+
+## Trust
+
+The hook runs scripts from the cogiforge checkout recorded in the local git config (`cogiforge.home`). The tool checks that the three scripts exist there, not who wrote them: it assumes the user chose their own clone. Say this in one sentence when you explain the plan.
 
 ## Never
 

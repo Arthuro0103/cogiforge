@@ -303,3 +303,137 @@ def test_e2e_mini_vault_plan_text(tmp_path):
     out = adopt(tmp_path).stdout
     assert "orphan notes           3" in out and "dead wikilinks         1" in out
     assert "Ideas: ideas" in out and "Work: work" in out
+
+
+# ---------------------------------------------------------------- hardening: untrusted vault
+
+def plant_decoy(vault, tmp_path, lines):
+    """A script that leaves a marker when run, and the `.git/config` lines that would make git run it."""
+    marker = tmp_path / "MARKER"
+    decoy = tmp_path / "decoy.sh"
+    decoy.write_text(f"#!/bin/sh\ntouch '{marker}'\n")
+    decoy.chmod(0o755)
+    with open(Path(vault) / ".git" / "config", "a", encoding="utf-8") as fh:
+        fh.write(lines.format(decoy=decoy))
+    return marker
+
+
+RISKY_CONFIGS = {
+    "fsmonitor": "[core]\n\tfsmonitor = {decoy}\n",
+    "sshcommand": "[core]\n\tsshCommand = {decoy}\n",
+    "pager": "[core]\n\tpager = {decoy}\n",
+    "editor": "[core]\n\teditor = {decoy}\n",
+    "alias": "[alias]\n\tst = !{decoy}\n",
+    "diff-external": "[diff]\n\texternal = {decoy}\n",
+    "filter": '[filter "x"]\n\tclean = {decoy}\n\tsmudge = {decoy}\n\tprocess = {decoy}\n',
+    "credential": "[credential]\n\thelper = !{decoy}\n",
+    "hookspath": "[core]\n\thooksPath = {decoy}\n",
+    "include": "[include]\n\tpath = {decoy}\n",
+    "same-line-section": "[core] fsmonitor = {decoy}\n",
+}
+
+
+def test_a_repo_config_that_runs_commands_blocks_the_apply_and_nothing_executes(tmp_path):
+    for name, cfg in RISKY_CONFIGS.items():
+        v = tmp_path / name
+        build(v, MINI)
+        git_init(v)
+        marker = plant_decoy(v, tmp_path, cfg)
+        before = tree(v)
+        plan = adopt(v)
+        assert plan.returncode == 1 and ".git/config" in plan.stdout, (name, plan.stdout)
+        r = adopt(v, "--apply", "--yes")
+        assert r.returncode == 1 and "NOT APPLIED" in r.stderr, (name, r.stderr)
+        assert tree(v) == before and not marker.exists(), name
+        assert not (v / ".githooks").exists()
+        assert "cogiforge" not in (v / ".git" / "config").read_text()
+
+
+def test_control_plain_git_would_run_the_decoy(tmp_path):
+    """The risk is real: this is what the block is for (git status runs core.fsmonitor)."""
+    build(tmp_path / "v", MINI)
+    git_init(tmp_path / "v")
+    marker = plant_decoy(tmp_path / "v", tmp_path, RISKY_CONFIGS["fsmonitor"])
+    subprocess.run(["git", "-C", str(tmp_path / "v"), "status"], capture_output=True)
+    if not marker.exists():
+        import pytest
+        pytest.skip("this git does not run core.fsmonitor on status")
+    assert marker.exists()
+
+
+def test_harmless_local_config_does_not_block(tmp_path):
+    build(tmp_path, MINI)
+    git_init(tmp_path)
+    with open(tmp_path / ".git" / "config", "a") as fh:
+        fh.write('[user]\n\tname = t\n[core]\n\tfsmonitor = false\n\thooksPath = .githooks\n[alias]\n\tco = checkout\n'
+                 '[remote "origin"]\n\turl = https://example.com/x.git\n')
+    assert adopt(tmp_path, "--apply", "--yes").returncode == 0
+
+
+def test_the_config_parser_flags_what_it_should():
+    m = load_module()
+    f = lambda t: [n for n, _ in m.risky_entries(m.parse_git_config(t))]  # noqa: E731
+    assert f("[core]\n\tfsmonitor = /x\n") == ["core.fsmonitor"]
+    assert f("[CORE]\n\tFsMonitor = /x\n") == ["core.fsmonitor"]
+    assert f('[filter "lfs"]\n\tclean = x\n') == ["filter.lfs.clean"]
+    assert f("[core]\n\tfsmonitor = true\n") == [] and f("[core]\n\tfsmonitor = false\n") == []
+    assert f("[alias]\n\ta = status\n") == [] and f("[alias]\n\ta = !x\n") == ["alias.a"]
+    assert f("[user]\n\tname = x\n") == []
+
+
+def test_git_dir_that_is_a_symlink_or_file_is_unsafe(tmp_path):
+    real = tmp_path / "elsewhere"
+    real.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=real, check=True)
+    v = tmp_path / "v"
+    build(v, MINI)
+    (v / ".git").symlink_to(real / ".git")
+    before = tree(v)
+    r = adopt(v, "--apply", "--yes")
+    assert r.returncode == 1 and tree(v) == before and not (real / ".githooks").exists()
+    w = tmp_path / "w"
+    build(w, {**MINI, ".git": "gitdir: /somewhere/else\n"})
+    assert adopt(w, "--apply", "--yes").returncode == 1 and not (w / ".githooks").exists()
+
+
+def test_a_symlinked_githooks_or_cogiforge_folder_is_never_written_through(tmp_path):
+    for name in (".githooks", ".cogiforge"):
+        out = tmp_path / ("outside" + name)
+        out.mkdir()
+        v = tmp_path / ("v" + name)
+        build(v, MINI)
+        git_init(v)
+        (v / name).symlink_to(out)
+        r = adopt(v, "--apply", "--yes")
+        assert r.returncode == 1 and not any(out.iterdir()), name
+
+
+def test_a_fifo_named_md_is_skipped_and_never_opened(tmp_path):
+    build(tmp_path, MINI)
+    os.mkfifo(tmp_path / "Ideas" / "pipe.md")
+    r = subprocess.run([sys.executable, ADOPT, str(tmp_path), "--json"], capture_output=True, text=True, timeout=30,
+                       stdin=subprocess.DEVNULL)
+    plan = json.loads(r.stdout)
+    assert [p for p, _ in plan["skipped"]] == ["Ideas/pipe.md"] and plan["debt"]["notes"] == 6
+
+
+def test_a_note_name_starting_with_a_dash_is_not_an_option_for_the_hook(tmp_path):
+    v = tmp_path / "v"
+    build(v, {**MINI, "-x.md": "links to [[a]] and [[ghost-nowhere]]\n"})
+    git_init(v)
+    assert adopt(v, "--apply", "--yes").returncode == 0
+    r = _hook_run(v, str(ROOT))  # stages Ideas/a.md only
+    assert r.returncode == 0
+    env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+           "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com", "LEAK_BLOCKLIST": str(v / "absent.txt")}
+    subprocess.run(["git", "-C", str(v), "add", "--", "-x.md"], check=True)
+    r = subprocess.run(["git", "-C", str(v), "commit", "-m", "dash"], capture_output=True, text=True, env=env)
+    out = r.stdout + r.stderr
+    assert r.returncode != 0 and "ghost-nowhere" in out and "unrecognized arguments" not in out  # judged as a note
+
+
+def test_yes_never_skips_the_plan_or_the_blocks(tmp_path):
+    build(tmp_path, MINI)  # not a git repo: --yes alone must not write
+    r = adopt(tmp_path, "--apply", "--yes")
+    assert "adopt plan for" in r.stdout and r.returncode == 1 and not (tmp_path / ".cogiforge").exists()
+    assert adopt(tmp_path, "--yes").returncode == 2  # --yes without --apply is a usage error
