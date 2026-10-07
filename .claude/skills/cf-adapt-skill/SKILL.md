@@ -1,9 +1,9 @@
 ---
-name: adapt-skill
-description: Guides the user to make a skill of THEIR OWN from a catalog worksheet (vault/skill-worksheets/) - read the worksheet, separate the method from what belongs only to the original author, decide whether it solves one of their pains, write it with their answers, test it on a real case and record the verdict in vault/memory/skills-reviewed.md. One question per message. Claude never writes the skill alone, and "does not fit me" is a valid answer that gets recorded. TRIGGERS - "/adapt-skill", "quero uma skill parecida com essa", "does this skill fit me?", "how do I make a skill", "what is in the skill catalog". Do NOT trigger to USE a skill that already exists, to create a skill without having looked at a worksheet, nor for task-observer to propose a skill (it only points here).
+name: cf-adapt-skill
+description: Guides the user to make a skill of THEIR OWN from a catalog worksheet (vault/skill-worksheets/) - read the worksheet, separate the method from what belongs only to the original author, decide whether it solves one of their pains, write it with their answers, test it on a real case and record the verdict in vault/memory/skills-reviewed.md. One question per message. Claude never writes the skill alone, and "does not fit me" is a valid answer that gets recorded. TRIGGERS - "/cf-adapt-skill", "quero uma skill parecida com essa", "does this skill fit me?", "how do I make a skill", "what is in the skill catalog". Do NOT trigger to USE a skill that already exists, to create a skill without having looked at a worksheet, nor for cf-task-observer to propose a skill (it only points here).
 ---
 
-# adapt-skill: learn to make your own by looking at someone else's
+# cf-adapt-skill: learn to make your own by looking at someone else's
 
 ## Why it exists
 

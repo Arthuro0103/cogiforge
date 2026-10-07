@@ -68,13 +68,13 @@ the commands above. Where a skill says "ask the user one question at a time", do
 
 | Skill (folder in `.claude/skills/`) | Use it when |
 |---|---|
-| `onboard` | the first time, or when the user wants to update their profile: one question at a time, the output is the user's own words |
-| `open-session` | starting work on a project: read its root, the last diary entries and the open tasks |
-| `ask` | the user asks a question the notes may answer: answer only from the notes, with citations that `tools/ask.py cite` can check |
-| `close-session` | the day ends: diary, briefing, pains the user voiced, tasks for what is pending |
-| `task-observer` | during work: notice what repeats or was corrected, and only propose improvements |
-| `claude-corner` | the user is away: reread, connect and test outside `vault/`, and only propose |
-| `adapt-skill` | the user wants their own skill from a worksheet in `vault/skill-worksheets/`: you do not write it alone |
+| `cf-onboard` | the first time, or when the user wants to update their profile: one question at a time, the output is the user's own words |
+| `cf-open-session` | starting work on a project: read its root, the last diary entries and the open tasks |
+| `cf-ask` | the user asks a question the notes may answer: answer only from the notes, with citations that `tools/ask.py cite` can check |
+| `cf-close-session` | the day ends: diary, briefing, pains the user voiced, tasks for what is pending |
+| `cf-task-observer` | during work: notice what repeats or was corrected, and only propose improvements |
+| `cf-claude-corner` | the user is away: reread, connect and test outside `vault/`, and only propose |
+| `cf-adapt-skill` | the user wants their own skill from a worksheet in `vault/skill-worksheets/`: you do not write it alone |
 
 Features that exist only in Claude Code (running a skill by `/name`, automatic loading by description)
 are conveniences. The rules in this file do not depend on them. More in

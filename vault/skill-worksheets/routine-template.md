@@ -12,7 +12,7 @@ Delete this paragraph. Anything unknown stays as `[CONFIRM] <the open question>`
 
 Project root: link it here with its full path, in the middle of a sentence, for example "this routine serves
 `[[projects/<name>/instructions|<name>]]`". Check the file exists first. This line is the connection that keeps the page
-from being an orphan. The skill that fills this template is described in `.claude/skills/extract-routine/SKILL.md`.
+from being an orphan. The skill that fills this template is described in `.claude/skills/cf-extract-routine/SKILL.md`.
 
 ## Expected result
 

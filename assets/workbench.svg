@@ -51,6 +51,6 @@
 <!-- terminal -->
 <rect x="20" y="368" width="860" height="92" rx="10" fill="#101010" stroke="#2e2e2e" stroke-width="1.5"/>
 <text x="40" y="396" class="m"><tspan fill="#6a6a6a">$</tspan> claude</text>
-<text x="40" y="420" class="m"><tspan class="o">/open-session</tspan> my-first-project</text>
+<text x="40" y="420" class="m"><tspan class="o">/cf-open-session</tspan> my-first-project</text>
 <text x="40" y="444" class="m" style="fill:#8a8a8a">reads the root, the last diary entries and the open tasks, then tells you where you stopped</text>
 </svg>

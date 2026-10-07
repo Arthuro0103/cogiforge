@@ -14,7 +14,7 @@ Skip a week without guilt; do not skip two.
 
 Claude reads the week's diary, pains and tasks, then proposes answers to the first four rows from what is
 written there. You correct them. It only saves what you confirm. Patterns that repeat three times become a
-proposal for a skill or a rule, never a change made on its own (see the `task-observer` skill).
+proposal for a skill or a rule, never a change made on its own (see the `cf-task-observer` skill).
 
 ## Fields
 

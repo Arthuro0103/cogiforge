@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ask.py: ask the vault a question and check that the answer's citations exist.
 
-Pure stdlib, no network, no API. The agent is the intelligence (see .claude/skills/ask/SKILL.md);
+Pure stdlib, no network, no API. The agent is the intelligence (see .claude/skills/cf-ask/SKILL.md);
 this script only retrieves passages and verifies citations.
 
 Usage:

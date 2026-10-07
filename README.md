@@ -29,19 +29,19 @@ cogiforge came out of using Claude on a real vault. Three decisions shaped it:
 | Piece | What it does |
 |---|---|
 | `vault/` | The workbench: `inbox/` for quick capture, `notes/` for processed notes, `projects/` with one root file per project, `memory/` for what *you* told it, `tasks/` for tasks. Open this folder in Obsidian. |
-| `/onboard` | Onboarding. Asks one question at a time, each following your last answer, and writes what **you said**, dated and quoted. It never guesses. |
-| `/open-session <project>` | Starts work on a project: reads its root file, the last diary entries and the open tasks, and tells you where you stopped. |
-| `/close-session` | Ends the day: diary, a briefing per session, the **pains you voiced** collected in one file, tasks opened for what is pending. It commits only if you say so and never pushes. |
-| `/task-observer` | Watches how you work and **only proposes** improvements (a missing skill, a step you repeated three times, a correction you made twice). You decide. |
-| `/claude-corner` | When you say you are leaving, Claude uses that time to reread your notes, find real connections and test ideas in a throwaway place. It **only proposes**, in a file. |
-| Tasks (**TaskNotes**) | Tasks are notes in `vault/tasks/`, managed by the public [TaskNotes](https://github.com/callumalpass/tasknotes) Obsidian plugin (MIT). Not bundled: you install it from Obsidian's community plugin store. `open-session` and `close-session` read and write the same format. |
+| `/cf-onboard` | Onboarding. Asks one question at a time, each following your last answer, and writes what **you said**, dated and quoted. It never guesses. |
+| `/cf-open-session <project>` | Starts work on a project: reads its root file, the last diary entries and the open tasks, and tells you where you stopped. |
+| `/cf-close-session` | Ends the day: diary, a briefing per session, the **pains you voiced** collected in one file, tasks opened for what is pending. It commits only if you say so and never pushes. |
+| `/cf-task-observer` | Watches how you work and **only proposes** improvements (a missing skill, a step you repeated three times, a correction you made twice). You decide. |
+| `/cf-claude-corner` | When you say you are leaving, Claude uses that time to reread your notes, find real connections and test ideas in a throwaway place. It **only proposes**, in a file. |
+| Tasks (**TaskNotes**) | Tasks are notes in `vault/tasks/`, managed by the public [TaskNotes](https://github.com/callumalpass/tasknotes) Obsidian plugin (MIT). Not bundled: you install it from Obsidian's community plugin store. `cf-open-session` and `cf-close-session` read and write the same format. |
 | Connection map (**graphify**, optional) | The public [graphify](https://github.com/Graphify-Labs/graphify) (Apache-2.0) maps your notes into a graph you can query. Install it yourself; its output folder is git-ignored. See the tutorial. |
-| `/brainstorm` | Brainstorming for any product, project, study, event or loose idea. Checks what the vault already says, proposes **three genuinely different paths**, compares them on criteria you choose, recommends one **without choosing for you**, and stops at a brief you approve. No code and no plan before your "yes". |
-| `/extract-routine` | Gets a real routine out of your head by interview, one question at a time. What you do not know stays `[CONFIRM]`; Claude never invents a step. It can reach `ready-for-human-review`; `validated` needs a second person who follows the order without guessing. |
-| `/whats-real` | Keeps, per project, what **works (with proof)**, what is **simulated or a demo**, and what is **unknown**. An item moves to "works" only with proof run again. |
-| `/know-my-product` | Interviews you about your product and collects your pains with your literal words and the date, then proposes a ranking. You approve before anything is saved. |
-| `/import-knowledge` | Brings an existing base (another vault, a folder, documents, chat exports) into the inbox and walks you through the triage, target first. See *Bringing an existing knowledge base*. |
-| `/adapt-skill` | Helps you write **your own** skill from a worksheet in `vault/skill-worksheets/`. One question at a time; Claude never writes it for you, and "this is not for me" is a valid answer that gets recorded. |
+| `/cf-brainstorm` | Brainstorming for any product, project, study, event or loose idea. Checks what the vault already says, proposes **three genuinely different paths**, compares them on criteria you choose, recommends one **without choosing for you**, and stops at a brief you approve. No code and no plan before your "yes". |
+| `/cf-extract-routine` | Gets a real routine out of your head by interview, one question at a time. What you do not know stays `[CONFIRM]`; Claude never invents a step. It can reach `ready-for-human-review`; `validated` needs a second person who follows the order without guessing. |
+| `/cf-whats-real` | Keeps, per project, what **works (with proof)**, what is **simulated or a demo**, and what is **unknown**. An item moves to "works" only with proof run again. |
+| `/cf-know-my-product` | Interviews you about your product and collects your pains with your literal words and the date, then proposes a ranking. You approve before anything is saved. |
+| `/cf-import-knowledge` | Brings an existing base (another vault, a folder, documents, chat exports) into the inbox and walks you through the triage, target first. See *Bringing an existing knowledge base*. |
+| `/cf-adapt-skill` | Helps you write **your own** skill from a worksheet in `vault/skill-worksheets/`. One question at a time; Claude never writes it for you, and "this is not for me" is a valid answer that gets recorded. |
 
 ![An Obsidian window on the vault: file tree, a note whose link sits inside the argument, the local graph, and Claude Code opening a project session below.](assets/workbench.svg)
 
@@ -52,8 +52,8 @@ cogiforge came out of using Claude on a real vault. Three decisions shaped it:
 Three loops, and in all of them the decision stays with you:
 
 1. **Pains.** At the end of a session your own words about what hurt are saved, dated, in `vault/memory/ideas/_pains.md`.
-2. **Proposals.** `task-observer` and `claude-corner` write suggestions to files. Nothing is changed behind your back.
-3. **Your own skills.** The worksheets teach how a skill is built, and `adapt-skill` walks you through making yours. You are not handed a finished one.
+2. **Proposals.** `cf-task-observer` and `cf-claude-corner` write suggestions to files. Nothing is changed behind your back.
+3. **Your own skills.** The worksheets teach how a skill is built, and `cf-adapt-skill` walks you through making yours. You are not handed a finished one.
 
 ![How cogiforge improves with you: your pains, its proposals, your decision, your own skills](assets/flow.svg)
 
@@ -72,8 +72,8 @@ sh install.sh      # turns the pre-commit hook on and proves it works
 claude              # run Claude Code at the repo root
 ```
 
-Then, inside Claude Code, type `/onboard`. Open `vault/` as a vault in Obsidian. When you have a
-project, `/open-session <name>` to start and `/close-session` to end the day. The example project
+Then, inside Claude Code, type `/cf-onboard`. Open `vault/` as a vault in Obsidian. When you have a
+project, `/cf-open-session <name>` to start and `/cf-close-session` to end the day. The example project
 `vault/projects/example-my-first-project/` shows the shape. Tasks need the public TaskNotes plugin
 (install it from Obsidian's community plugins), and the optional connection map needs graphify: both are
 in the [tutorial](TUTORIAL.md).
@@ -99,7 +99,7 @@ nothing changes: solo mode is identical.
 - [docs/RESEARCH.md](docs/RESEARCH.md): research with the vault: your notes first, the internet second, every outside claim marked until checked.
 - [docs/USING-OTHER-MODELS.md](docs/USING-OTHER-MODELS.md): use the vault with agents other than Claude Code, and what you lose without its skills.
 - [docs/SYNC.md](docs/SYNC.md): keep the vault in sync without duplicates or conflicts, and what the commit guard catches.
-- [docs/STUDENTS.md](docs/STUDENTS.md): study what you want, the way you want, with `/study <topic>`: recall questions, a mastery log and retests on another day.
+- [docs/STUDENTS.md](docs/STUDENTS.md): study what you want, the way you want, with `/cf-study <topic>`: recall questions, a mastery log and retests on another day.
 
 ## Context, worksheets and pains
 
@@ -109,7 +109,7 @@ specific and in your own words.
 - [docs/CONTEXT.md](docs/CONTEXT.md): what loads in every session, what loads only on demand, where each thing lives, signs of bad context, and tips for personal, team and school use.
 - [docs/PRODUCT-AND-PAINS.md](docs/PRODUCT-AND-PAINS.md): how the workbench learns your product and collects your pains, and how to ask "what do I build first?".
 - Worksheets in [`vault/worksheets/`](vault/worksheets/): [product-brief](vault/worksheets/product-brief.md), [pains](vault/worksheets/pains.md), [audience](vault/worksheets/audience.md), [project-brief](vault/worksheets/project-brief.md), [decisions-log](vault/worksheets/decisions-log.md), [weekly-review](vault/worksheets/weekly-review.md). `pains` and `decisions-log` also come as CSV in `vault/worksheets/csv/` for Sheets or Excel.
-- `/know-my-product <project>`: interviews you one question at a time and fills the product brief with your words only.
+- `/cf-know-my-product <project>`: interviews you one question at a time and fills the product brief with your words only.
 
 ## What keeps it healthy
 
@@ -155,7 +155,7 @@ It writes `_import-report.md` next to the copy: every file of the source is list
 unchanged, ignored or not converted, with the reason, and the count has to close. It then runs the leak
 scanner on the result and lists `file:line:type` (never the data); a leak does not stop the copy, but the
 commit is blocked until it is cleaned. Imported files land in an inbox, which the orphan gate exempts. Moving
-one into `notes/` takes a named target and a link in the body: the `import-knowledge` skill walks you through it.
+one into `notes/` takes a named target and a link in the body: the `cf-import-knowledge` skill walks you through it.
 
 | Format | What happens |
 |---|---|
@@ -182,7 +182,7 @@ today**: orphan notes, dead links and notes without `area:`, saved as `.cogiforg
 judges the notes in each commit, so the old debt blocks nothing; it only stops new problems from entering.
 The dry run prints the full text of the hook, which runs on every commit and finds this repo through your local git config (never through a file in the vault). Adopt asks git itself to list a private copy of `.git/config` (running nothing) and accepts only what `git init` or `git clone` write (plus its own two keys); anything else, such as a filter, an alias, an include or a pager, blocks it with the line cited, so a vault received from someone else cannot run anything through its git config. Text that comes from the vault is shown with control characters escaped, so it cannot rewrite your terminal. It also refuses symlinks on the paths it writes and a `.githooks` folder that holds anything but its own hook. The hook trusts the cogiforge checkout you point it at (`cogiforge.home`): it checks that the three scripts exist there, not who wrote them, so use a clone of your own. If the vault already has a different `.githooks/pre-commit`, adopt refuses to activate it and applies nothing until you have read it and decided. An existing file is never overwritten (it becomes a conflict in the report), no note is ever touched, and the tool
 never runs `git init` for you. Notes that are iCloud placeholders not yet downloaded, or unreadable, are skipped
-and listed, never counted as fine. The `adopt` skill walks you through it.
+and listed, never counted as fine. The `cf-adopt` skill walks you through it.
 
 ## License
 

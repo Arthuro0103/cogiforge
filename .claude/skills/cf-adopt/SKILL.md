@@ -1,9 +1,9 @@
 ---
-name: adopt
-description: Applies the cogiforge to an Obsidian vault the person ALREADY has, in place, copying nothing into an inbox. Runs tools/adopt.py as a dry run, reads the plan in plain words (areas inferred from their folders, what would be installed, the debt measured today, and that the hook only judges notes in the commit), asks "want to apply?", and only then runs it with --apply --yes. It invents no link and states nothing about the person. TRIGGERS - "/adopt <vault>", "use this on my existing vault", "I already have an Obsidian vault", "start from my current notes", "I do not want to start from zero", "move from my old tool without copying". Do NOT trigger to bring loose files or another folder INTO this vault (that is import-knowledge), to capture one idea, to open or close a session, nor to fix the old debt note by note without being asked.
+name: cf-adopt
+description: Applies the cogiforge to an Obsidian vault the person ALREADY has, in place, copying nothing into an inbox. Runs tools/adopt.py as a dry run, reads the plan in plain words (areas inferred from their folders, what would be installed, the debt measured today, and that the hook only judges notes in the commit), asks "want to apply?", and only then runs it with --apply --yes. It invents no link and states nothing about the person. TRIGGERS - "/cf-adopt <vault>", "use this on my existing vault", "I already have an Obsidian vault", "start from my current notes", "I do not want to start from zero", "move from my old tool without copying". Do NOT trigger to bring loose files or another folder INTO this vault (that is cf-import-knowledge), to capture one idea, to open or close a session, nor to fix the old debt note by note without being asked.
 ---
 
-# adopt: put the gate on the vault you already have
+# cf-adopt: put the gate on the vault you already have
 
 ## Why it exists
 

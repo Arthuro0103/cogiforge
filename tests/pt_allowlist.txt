@@ -10,8 +10,8 @@ tests/mutate.py: a mutant of the negra.txt fallback
 .gitignore: the old private-list name negra.txt must stay ignored
 .githooks/pre-commit: a comment about the old private-list name
 tests/test_ring.py: a note named with an accent, to prove NFD and NFC names are treated alike
-.claude/skills/claude-corner/SKILL.md: the description keeps one or two Portuguese trigger phrases
-.claude/skills/close-session/SKILL.md: the description keeps one or two Portuguese trigger phrases
-.claude/skills/open-session/SKILL.md: the description keeps one or two Portuguese trigger phrases
-.claude/skills/task-observer/SKILL.md: the description keeps one or two Portuguese trigger phrases
+.claude/skills/cf-claude-corner/SKILL.md: the description keeps one or two Portuguese trigger phrases
+.claude/skills/cf-close-session/SKILL.md: the description keeps one or two Portuguese trigger phrases
+.claude/skills/cf-open-session/SKILL.md: the description keeps one or two Portuguese trigger phrases
+.claude/skills/cf-task-observer/SKILL.md: the description keeps one or two Portuguese trigger phrases
 tests/pt_allowlist.txt: it names the exceptions, some of which mention the old name negra.txt

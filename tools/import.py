@@ -32,7 +32,7 @@ Running it again is idempotent: identical files are reported as unchanged.
 The report is `<dest>/_import-report.md` (or `--report PATH`). After the copy, `core/leak.py` runs on the
 destination and the report lists file:line:type, never the data. A leak does NOT stop the copy, but the
 pre-commit hook will block the commit until it is cleaned. Imported files land in an inbox, which the orphan
-gate exempts: moving one to `notes/` needs a named target and a link in the body (skill `import-knowledge`).
+gate exempts: moving one to `notes/` needs a named target and a link in the body (skill `cf-import-knowledge`).
 `--dry-run` plans everything, prints the report and writes nothing. An empty SRC (or one with only ignored
 files) prints "nothing to import", writes nothing and is never reported as OK.
 Env `COGIFORGE_IMPORT_NO_DOCLING=1` pretends docling is not installed.
@@ -634,7 +634,7 @@ def build_report(name, dest_label, entries, leaks, leak_note, dry, dest_in_inbox
     else:
         out.append("**The destination is not inside an inbox folder**, so the orphan gate will judge every imported note.")
     out += ["Moving one into `notes/` is a decision, not a copy: it needs a **named target** (project, article, question, "
-            "task or none) and a **link in the body** that is real. Use the `import-knowledge` skill: it proposes, you approve.",
+            "task or none) and a **link in the body** that is real. Use the `cf-import-knowledge` skill: it proposes, you approve.",
             "Links inside the imported files still point where they pointed in the old base; some will be dead here."]
     if any("docling" in e["reason"] for e in entries if e["cat"] == "unconverted"):
         out += ["", f"To convert the documents listed above: `{INSTALL}`, then run the same command again "

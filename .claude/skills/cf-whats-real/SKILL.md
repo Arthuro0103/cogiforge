@@ -1,9 +1,9 @@
 ---
-name: whats-real
-description: Keeps vault/projects/<name>/whats-real.md, a page with three sections - Works (each item with proof - the command run, its output and the date), Simulated or demo (what looks like it works and does not) and Unknown - plus a short dated diary.md for the project. It is created BEFORE a milestone (demo, delivery, class, launch) and CHECKED after it - every Works item needs its proof re-run, otherwise it goes back to Unknown. The agent never moves an item to Works without proof. TRIGGERS - "/whats-real", "what actually works", "before the demo", "before I deliver", "what is real and what is fake", "check the whats-real after the launch", "what did we only simulate". Do NOT trigger to fix what is broken, to write the closing summary of a day (that is close-session), nor to judge the quality of an idea (that is a brainstorm).
+name: cf-whats-real
+description: Keeps vault/projects/<name>/whats-real.md, a page with three sections - Works (each item with proof - the command run, its output and the date), Simulated or demo (what looks like it works and does not) and Unknown - plus a short dated diary.md for the project. It is created BEFORE a milestone (demo, delivery, class, launch) and CHECKED after it - every Works item needs its proof re-run, otherwise it goes back to Unknown. The agent never moves an item to Works without proof. TRIGGERS - "/cf-whats-real", "what actually works", "before the demo", "before I deliver", "what is real and what is fake", "check the whats-real after the launch", "what did we only simulate". Do NOT trigger to fix what is broken, to write the closing summary of a day (that is cf-close-session), nor to judge the quality of an idea (that is a brainstorm).
 ---
 
-# whats-real: separate what works from what only looks like it works
+# cf-whats-real: separate what works from what only looks like it works
 
 ## Why it exists
 

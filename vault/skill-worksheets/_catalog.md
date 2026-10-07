@@ -6,7 +6,7 @@ status: in-progress
 # The catalog says what to look at, adapt or decline
 
 Each line has a **worksheet** that explains the skill from the inside, without the author's collection. Reading a
-worksheet takes about 10 minutes. `/adapt-skill` guides you through it and through one question that decides
+worksheet takes about 10 minutes. `/cf-adapt-skill` guides you through it and through one question that decides
 everything: **does this solve a pain of yours?** Declining is a legitimate answer and is recorded in
 `vault/memory/skills-reviewed.md`.
 
@@ -20,21 +20,21 @@ Before anything else, read [[skill-worksheets/anatomy-of-a-skill|the anatomy of 
 | `consult-notes` | answers a practical question only with what your notes say, citing the note behind each claim | [[skill-worksheets/consult-notes\|consult-notes]] | yes, if you have notes on the subject |
 
 **Four skills that come with a template instead of a worksheet.** They are already in `.claude/skills/`;
-each one fills a model (`study` fills two) that you copy into your project. Copy the model, never edit it here.
+each one fills a model (`cf-study` fills two) that you copy into your project. Copy the model, never edit it here.
 
 | skill | what it does, in one line | model it fills |
 |---|---|---|
-| `extract-routine` | interviews you, one question at a time, and writes down a routine another person can follow | [[skill-worksheets/routine-template\|routine-template]] |
-| `brainstorm` | turns a loose idea into three different paths, a comparison you weigh, and a brief you approve before anything is built | [[skill-worksheets/brainstorm-brief-template\|brainstorm-brief-template]] |
-| `whats-real` | keeps the list of what works (with proof), what is simulated and what is unknown, before and after a milestone | [[skill-worksheets/whats-real-template\|whats-real-template]] |
-| `study` | interviews you about what and how you like to learn, plans small blocks, tests you by recall and marks an item mastered only after a retest on another day | [[skill-worksheets/study-plan-template\|study-plan-template]] and [[skill-worksheets/mastery-template\|mastery-template]] |
+| `cf-extract-routine` | interviews you, one question at a time, and writes down a routine another person can follow | [[skill-worksheets/routine-template\|routine-template]] |
+| `cf-brainstorm` | turns a loose idea into three different paths, a comparison you weigh, and a brief you approve before anything is built | [[skill-worksheets/brainstorm-brief-template\|brainstorm-brief-template]] |
+| `cf-whats-real` | keeps the list of what works (with proof), what is simulated and what is unknown, before and after a milestone | [[skill-worksheets/whats-real-template\|whats-real-template]] |
+| `cf-study` | interviews you about what and how you like to learn, plans small blocks, tests you by recall and marks an item mastered only after a retest on another day | [[skill-worksheets/study-plan-template\|study-plan-template]] and [[skill-worksheets/mastery-template\|mastery-template]] |
 
-**Examples already written, for free.** The skills `open-session`, `close-session`, `task-observer`,
-`claude-corner`, `adapt-skill` and `onboard` are in `.claude/skills/`. Read the `description` of one and
+**Examples already written, for free.** The skills `cf-open-session`, `cf-close-session`, `cf-task-observer`,
+`cf-claude-corner`, `cf-adapt-skill` and `cf-onboard` are in `.claude/skills/`. Read the `description` of one and
 compare it with the anatomy: it is an example of a finished skill and a format reference.
 
 ## How to use
 
-Run `/adapt-skill`. It asks one thing at a time, starts from what you already told it about yourself, and
+Run `/cf-adapt-skill`. It asks one thing at a time, starts from what you already told it about yourself, and
 ends with the skill written and tested by you, or with a "does not fit, because..." on record. In both
 cases you learned the part that matters.

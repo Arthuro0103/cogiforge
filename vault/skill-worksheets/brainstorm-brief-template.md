@@ -12,7 +12,7 @@ paragraph. Nothing is built, planned or created until the owner writes an explic
 
 Project root: link it here with its full path, in the middle of a sentence, for example "this brief belongs to
 `[[projects/<name>/instructions|<name>]]`". Check the file exists first. The skill that fills this template is
-described in `.claude/skills/brainstorm/SKILL.md`.
+described in `.claude/skills/cf-brainstorm/SKILL.md`.
 
 ## Who uses it
 

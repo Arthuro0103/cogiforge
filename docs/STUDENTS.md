@@ -7,7 +7,7 @@ actually proved you know. It does not learn for you.
 ## How to ask
 
 ```
-/study <topic>
+/cf-study <topic>
 ```
 
 Claude asks one question at a time: what you want to learn, why, by when (or no deadline), how you like to learn,

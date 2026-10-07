@@ -47,7 +47,7 @@ chosen, the scan loses its point: what helps is judging the slice.
 ## When NOT to use
 
 When you have already decided what to build, or when there is nothing written yet (start by collecting pains with
-`close-session`).
+`cf-close-session`).
 
 ## Questions to decide whether it fits you
 

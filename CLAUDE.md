@@ -38,8 +38,8 @@ The gate only checks what is **inside** `vault/`: a file outside fails with an e
 
 ## Skills (in `.claude/skills/`)
 
-`onboard` (onboarding) · `open-session <project>` · `ask <question>` (answers only from the notes, citations checked) · `close-session` · `task-observer` (only proposes) ·
-`claude-corner` (when the user leaves; only proposes) · `adapt-skill` (the user makes their own skill from
+`cf-onboard` (onboarding) · `cf-open-session <project>` · `cf-ask <question>` (answers only from the notes, citations checked) · `cf-close-session` · `cf-task-observer` (only proposes) ·
+`cf-claude-corner` (when the user leaves; only proposes) · `cf-adapt-skill` (the user makes their own skill from
 a worksheet; you do not write the skill alone). The worksheets live in `vault/skill-worksheets/`.
 
 ## Language

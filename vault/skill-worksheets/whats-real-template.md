@@ -12,7 +12,7 @@ Delete this paragraph. Create it before the milestone, check it after. An item m
 
 Project root: link it here with its full path, in the middle of a sentence, for example "this page is about
 `[[projects/<name>/instructions|<name>]]`". Check the file exists first. The skill that keeps this page is
-described in `.claude/skills/whats-real/SKILL.md`.
+described in `.claude/skills/cf-whats-real/SKILL.md`.
 
 ## Works
 

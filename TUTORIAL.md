@@ -9,9 +9,9 @@ in the repo: tell us.
 | Part | How it was checked |
 |---|---|
 | `install.sh`, hook, gate, ring, leak, hub | **Run in a fresh clone on Oct 6, 2026**, after the move to English, and the output blocks below are the real ones (your own home folder shows as `~`). |
-| `open-session`, `close-session` | **Run in a real Claude Code session on Oct 3**, before the commands were renamed and translated. Since the rename they have not been run in a live session yet. The replies below are examples. |
-| `onboard`, `adapt-skill` | Run up to the **first question** on Oct 3 (they are conversations; the rest depends on you), also before the rename. |
-| `task-observer`, `claude-corner` | **Not exercised yet.** What is written here comes from the skill itself. |
+| `cf-open-session`, `cf-close-session` | **Run in a real Claude Code session on Oct 3**, before the commands were renamed and translated. Since the rename they have not been run in a live session yet. The replies below are examples. |
+| `cf-onboard`, `cf-adapt-skill` | Run up to the **first question** on Oct 3 (they are conversations; the rest depends on you), also before the rename. |
+| `cf-task-observer`, `cf-claude-corner` | **Not exercised yet.** What is written here comes from the skill itself. |
 | TaskNotes (plugin) and graphify | They follow the projects' own documentation. `graphifyy` was installed in an isolated environment and `graphify --help` was checked; **the plugin inside Obsidian and `/graphify` on a vault were not run.** |
 
 All skills were tested on the author's machine, which has its own Claude Code settings. That does not
@@ -98,9 +98,9 @@ fails.
 > There are also public command-line tools from the same author (`npm install -g tasknotes-cli` and
 > `npm install -g mdbase-tasknotes`, both MIT). They are not needed here and were not tested.
 
-## 4. Your first day: `/onboard`
+## 4. Your first day: `/cf-onboard`
 
-**Do:** with Claude Code at the repo root (`claude`), type `/onboard`.
+**Do:** with Claude Code at the repo root (`claude`), type `/cf-onboard`.
 
 **You see** (example, in any language; a real reply in a clone where the profile was empty):
 
@@ -232,10 +232,10 @@ python3 core/leak.py .      # looks for personal data
 The gate answers `N note(s), 0 fail, 0 COULD NOT READ` when everything is fine. It only checks what is
 **inside** `vault/`: a file from outside exits with an error (code 2), never as "ok".
 
-## 7. `/open-session`: where you left off
+## 7. `/cf-open-session`: where you left off
 
 **Do:** say `open session for example-my-first-project` (or the name of your project), or use
-`/open-session <project>`. We tested it with the sentence. Without a project name it does not trigger.
+`/cf-open-session <project>`. We tested it with the sentence. Without a project name it does not trigger.
 
 **You see** (example, in any language; an abridged real reply in the clean clone, with the in-progress task
 created in step 3):
@@ -259,9 +259,9 @@ Where do you want to start?
 It **only reports what is in the files**, and where the disk disagrees with what a file claims it **asks**,
 it does not decide. The suggestion comes marked as a suggestion.
 
-## 8. `/close-session`: closing the day
+## 8. `/cf-close-session`: closing the day
 
-**Do:** when you finish, `/close-session`. If something hurt, say it in your own words.
+**Do:** when you finish, `/cf-close-session`. If something hurt, say it in your own words.
 
 **You see** (example, in any language; abridged; we said "every time I create a new project I forget to add
 it to the index" and asked for a task):
@@ -285,17 +285,17 @@ in the body, no `## Connections` block), the **pains** collected only from **you
 not go in), **tasks** opened in the TaskNotes format, and it runs the gate and the ring. **It commits only
 if you tell it to and never pushes.** What it created passed the hook when committed, with no adjustments.
 
-## 9. `/task-observer`: the workbench learns from you
+## 9. `/cf-task-observer`: the workbench learns from you
 
-**Do:** during the work, ask for `/task-observer`, or say "observe this session".
+**Do:** during the work, ask for `/cf-task-observer`, or say "observe this session".
 
 **What it does** (described in the skill; **not exercised yet**): it looks for three signals: a skill that
 was missing, a step repeated three times, a correction you made twice. It adds one line per proposal to
 `vault/memory/observations.md` (date, what it saw, what it proposes). **It only proposes.** It never
 writes to `profile.md`, `patterns.md`, `decisions.md` or to `vault/notes/`, and **it never creates a
-skill**: the agenda is yours, and what guides skill creation is `/adapt-skill`.
+skill**: the agenda is yours, and what guides skill creation is `/cf-adapt-skill`.
 
-## 10. `/claude-corner`: the time you are away
+## 10. `/cf-claude-corner`: the time you are away
 
 **Do:** before leaving, say "I'm leaving for an hour".
 
@@ -306,14 +306,14 @@ place **outside `vault/`**. It **only proposes**, in `vault/memory/corner/YYYY-M
 not assert, does not merge, does not push, does not install anything outside the throwaway place and does
 not message anyone. When you return you get a short summary and the path of the file.
 
-## 11. `/adapt-skill` and the worksheets: make your own skill
+## 11. `/cf-adapt-skill` and the worksheets: make your own skill
 
 The skills `artigo`, `conselho`, `product-idea` and `consult-notes` **do not come ready-made**: they come
 as **worksheets** in `vault/skill-worksheets/`, which explain the method from the inside. The idea is that
 you decide whether you want a version of your own and write it, instead of receiving a finished one that
 may not fit.
 
-**Do:** `/adapt-skill`.
+**Do:** `/cf-adapt-skill`.
 
 **You see** (example, in any language; abridged):
 
@@ -403,11 +403,11 @@ most connected concepts and the surprising connections) and `graph.json`. To que
 
 | Skill | When |
 |---|---|
-| `/onboard` | the first time, and when you want to update the profile |
-| `/open-session <project>` | when you start working on a project |
-| `/close-session` | when you finish the day |
-| `/task-observer` | during the work, so the workbench proposes improvements |
-| `/claude-corner` | when you are about to leave |
-| `/adapt-skill` | when you want a skill of your own from a worksheet |
+| `/cf-onboard` | the first time, and when you want to update the profile |
+| `/cf-open-session <project>` | when you start working on a project |
+| `/cf-close-session` | when you finish the day |
+| `/cf-task-observer` | during the work, so the workbench proposes improvements |
+| `/cf-claude-corner` | when you are about to leave |
+| `/cf-adapt-skill` | when you want a skill of your own from a worksheet |
 
 Something did not match this guide? Write down the step, what you expected and what appeared, and send it.

@@ -68,7 +68,7 @@ here with the author's private one, so **keep the markers and the three-column f
 | `--no-ignore`, `--require-list`, `--audit` | `--sem-ignorar`, `--exigir-lista`, `--auditar` | flags |
 | `NOT_VERIFIED`, `UNREADABLE`, `WARNING`, `FAILS`, `COMMIT BLOCKED`, `How to fix` | `NAO_VERIFICADO`, `ILEGIVEL`, `AVISO`, `REPROVA`, `COMMIT BLOQUEADO`, `Como consertar` | what the scripts print and the hook greps |
 | `<!-- hub:start -->`, `<!-- hub:end -->` | `<!-- hub:inicio -->`, `<!-- hub:fim -->` | the generated block in a project's `instructions.md` |
-| `/onboard`, `/open-session`, `/close-session`, `/adapt-skill` | `/conhecer`, `/abrir-sessao`, `/fechar-sessao`, `/adaptar-skill` | skill folders in `.claude/skills/` |
+| `/cf-onboard`, `/cf-open-session`, `/cf-close-session`, `/cf-adapt-skill` | `/conhecer`, `/abrir-sessao`, `/fechar-sessao`, `/adaptar-skill` | skill folders in `.claude/skills/` |
 
 ## Glossary
 

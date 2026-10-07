@@ -6,7 +6,7 @@ you run at the repo root and read and write **only inside `vault/`**.
 
 ## First time
 
-1. Run the `onboard` skill: the user answers `_questions_about_me.md` (empty at the start), one question at a time. You invent nothing.
+1. Run the `cf-onboard` skill: the user answers `_questions_about_me.md` (empty at the start), one question at a time. You invent nothing.
 2. Create the project: copy `projects/example-my-first-project/` to `projects/<name>/`, edit the
    frontmatter (`type`, `status`, `declared_target`) and add the line to `projects/_index.md`.
 3. Run `python3 tools/hub.py` so the project lists its files.
@@ -89,19 +89,19 @@ on its own; a note in `notes/` only shows up there through the link in the body.
 
 | skill | when |
 |---|---|
-| `open-session` | when starting work on a project: say its name and it reads the root, the diary and the open tasks |
-| `close-session` | when ending the day: diary, briefing, pains collected, tasks opened |
-| `task-observer` | during the work: sees what repeats or was corrected and **only proposes** improvements |
-| `claude-corner` | when the user says they are leaving: Claude rereads, connects and tests outside `vault/`, and **only proposes** |
-| `onboard` | the first time and when the user wants to update the profile: one question at a time, the output is the user's own words |
-| `extract-routine` | when a routine lives only in someone's head: one question at a time until another person could follow it; the agent never declares it `validated` |
-| `brainstorm` | when an idea is still loose: three different paths, a comparison by criteria you pick, and a brief; nothing is built before your explicit yes |
-| `whats-real` | before a demo, delivery or launch: what works (with proof), what is simulated, what is unknown; checked again afterwards |
-| `adapt-skill` | when the user wants a skill of their own from a worksheet in `skill-worksheets/`; Claude does not write the skill alone |
-| `import-knowledge` | when the user brings an existing base (another vault, a folder, documents): runs `tools/import.py`, reads the report, then proposes the triage from the inbox to `notes/`, target first; the user approves |
-| `adopt` | when the user already has an Obsidian vault and does not want to start from zero or copy anything: dry-runs `tools/adopt.py`, explains the plan and the debt measured today, and applies only after a clear yes |
-| `know-my-product` | when the user wants Claude to understand their product and pains: one question at a time, fills `projects/<name>/product.md` in their words, proposes the pain ranking |
-| `study` | when the user wants to learn something their way: one question at a time on what, why, deadline, how and time; three level questions; a plan; then explain, recall, log. `mastered` only after a retest on another day, never without proof |
+| `cf-open-session` | when starting work on a project: say its name and it reads the root, the diary and the open tasks |
+| `cf-close-session` | when ending the day: diary, briefing, pains collected, tasks opened |
+| `cf-task-observer` | during the work: sees what repeats or was corrected and **only proposes** improvements |
+| `cf-claude-corner` | when the user says they are leaving: Claude rereads, connects and tests outside `vault/`, and **only proposes** |
+| `cf-onboard` | the first time and when the user wants to update the profile: one question at a time, the output is the user's own words |
+| `cf-extract-routine` | when a routine lives only in someone's head: one question at a time until another person could follow it; the agent never declares it `validated` |
+| `cf-brainstorm` | when an idea is still loose: three different paths, a comparison by criteria you pick, and a brief; nothing is built before your explicit yes |
+| `cf-whats-real` | before a demo, delivery or launch: what works (with proof), what is simulated, what is unknown; checked again afterwards |
+| `cf-adapt-skill` | when the user wants a skill of their own from a worksheet in `skill-worksheets/`; Claude does not write the skill alone |
+| `cf-import-knowledge` | when the user brings an existing base (another vault, a folder, documents): runs `tools/import.py`, reads the report, then proposes the triage from the inbox to `notes/`, target first; the user approves |
+| `cf-adopt` | when the user already has an Obsidian vault and does not want to start from zero or copy anything: dry-runs `tools/adopt.py`, explains the plan and the debt measured today, and applies only after a clear yes |
+| `cf-know-my-product` | when the user wants Claude to understand their product and pains: one question at a time, fills `projects/<name>/product.md` in their words, proposes the pain ranking |
+| `cf-study` | when the user wants to learn something their way: one question at a time on what, why, deadline, how and time; three level questions; a plan; then explain, recall, log. `mastered` only after a retest on another day, never without proof |
 
 How context loads and how to keep it small: `docs/CONTEXT.md`.
 

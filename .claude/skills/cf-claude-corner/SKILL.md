@@ -1,9 +1,9 @@
 ---
-name: claude-corner
-description: Claude's corner. When the user says they are leaving, Claude uses the time away (whatever they say, at most 1h30) to reread the notes, find real connections, read the pains and the projects, and test ideas in a throwaway place outside vault/. Only proposes, in vault/memory/corner/YYYY-MM-DD-<slug>.md - it does not assert, does not merge, does not push, does not install anything outside the throwaway, does not send messages to anyone. ORDER RULE - if the user asked for something before leaving, the request is done IN FULL first. TRIGGERS - "vou sair", "volto às X", "I'm heading out", "back at X", "/claude-corner". Do NOT trigger for a leave of a few minutes, for a specific task the user wants running, nor for deciding between two paths.
+name: cf-claude-corner
+description: Claude's corner. When the user says they are leaving, Claude uses the time away (whatever they say, at most 1h30) to reread the notes, find real connections, read the pains and the projects, and test ideas in a throwaway place outside vault/. Only proposes, in vault/memory/corner/YYYY-MM-DD-<slug>.md - it does not assert, does not merge, does not push, does not install anything outside the throwaway, does not send messages to anyone. ORDER RULE - if the user asked for something before leaving, the request is done IN FULL first. TRIGGERS - "vou sair", "volto às X", "I'm heading out", "back at X", "/cf-claude-corner". Do NOT trigger for a leave of a few minutes, for a specific task the user wants running, nor for deciding between two paths.
 ---
 
-# claude-corner: the time away becomes a proposal
+# cf-claude-corner: the time away becomes a proposal
 
 ## Why it exists
 

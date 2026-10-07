@@ -12,7 +12,7 @@ Delete this paragraph. Everything below comes from the student's own answers; no
 
 Project root: link it here with its full path, in the middle of a sentence, for example "this plan belongs to
 `[[projects/<topic>/instructions|<topic>]]`". Check the file exists first. The skill that keeps this page is
-described in `.claude/skills/study/SKILL.md`, and the log of proof lives in the mastery file made from
+described in `.claude/skills/cf-study/SKILL.md`, and the log of proof lives in the mastery file made from
 [[skill-worksheets/mastery-template|mastery-template]].
 
 ## Goal

@@ -12,7 +12,7 @@ depends on a website.
 1. **State the question as a sentence you could be wrong about.** "What do I already think about
    spaced repetition?" is a question. "Spaced repetition" is a topic.
 2. **Search the vault first.** Run `python3 tools/ask.py search "<question>"` (local, no network), or
-   use the `ask` skill (`.claude/skills/ask/SKILL.md`, plain text any agent can follow). Read what
+   use the `cf-ask` skill (`.claude/skills/cf-ask/SKILL.md`, plain text any agent can follow). Read what
    comes back. Note which notes you already have and what they say.
 3. **Declare the gap before searching outside.** Write, in the working note, one line per hole:
    "my notes do not cover X". If you cannot name a gap, you do not need the internet yet. This is the

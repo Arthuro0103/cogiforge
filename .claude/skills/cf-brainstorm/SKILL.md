@@ -1,9 +1,9 @@
 ---
-name: brainstorm
-description: General brainstorming for any product, project, study, event or loose idea (pains are one possible input, not the only one). Asks about the goal one question at a time, scans what the vault already says (collection before internet) and declares the gap, proposes 3 genuinely different paths, compares them in a table by criteria the person picks (defaults - value, frequency of the problem, effort, dependence on others, reversibility), recommends one WITHOUT choosing for them, and closes in a brief at vault/projects/<name>/brief.md. HARD-GATE - no code, plan or project file before an explicit yes on the brief; answers are approve, revise or abort. TRIGGERS - "/brainstorm", "I have an idea", "help me think this through", "what could I build", "ideas for an event". Do NOT trigger when the path is chosen and the person wants it built, to pick between two existing options (that is a council), to mine pains for products (that is product-idea), nor to write the plan or code after approval.
+name: cf-brainstorm
+description: General brainstorming for any product, project, study, event or loose idea (pains are one possible input, not the only one). Asks about the goal one question at a time, scans what the vault already says (collection before internet) and declares the gap, proposes 3 genuinely different paths, compares them in a table by criteria the person picks (defaults - value, frequency of the problem, effort, dependence on others, reversibility), recommends one WITHOUT choosing for them, and closes in a brief at vault/projects/<name>/brief.md. HARD-GATE - no code, plan or project file before an explicit yes on the brief; answers are approve, revise or abort. TRIGGERS - "/cf-brainstorm", "I have an idea", "help me think this through", "what could I build", "ideas for an event". Do NOT trigger when the path is chosen and the person wants it built, to pick between two existing options (that is a council), to mine pains for products (that is product-idea), nor to write the plan or code after approval.
 ---
 
-# brainstorm: think before building, and stop at an approved brief
+# cf-brainstorm: think before building, and stop at an approved brief
 
 ## Why it exists
 
@@ -51,7 +51,7 @@ python3 tools/ask.py search "<query>" --top 8
 ls vault/projects/ vault/notes/ 2>/dev/null
 ```
 
-Use `ask` for retrieval if present, otherwise `grep -ril`. Report what exists on the subject and where, then
+Use `cf-ask` for retrieval if present, otherwise `grep -ril`. Report what exists on the subject and where, then
 the **gap**: what the vault does not say. A gap is a result, not a failure. Do not go to the internet unless
 the person asks.
 

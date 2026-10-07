@@ -1,4 +1,4 @@
-"""The brainstorm pack: three skills (extract-routine, brainstorm, whats-real) and their three templates."""
+"""The brainstorm pack: three skills (cf-extract-routine, cf-brainstorm, cf-whats-real) and their three templates."""
 import re
 from pathlib import Path
 
@@ -11,7 +11,7 @@ from helpers import vault
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS = ROOT / ".claude" / "skills"
 WS = ROOT / "vault" / "skill-worksheets"
-NAMES = ["extract-routine", "brainstorm", "whats-real"]
+NAMES = ["cf-extract-routine", "cf-brainstorm", "cf-whats-real"]
 TEMPLATES = ["routine-template", "brainstorm-brief-template", "whats-real-template"]
 
 
@@ -37,8 +37,8 @@ def test_skill_has_name_and_description_with_triggers(name):
 
 @pytest.mark.parametrize("name", NAMES)
 def test_skill_links_its_template(name):
-    tpl = {"extract-routine": "routine-template", "brainstorm": "brainstorm-brief-template",
-           "whats-real": "whats-real-template"}[name]
+    tpl = {"cf-extract-routine": "routine-template", "cf-brainstorm": "brainstorm-brief-template",
+           "cf-whats-real": "whats-real-template"}[name]
     assert f"[[skill-worksheets/{tpl}|" in skill_text(name)
 
 
@@ -72,21 +72,21 @@ def test_a_template_with_no_inbound_link_fails_the_ring(tmp_path):
 
 
 def test_brainstorm_has_the_hard_gate_and_three_paths():
-    t = skill_text("brainstorm")
+    t = skill_text("cf-brainstorm")
     assert "HARD-GATE" in t
     assert "3" in t
     assert "approve" in t and "revise" in t and "abort" in t
 
 
 def test_extract_routine_has_the_three_states():
-    t = skill_text("extract-routine")
+    t = skill_text("cf-extract-routine")
     for state in ("draft", "ready-for-human-review", "validated"):
         assert state in t
     assert "[CONFIRM]" in t
 
 
 def test_whats_real_has_the_three_sections():
-    for text in (skill_text("whats-real"), (WS / "whats-real-template.md").read_text(encoding="utf-8")):
+    for text in (skill_text("cf-whats-real"), (WS / "whats-real-template.md").read_text(encoding="utf-8")):
         for section in ("Works", "Simulated or demo", "Unknown"):
             assert section in text
 

@@ -10,18 +10,18 @@ A skill is a **folder with a `SKILL.md` file** in `.claude/skills/<name>/`. Clau
 So two things matter a lot: the `description` decides **when** the skill triggers, and each line of it
 **costs context in every session**, even in the ones where it never triggers.
 
-To see it in practice, open `.claude/skills/onboard/SKILL.md` alongside (the shortest one) and find each part.
+To see it in practice, open `.claude/skills/cf-onboard/SKILL.md` alongside (the shortest one) and find each part.
 
 ## The seven parts
 
-| part | what it is for | where to find it in `onboard` |
+| part | what it is for | where to find it in `cf-onboard` |
 |---|---|---|
 | **1. `description`** | the trigger: what it does, the phrases that call it (`TRIGGERS`) and when **not** to fire (`Do NOT trigger`). At most 1024 characters | the frontmatter |
 | **2. Why it exists** | the pain that originated the skill, preferably with the words of whoever felt it. Without pain, the skill is decoration | the "Why it exists" section |
 | **3. The rules** | a few rules, each **verifiable**: you can tell whether it was followed or not | the "The rules" section |
 | **4. The steps** | what to do, in order, with the real command, saying who does each step (the user, Claude, a script) | "The steps" |
 | **5. The output** | where it writes, in what format, and how it is checked | the step that writes the profile |
-| **6. The model of each agent** | only if the skill opens agents: which ones only read (smaller model) and which ones decide (larger model) | `onboard` has none: it opens no agents |
+| **6. The model of each agent** | only if the skill opens agents: which ones only read (smaller model) and which ones decide (larger model) | `cf-onboard` has none: it opens no agents |
 | **7. Never** | what the skill does not do. It is the part that prevents the most damage | the "Never" section |
 
 ## What separates the skill that gets used from the one nobody calls
@@ -47,5 +47,5 @@ When you read someone else's skill, separate two layers:
   installed. You swap this for yours or cut it.
 
 The question that drives adaptation: *"what in this skill only works because it is the author?"* Each answer becomes a
-swap point. `/adapt-skill` guides this work, and what you can look at is in
+swap point. `/cf-adapt-skill` guides this work, and what you can look at is in
 [[skill-worksheets/_catalog|_catalog]].

@@ -13,7 +13,7 @@ It is a one-page brief, not a business plan. Short answers are fine; "I don't kn
 
 ## What Claude does with it
 
-Claude interviews you one question at a time (the `know-my-product` skill does this) and writes the
+Claude interviews you one question at a time (the `cf-know-my-product` skill does this) and writes the
 answers into `projects/<name>/product.md` **with your words only**. At the start of a session it reads
 that file, so its suggestions fit your product instead of a generic one. Claude fills nothing you did not
 say. The rules of the workbench are in [[CLAUDE]].

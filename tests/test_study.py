@@ -11,7 +11,7 @@ from helpers import vault
 
 ROOT = Path(__file__).resolve().parent.parent
 VAULT = ROOT / "vault"
-SKILL = ROOT / ".claude/skills/study/SKILL.md"
+SKILL = ROOT / ".claude/skills/cf-study/SKILL.md"
 TEMPLATES = ["study-plan-template", "mastery-template"]
 
 
@@ -25,7 +25,7 @@ def skill():
 
 def test_skill_has_name_description_triggers_and_not_triggers():
     fm = skill().split("---")[1]
-    assert re.search(r"^name: study$", fm, re.M)
+    assert re.search(r"^name: cf-study$", fm, re.M)
     desc = re.search(r"^description: (.+)$", fm, re.M)
     assert desc and "TRIGGERS" in desc.group(1) and "Do NOT trigger" in desc.group(1)
 
@@ -73,7 +73,7 @@ def test_template_without_an_inbound_link_fails_the_ring(tmp_path):
 
 def test_vault_claude_md_has_the_study_row():
     t = (VAULT / "CLAUDE.md").read_text(encoding="utf-8")
-    assert re.search(r"^\| `study` \|", t, re.M)
+    assert re.search(r"^\| `cf-study` \|", t, re.M)
 
 
 def test_students_guide_and_readme_link():

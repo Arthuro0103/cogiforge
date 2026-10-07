@@ -11,7 +11,7 @@ Copy this file to `vault/projects/<topic>/mastery.md`. Replace the title with a 
 Delete this paragraph. One row per item. The agent writes a row only with the student's own answer as proof.
 
 This log goes with the plan made from [[skill-worksheets/study-plan-template|study-plan-template]]. The skill that
-keeps it is described in `.claude/skills/study/SKILL.md`.
+keeps it is described in `.claude/skills/cf-study/SKILL.md`.
 
 ## The two states
 

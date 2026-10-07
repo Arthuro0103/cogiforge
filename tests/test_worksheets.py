@@ -1,4 +1,4 @@
-"""The context and pains guides: worksheets, CSV templates, docs and the know-my-product skill."""
+"""The context and pains guides: worksheets, CSV templates, docs and the cf-know-my-product skill."""
 import csv
 import re
 import shutil
@@ -70,12 +70,12 @@ def test_guides_exist():
 
 
 def test_skill_has_name_and_description_and_is_in_the_table():
-    text = (ROOT / ".claude/skills/know-my-product/SKILL.md").read_text(encoding="utf-8")
+    text = (ROOT / ".claude/skills/cf-know-my-product/SKILL.md").read_text(encoding="utf-8")
     fm = text.split("---")[1]
-    assert re.search(r"^name: know-my-product$", fm, re.M)
+    assert re.search(r"^name: cf-know-my-product$", fm, re.M)
     desc = re.search(r"^description: (.+)$", fm, re.M)
     assert desc and "TRIGGERS" in desc.group(1) and "Do NOT trigger" in desc.group(1)
-    assert "`know-my-product`" in (VAULT / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "`cf-know-my-product`" in (VAULT / "CLAUDE.md").read_text(encoding="utf-8")
 
 
 def test_readme_links_the_guides():

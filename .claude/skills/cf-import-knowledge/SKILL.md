@@ -1,9 +1,9 @@
 ---
-name: import-knowledge
-description: Brings an existing knowledge base (another vault, a folder of notes, a wiki export, loose documents) into the workbench. Runs tools/import.py, reads the report it writes, and then helps triage the imported inbox into vault/notes/ one batch at a time, following "the target comes first": a named target and a real link in the body for every note that moves. It proposes, the user approves; it invents no link and states nothing about the user. TRIGGERS - "/import-knowledge <folder>", "import my old notes", "bring my wiki into the vault", "I have a folder of documents", "triage what was imported". Do NOT trigger to capture one loose idea (put it in vault/inbox/), to open or close a session, nor to rewrite notes that are already in vault/notes/.
+name: cf-import-knowledge
+description: Brings an existing knowledge base (another vault, a folder of notes, a wiki export, loose documents) into the workbench. Runs tools/import.py, reads the report it writes, and then helps triage the imported inbox into vault/notes/ one batch at a time, following "the target comes first": a named target and a real link in the body for every note that moves. It proposes, the user approves; it invents no link and states nothing about the user. TRIGGERS - "/cf-import-knowledge <folder>", "import my old notes", "bring my wiki into the vault", "I have a folder of documents", "triage what was imported". Do NOT trigger to capture one loose idea (put it in vault/inbox/), to open or close a session, nor to rewrite notes that are already in vault/notes/.
 ---
 
-# import-knowledge: bring it in whole, then decide note by note
+# cf-import-knowledge: bring it in whole, then decide note by note
 
 ## Why it exists
 

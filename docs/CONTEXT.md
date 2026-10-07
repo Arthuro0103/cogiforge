@@ -23,12 +23,12 @@ would break something in most sessions. Everything else goes somewhere that load
 
 | what | how it loads |
 |---|---|
-| one project | `/open-session <name>` reads that project's root, the last diary entries and its open tasks. **One project**, not all of them. |
+| one project | `/cf-open-session <name>` reads that project's root, the last diary entries and its open tasks. **One project**, not all of them. |
 | a skill | a skill's text enters the context only when it triggers. Its `description` is always visible so Claude can tell when to use it. |
 | a worksheet | read when you or a skill points to it. See [vault/worksheets/](../vault/worksheets/). |
-| an answer from your notes | `/ask` searches and returns only the matching passages, with citations. |
+| an answer from your notes | `/cf-ask` searches and returns only the matching passages, with citations. |
 
-This is the reason `open-session` takes a name: loading every project in every session would make the
+This is the reason `cf-open-session` takes a name: loading every project in every session would make the
 context large and mostly irrelevant.
 
 ## Where each thing lives

@@ -9,7 +9,7 @@ Answer at your own pace: one a day or all at once, and skip whatever makes no se
 sentences or bullets. Only what you write here becomes a fact about you. Claude reads it, proposes
 what it noticed and **only writes to `memory/` what you confirm**, with the date and your verbatim phrase.
 
-When a block is answered, ask for: `onboard`.
+When a block is answered, ask for: `cf-onboard`.
 
 ## Who you are and what you want from the workbench
 

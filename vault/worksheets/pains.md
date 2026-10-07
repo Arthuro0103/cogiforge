@@ -13,7 +13,7 @@ have ten of these.
 
 ## What Claude does with it
 
-Claude collects pains from the conversation (the `close-session` skill does it at the end of the day) and
+Claude collects pains from the conversation (the `cf-close-session` skill does it at the end of the day) and
 appends them to [[memory/ideas/_pains]], the queue. This worksheet is the richer version of a queue line:
 use it when a pain deserves the extra fields. Claude ranks pains by **frequency and cost** and links each
 one to a project or a task. A pain without a verbatim quote does not enter the ranking.

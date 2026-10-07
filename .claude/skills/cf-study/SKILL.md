@@ -1,9 +1,9 @@
 ---
-name: study
-description: Helps a student learn what they want, the way they want. Interviews one question at a time (what, why, deadline or none, HOW they like to learn, time per day), asks three level questions without punishing, writes projects/<topic>/study-plan.md, then runs a session loop - explain a small block in the chosen way, ask an active-recall question, and log each item in projects/<topic>/mastery.md with the date and the student's own words as proof. An item is learning until it passes a RETEST on a DIFFERENT day; only then it is mastered. The agent never claims the student knows something without recorded proof, never invents a source, quote or figure, and marks [VERIFY] on anything it explains without a source. TRIGGERS - "/study <topic>", "help me study", "I want to learn X", "quiz me on", "test me again", "what have I mastered", "I have an exam on". Do NOT trigger to do the student's homework or write their essay for them, to research a topic for a text with sources (that is the research guide), to judge whether an idea is good (that is brainstorm), nor to record what works in a project (that is whats-real).
+name: cf-study
+description: Helps a student learn what they want, the way they want. Interviews one question at a time (what, why, deadline or none, HOW they like to learn, time per day), asks three level questions without punishing, writes projects/<topic>/study-plan.md, then runs a session loop - explain a small block in the chosen way, ask an active-recall question, and log each item in projects/<topic>/mastery.md with the date and the student's own words as proof. An item is learning until it passes a RETEST on a DIFFERENT day; only then it is mastered. The agent never claims the student knows something without recorded proof, never invents a source, quote or figure, and marks [VERIFY] on anything it explains without a source. TRIGGERS - "/cf-study <topic>", "help me study", "I want to learn X", "quiz me on", "test me again", "what have I mastered", "I have an exam on". Do NOT trigger to do the student's homework or write their essay for them, to research a topic for a text with sources (that is the research guide), to judge whether an idea is good (that is cf-brainstorm), nor to record what works in a project (that is cf-whats-real).
 ---
 
-# study: learn what you want, the way you want
+# cf-study: learn what you want, the way you want
 
 ## Why it exists
 

@@ -7,7 +7,7 @@ product or a school assignment.
 
 ## The flow in five steps
 
-1. **Fill the product brief.** Run the `know-my-product` skill (or fill the sheet by hand). You answer; Claude
+1. **Fill the product brief.** Run the `cf-know-my-product` skill (or fill the sheet by hand). You answer; Claude
    writes **only your words** into `projects/<name>/product.md`. Sheet:
    [product-brief](../vault/worksheets/product-brief.md).
 2. **Collect a pain in every conversation.** When someone says something hurts, the pain goes into
