@@ -24,13 +24,19 @@ a different hook (someone else's code) is a BLOCKING conflict: the plan shows it
 nothing, and you have to read that hook and decide. The hook refuses to run (blocks the commit) if `cogiforge.home`
 is not an absolute path to a folder holding core/ring.py, core/gate.py and core/leak.py.
 
-Trust model: the vault may come from outside, so adopt runs NO git to inspect it: it reads `.git/config` as text and
-refuses (blocking, rc 1, nothing written) if it names commands git would run (core.fsmonitor, sshCommand, pager, editor,
-`!` aliases, filter/diff/merge/credential commands, an `include`, a core.hooksPath other than `.githooks`), if `.git`,
-`.git/config`, `.githooks` or `.cogiforge` is a symlink or the wrong kind of file, or if `.git` is a file. It only runs
-git to WRITE two local keys, after those checks. Notes that are pipes or devices are never opened. The one thing it
-trusts is YOUR choice of checkout: `cogiforge.home` is checked for the three scripts, not for who wrote them, so point
-it only at a cogiforge you cloned yourself and keep that folder writable by you alone.
+THREAT MODEL (6 lines)
+  1. DEFENDS: a vault received from a third party (zip, copy, sync) whose `.git`, `.githooks` or notes are hostile.
+  2. `.git/config` is read as BYTES and judged by an ALLOWLIST of what `git init`/`clone` write (core.repositoryformatversion,
+     filemode, bare, logallrefupdates, ignorecase, precomposeunicode, symlinks; remote.*.url/fetch; branch.*.remote/merge;
+     user.name/email) plus the two keys adopt writes. Any other section, key, include, quote, continuation or line it cannot
+     parse blocks (rc 1, line cited, nothing written, no git run against the vault).
+  3. It refuses symlinks in any component of a path it would write, `.git` that is a symlink or a file, a `.githooks` that
+     holds anything but the generated `pre-commit`, a different `pre-commit`, and a `cogiforge.home` that is not this checkout.
+  4. The generated hook accepts `cogiforge.home` only as a canonical absolute path (no `.`/`..`, no symlink) with the three
+     scripts inside, and passes note names after `--`; names are shown with control characters neutralized.
+  5. DOES NOT DEFEND: you pointing `cogiforge.home` at a clone you chose yourself (it checks the three scripts exist, not who
+     wrote them), nor a hook you read and approved, nor a hostile global git config or `PATH` of your own account.
+  6. When the allowlist blocks something you consider fine, the fix is to edit `.git/config` yourself; adopt never loosens it.
 
 `--apply` runs only after the plan was printed, and needs `--yes` or an interactive "yes". It writes only what the
 plan listed and never touches an existing note. It never runs `git init`: a vault that is not a git repository
@@ -86,7 +92,11 @@ case "$home" in
     /*) ;;
     *) block "cogiforge.home is not set to an absolute path." ;;
 esac
+case "$home/" in
+    */../*|*/./*|*//*) block "cogiforge.home has a . or .. or empty component." ;;
+esac
 [ -d "$home" ] || block "cogiforge.home is not a folder."
+[ "$(cd "$home" 2>/dev/null && pwd -P)" = "$home" ] || block "cogiforge.home is not a canonical path (a symlink in it?)."
 for f in core/gate.py core/ring.py core/leak.py; do
     [ -f "$home/$f" ] || block "cogiforge.home does not contain $f."
 done
@@ -94,7 +104,7 @@ out=$(mktemp) || exit 1
 trap 'rm -f "$out"' EXIT
 blocked=0
 
-if git diff --cached --name-only --diff-filter=ACMR | grep -q '\\.md$'; then
+if git diff --cached --name-only --diff-filter=ACMR -z | grep -qz '\\.md$'; then
     if ! python3 "$home/core/ring.py" --vault . --gate --stage >"$out" 2>&1; then
         echo "  COMMIT BLOCKED: a note in this commit has no link"
         sed 's/^/     /' "$out" | head -20
@@ -141,66 +151,102 @@ def git_state(vault):
     return "no-git", None
 
 
-BOOL = {"true", "false", "yes", "no", "on", "off", "0", "1", ""}
-# (section, key) pairs whose value is a command git may run; None = any key of that section
-RISKY = {("core", "sshcommand"), ("core", "pager"), ("core", "editor"), ("core", "askpass"), ("core", "gitproxy"),
-         ("sequence", "editor"), ("gpg", "program"), ("credential", "helper"), ("diff", "external"),
-         ("diff", "command"), ("diff", "textconv"), ("merge", "driver"), ("filter", "clean"), ("filter", "smudge"),
-         ("filter", "process"), ("pager", None), ("include", None), ("includeif", None), ("difftool", "cmd"),
-         ("mergetool", "cmd"), ("man", "cmd"), ("uploadpack", "packobjectshook"), ("remote", "vcs"),
-         ("remote", "receivepack"), ("remote", "uploadpack"), ("http", "sslcommand")}
-CONFIG_LINE = re.compile(r'^\[\s*([A-Za-z0-9-]+)((?:\.[^\s"\]]+)?)(?:\s+"((?:[^"\\]|\\.)*)")?\s*\](.*)$')
+# ALLOWLIST of what `git init` / `git clone` write into a repo's local config, plus the two keys adopt writes.
+# Anything else (another section, another key, a value outside the pattern, a continuation line, a quote, a line the
+# parser cannot read) is a violation: the vault is not touched and git is not run against it. When in doubt, block.
+BOOLV = r"true|false"
+_PATH = r"[A-Za-z0-9_./+~ -]*"
+ALLOWED = {
+    ("core", None): {"repositoryformatversion": r"0", "filemode": BOOLV, "bare": r"false", "logallrefupdates": r"true",
+                     "ignorecase": BOOLV, "precomposeunicode": BOOLV, "symlinks": BOOLV, "hookspath": r"\.githooks"},
+    ("remote", "name"): {
+        "url": r"(?:(?:https?|ssh|git)://[A-Za-z0-9][A-Za-z0-9_.~%+@:/-]*"
+               r"|[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+:[A-Za-z0-9_.~/+-]*|/" + _PATH + r"|\.{1,2}/" + _PATH + ")",
+        "fetch": r"\+?[A-Za-z0-9_./*-]+:[A-Za-z0-9_./*-]+"},
+    ("branch", "name"): {"remote": r"\.|[A-Za-z0-9_.-]+", "merge": r"refs/[A-Za-z0-9_./-]+"},
+    ("user", None): {"name": r"[\w.@+' ,()-]{1,100}", "email": r"[\w.@+'-]{1,100}"},
+    ("cogiforge", None): {"home": None},  # compared with the checkout path below, not by pattern
+}
+HEADER = re.compile(r'^\[([A-Za-z]+)(?: "([A-Za-z0-9_./-]+)")?\]$')
+KEYLINE = re.compile(r"^([A-Za-z][A-Za-z0-9-]*)[ \t]*=[ \t]*(.*)$")
+ROOT_SAFE = re.compile(r"^/[A-Za-z0-9_./+@~ -]+$")  # a path adopt can write to the config and read back exactly
 
 
-def parse_git_config(text):
-    """[(section, subsection, key, value)], lowercased section and key. Reads text only: no git, no includes."""
-    out, sect = [], None
-    for raw in text.splitlines():
-        line = raw.strip()
-        if not line or line[0] in "#;":
+def validate_git_config(data):
+    """(entries, violations). `data` is the config file as BYTES. entries = [(section, sub, key, value)] of what passed
+    (lowercase section and key); violations = [(line number, shown line, reason)]. Reads text only: no git, no includes."""
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return [], [(0, "(file)", "not valid UTF-8")]
+    if "\x00" in text:
+        return [], [(0, "(file)", "NUL byte")]
+    entries, bad, sect = [], [], None
+    for n, raw in enumerate(text.split("\n"), 1):
+        line = raw.rstrip("\r").strip()
+        shown = shown_text(line)[:80]
+        if not line:
             continue
-        m = CONFIG_LINE.match(line)
+        if "\\" in line or ('"' in line and not HEADER.match(line)):
+            bad.append((n, shown, "backslash, quote or continuation (not parsed, so not trusted)"))
+            sect = None
+            continue
+        if any(ord(c) < 32 and c != "\t" for c in line):
+            bad.append((n, shown, "control character"))
+            continue
+        if line[0] in "#;":
+            continue
+        m = HEADER.match(line)
         if m:
-            sect = (m.group(1).lower(), (m.group(2)[1:] or m.group(3) or ""))
-            line = m.group(4).strip()
-            if not line or line[0] in "#;":
-                continue
-        if sect is None:
+            sec, sub = m.group(1).lower(), m.group(2)
+            kind = (sec, "name" if sub else None)
+            if kind not in ALLOWED or (sub and ".." in sub):
+                bad.append((n, shown, "section not in the allowlist of what git init/clone writes"))
+                sect = None
+            else:
+                sect = (sec, sub, kind)
             continue
-        k, eq, v = line.partition("=")
-        out.append((sect[0], sect[1], k.strip().lower(), v.strip().strip('"') if eq else "true"))
-    return out
+        if sect is None:
+            bad.append((n, shown, "line outside an allowed section, or not parseable"))
+            continue
+        k = KEYLINE.match(line)
+        if not k:
+            bad.append((n, shown, "not a `key = value` line"))
+            continue
+        key, val = k.group(1).lower(), k.group(2).rstrip()
+        allowed = ALLOWED[sect[2]]
+        if key not in allowed:
+            bad.append((n, shown, f"key `{sect[0]}.{key}` not in the allowlist"))
+        elif sect[:2] == ("cogiforge", None):
+            if val != str(ROOT):
+                bad.append((n, shown, "cogiforge.home is not this checkout"))
+            else:
+                entries.append((sect[0], sect[1], key, val))
+        elif not re.fullmatch(allowed[key], val):
+            bad.append((n, shown, f"value of `{sect[0]}.{key}` outside the accepted pattern"))
+        else:
+            entries.append((sect[0], sect[1], key, val))
+    return entries, bad
 
 
-def risky_entries(entries):
-    """The entries of a repo config that make git (or the hook) run a command, or pull in another config file."""
-    found = []
-    for sec, sub, key, val in entries:
-        name = f"{sec}.{sub + '.' if sub else ''}{key}"
-        if (sec, key) in RISKY or (sec, None) in RISKY:
-            found.append((name, val))
-        elif sec == "core" and key == "fsmonitor" and val.lower() not in BOOL:
-            found.append((name, val))
-        elif sec == "core" and key == "hookspath" and val not in ("", ".githooks"):
-            found.append((name, val))
-        elif sec == "alias" and val.startswith("!"):
-            found.append((name, val))
-    return found
+def shown_text(s):
+    """Text for the screen: control characters (newline, escape) never reach the terminal as such."""
+    return "".join("?" if (ord(c) < 32 or ord(c) == 127) else c for c in str(s))
 
 
 def read_repo_config(vault):
-    """(entries, error). The local config of the repo, read as text."""
+    """(entries, violations) of the local config of the repo, read as BYTES and judged by the allowlist."""
     cfg = Path(vault) / ".git" / "config"
     if cfg.is_symlink():
-        return [], ".git/config is a symlink"
+        return [], [(0, ".git/config", "is a symlink")]
     if not cfg.exists():
-        return [], None
+        return [], []
     if not cfg.is_file():
-        return [], ".git/config is not a regular file"
+        return [], [(0, ".git/config", "is not a regular file")]
     try:
-        return parse_git_config(cfg.read_text(encoding="utf-8", errors="replace")), None
+        return validate_git_config(cfg.read_bytes())
     except OSError as e:
-        return [], f".git/config unreadable ({type(e).__name__})"
+        return [], [(0, ".git/config", f"unreadable ({type(e).__name__})")]
 
 
 def safe_git(vault, *args):
@@ -213,6 +259,66 @@ def safe_git(vault, *args):
 def lookup(entries, section, key):
     vals = [v for sec, sub, k, v in entries if sec == section and not sub and k == key]
     return vals[-1] if vals else ""
+
+
+def unsafe_path(vault, rel):
+    """Why writing `rel` under the vault would leave it (a symlink in ANY component, or a non-folder parent), or None."""
+    cur = Path(vault)
+    for part in Path(rel).parts[:-1]:
+        cur = cur / part
+        if cur.is_symlink():
+            return f"{shown_text(cur.relative_to(vault))} is a symlink: adopt would write through it, outside the vault"
+        if cur.exists() and not cur.is_dir():
+            return f"{shown_text(cur.relative_to(vault))} is not a folder"
+    return None
+
+
+def guard(vault):
+    """Everything that must hold before ANY write, judged from disk and from text (no git is run against the vault).
+    -> {state, detail, entries, blocking, existing_hook, hook_state}. Called by the plan and again by apply."""
+    vault = Path(vault)
+    state, detail = git_state(vault)
+    blocking, entries, existing_hook, hook_state = [], [], None, "create"
+    if state == "no-git":
+        blocking.append("the vault is not a git repository: run `git init` yourself, then adopt again")
+    elif state == "nested":
+        blocking.append(f"the vault is inside another git repository ({shown_text(detail)}): adopt needs the vault to be the repo root")
+    elif state == "no-binary":
+        blocking.append("git is not installed")
+    elif state == "unsafe":
+        blocking.append(f"unsafe repository layout: {detail}")
+    if state == "ok":
+        entries, violations = read_repo_config(vault)
+        if violations:
+            blocking.append("the repo's .git/config has content outside the allowlist of what `git init` writes, so adopt "
+                            "will not run git against this vault. Read .git/config, remove what is not yours, then adopt again: "
+                            + "; ".join(f"line {n} `{l}` ({why})" for n, l, why in violations[:8]))
+    if not ROOT_SAFE.match(str(ROOT)):
+        blocking.append("the path of this cogiforge checkout has characters adopt cannot verify safely: move the checkout")
+    for rel in (AREAS, HOOK, BASELINE):
+        why = unsafe_path(vault, rel)
+        if why:
+            blocking.append(why)
+    hooks_dir = vault / ".githooks"
+    hp = vault / HOOK
+    if hooks_dir.is_dir() and not hooks_dir.is_symlink():
+        others = sorted(x.name for x in hooks_dir.iterdir() if x.name != "pre-commit")
+        if others:
+            blocking.append(f".githooks holds other files ({', '.join(shown_text(o) for o in others[:6])}): core.hooksPath would run "
+                            "every hook in that folder on git operations. Read them and decide; adopt activates nothing.")
+    if hp.exists() or hp.is_symlink():
+        if hp.is_file() and not hp.is_symlink() and hp.read_bytes() == HOOK_TEXT.encode("utf-8"):
+            hook_state = "identical"
+        else:
+            hook_state = "foreign"
+            try:
+                existing_hook = [shown_text(l) for l in hp.read_text(encoding="utf-8", errors="replace").splitlines()[:HOOK_PEEK]]
+            except OSError:
+                existing_hook = ["(could not read it)"]
+            blocking.append(f"{HOOK} exists and is NOT the generated hook: it would run on every commit. Read it, "
+                            f"then decide (delete or move it, or keep it and wire the cogiforge by hand). Nothing was activated.")
+    return {"state": state, "detail": detail, "entries": entries, "blocking": blocking,
+            "existing_hook": existing_hook, "hook_state": hook_state}
 
 
 def slug(name):
@@ -257,7 +363,8 @@ def scan(vault):
 def infer_areas(counter):
     out = {}
     for folder, n in sorted(counter.items()):
-        if folder.lower() in NOT_AREAS or ":" in folder or n == 0:
+        if (folder.lower() in NOT_AREAS or ":" in folder or n == 0 or folder != folder.strip() or folder[0] in "#;"
+                or any(ord(c) < 32 or ord(c) == 127 for c in folder)):  # would inject lines into areas.txt
             continue
         out[folder] = slug(folder)
     return out
@@ -294,11 +401,12 @@ def measure(vault, notes):
 def build_plan(vault):
     vault = Path(vault)
     s = scan(vault)
-    state, top = git_state(vault)
-    entries, cfg_error = read_repo_config(vault) if state == "ok" else ([], None)
+    g = guard(vault)
+    state, entries = g["state"], g["entries"]
     areas = infer_areas(s["areas"])
     debt = measure(vault, s["notes"]) if s["notes"] else None
-    items, conflicts, blocking = [], [], []
+    items, conflicts = [], []
+    blocking = list(g["blocking"])
 
     def item(rel, what):
         if (vault / rel).exists() or (vault / rel).is_symlink():
@@ -307,71 +415,26 @@ def build_plan(vault):
         else:
             items.append({"path": rel, "what": what, "status": "create"})
 
-    risky = risky_entries(entries)
-    for d_name in (".githooks", ".cogiforge"):
-        dp = vault / d_name
-        if dp.is_symlink() or (dp.exists() and not dp.is_dir()):
-            blocking.append(f"{d_name} is a symlink or not a folder: adopt would write through it, outside the vault.")
-    if cfg_error:
-        blocking.append(cfg_error + ": adopt will not run git against it.")
-    if risky:
-        blocking.append("the repo's .git/config names commands git would run or files it would include: "
-                        + "; ".join(f"{n} = {v[:60]}" for n, v in risky)
-                        + ". Read .git/config, remove what is not yours, then adopt again. Nothing was written and no git was run.")
-
-    hook_ok, existing_hook = True, None
     item(AREAS, "proposed areas, one `folder: area` per line")
-    hp = vault / HOOK
-    if hp.exists() or hp.is_symlink():
-        if hp.is_file() and not hp.is_symlink() and hp.read_bytes() == HOOK_TEXT.encode("utf-8"):
-            items.append({"path": HOOK, "what": "pre-commit hook (already the generated one)", "status": "identical (kept)"})
-        else:
-            hook_ok = False
-            try:
-                existing_hook = hp.read_text(encoding="utf-8", errors="replace").splitlines()[:HOOK_PEEK]
-            except OSError:
-                existing_hook = ["(could not read it)"]
-            items.append({"path": HOOK, "what": "pre-commit hook", "status": "CONFLICT, NOT ACTIVATED (a different hook)"})
-            blocking.append(f"{HOOK} exists and is NOT the generated hook: it would run on every commit. Read it, "
-                            f"then decide (delete or move it, or keep it and wire the cogiforge by hand). Nothing was activated.")
+    if g["hook_state"] == "identical":
+        items.append({"path": HOOK, "what": "pre-commit hook (already the generated one)", "status": "identical (kept)"})
+    elif g["hook_state"] == "foreign":
+        items.append({"path": HOOK, "what": "pre-commit hook", "status": "CONFLICT, NOT ACTIVATED (a different hook)"})
     else:
         items.append({"path": HOOK, "what": "pre-commit hook: ring, gate and leak scan on the notes of the commit",
                       "status": "create"})
     item(BASELINE, "debt measured today, saved as the baseline")
-    hooks_path = home_cfg = ""
-    if state == "ok":
-        hooks_path = lookup(entries, "core", "hookspath")
-        home_cfg = lookup(entries, "cogiforge", "home")
-    if home_cfg and home_cfg != str(ROOT):
-        items.append({"path": "git config cogiforge.home", "what": "where the cogiforge checkout lives",
-                      "status": f"CONFLICT (already set to another path, kept as it is)"})
-        blocking.append("`cogiforge.home` is already set to a different path in this repo's git config: the hook would "
-                        "run code from there. Check it (`git config --local cogiforge.home`) and unset it if it is not yours.")
-    else:
-        items.append({"path": "git config cogiforge.home", "what": f"where the cogiforge checkout lives: {ROOT}",
-                      "status": "set" if not home_cfg else "already set"})
-    if not hook_ok:
-        items.append({"path": "git config core.hooksPath", "what": "activate the hook", "status": "NOT set (see the hook conflict)"})
-    elif hooks_path and hooks_path != ".githooks":
-        conflicts.append("git config core.hooksPath")
-        items.append({"path": "git config core.hooksPath", "what": "activate the hook",
-                      "status": f"CONFLICT (already '{hooks_path}', kept as it is)"})
+    hooks_path, home_cfg = lookup(entries, "core", "hookspath"), lookup(entries, "cogiforge", "home")
+    items.append({"path": "git config cogiforge.home", "what": f"where the cogiforge checkout lives: {ROOT}",
+                  "status": "already set" if home_cfg else "set"})
+    if blocking:
+        items.append({"path": "git config core.hooksPath", "what": "activate the hook", "status": "NOT set (see pending)"})
     else:
         items.append({"path": "git config core.hooksPath", "what": "activate the hook (value: .githooks)",
-                      "status": "set" if hooks_path != ".githooks" else "already set"})
+                      "status": "already set" if hooks_path == ".githooks" else "set"})
     pending = []
     if not s["notes"]:
         pending.append("nothing to adopt: the vault has no readable note")
-        blocking.append(pending[-1])
-    if state == "no-git":
-        pending.append("the vault is not a git repository: run `git init` yourself, then adopt again")
-    elif state == "nested":
-        pending.append(f"the vault is inside another git repository ({top}): adopt needs the vault to be the repo root")
-    elif state == "no-binary":
-        pending.append("git is not installed")
-    elif state == "unsafe":
-        pending.append(f"unsafe repository layout: {top}")
-    if state != "ok":
         blocking.append(pending[-1])
     pending += [b for b in blocking if b not in pending]
     pending += [f"conflict: {c} already exists, adopt keeps it" for c in conflicts]
@@ -379,7 +442,7 @@ def build_plan(vault):
         pending.append(f"{len(s['skipped'])} note(s) skipped and NOT measured (see the list)")
     return {"vault": str(vault), "git": state, "notes": len(s["notes"]), "skipped": s["skipped"], "areas": areas,
             "items": items, "debt": debt, "pending": pending, "conflicts": conflicts, "blocking": blocking,
-            "existing_hook": existing_hook, "hook_text": HOOK_TEXT}
+            "existing_hook": g["existing_hook"], "hook_text": HOOK_TEXT}
 
 
 def render(plan):
@@ -419,12 +482,19 @@ def render(plan):
         out += [f"       | {l}" for l in plan["hook_text"].splitlines()]
     if plan["pending"]:
         out += ["", "pending:"] + [f"   - {p}" for p in plan["pending"]]
-    return "\n".join(out)
+    return "\n".join(shown_text(x) for x in out)
+
+
+class Blocked(Exception):
+    pass
 
 
 def apply(plan, vault):
     """Writes exactly the plan's `create`/`set` items. Returns the list written."""
     vault = Path(vault)
+    again = guard(vault)  # the disk may have changed since the plan was printed
+    if again["blocking"]:
+        raise Blocked(again["blocking"])
     written = []
     d = plan["debt"]
     baseline = {"created": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -485,7 +555,11 @@ def run(args):
         if input("\nApply this plan? Type 'yes': ").strip().lower() != "yes":
             print("NOT APPLIED: no confirmation. Nothing was written.", file=sys.stderr)
             return 2
-    written = apply(plan, vault)
+    try:
+        written = apply(plan, vault)
+    except Blocked as e:
+        print("\nNOT APPLIED, the vault changed since the plan and now fails: " + "; ".join(e.args[0]), file=sys.stderr)
+        return 1
     print("\nAPPLIED:" + "".join(f"\n   {w}" for w in written or ["(nothing to create: everything existed)"]))
     print("Existing notes were not touched. Test it: add a note with no link and run git commit.")
     return 1 if plan["pending"] else 0

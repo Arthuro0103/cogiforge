@@ -330,55 +330,113 @@ RISKY_CONFIGS = {
     "hookspath": "[core]\n\thooksPath = {decoy}\n",
     "include": "[include]\n\tpath = {decoy}\n",
     "same-line-section": "[core] fsmonitor = {decoy}\n",
+    "upper-case": "[CORE]\n\tFsMonitor = {decoy}\n",
+    "continuation": "[core]\n\tfilemode = true\n\tfsmonitor = \\\n{decoy}\n",
+    "includeif": '[includeIf "gitdir:/"]\n\tpath = {decoy}\n',
+    "quoted-subsection": '[filter "a b"]\n\tclean = {decoy}\n',
+    "repeated-key": "[core]\n\tfilemode = true\n\tfilemode = {decoy}\n",
+    "hookspath-dot-slash": "[core]\n\thooksPath = ./.githooks\n",
+    "hookspath-normalizes": "[core]\n\thooksPath = .githooks/../../{decoy}\n",
+    "trailing-after-header": "[core] bare = false\n",
+    "quoted-value": '[core]\n\tpager = "{decoy}"\n',
+    "comment-backslash": "# harmless comment \\\n[core]\n\tfsmonitor = {decoy}\n",
+    "extensions": "[extensions]\n\tworktreeConfig = true\n",
+    "bare-key": "[core]\n\tfilemode\n",
+    "remote-ext-url": '[remote "o"]\n\turl = ext::{decoy}\n',
+    "remote-pushurl": '[remote "o"]\n\tpushurl = https://example.com/x.git\n',
+    "core-bare-true": "[core]\n\tbare = true\n",
+    "format-version-1": "[core]\n\trepositoryformatversion = 1\n",
+    "unknown-section": "[safe]\n\tdirectory = *\n",
+    "key-before-section": "fsmonitor = {decoy}\n",
+    "nul-byte": "[core]\n\tfilemode = true\x00\n",
+    "ansi-in-value": "[user]\n\tname = \x1b[31mred\n",
 }
 
 
-def test_a_repo_config_that_runs_commands_blocks_the_apply_and_nothing_executes(tmp_path):
+def test_what_git_init_and_git_clone_write_is_accepted(tmp_path):
+    build(tmp_path / "v", MINI)
+    git_init(tmp_path / "v")
+    with open(tmp_path / "v" / ".git" / "config", "a", encoding="utf-8") as fh:
+        fh.write('[user]\n\tname = Ana Souza\n\temail = ana@example.com\n'
+                 '[remote "origin"]\n\turl = https://example.com/x.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n'
+                 '[branch "main"]\n\tremote = origin\n\tmerge = refs/heads/main\n# a comment\n')
+    assert adopt(tmp_path / "v", "--apply", "--yes").returncode == 0
+    # a real clone
+    src = tmp_path / "src"
+    build(src, MINI)
+    git_init(src)
+    env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+           "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com"}
+    subprocess.run(["git", "-C", str(src), "add", "-A"], check=True)
+    subprocess.run(["git", "-C", str(src), "commit", "-qm", "i"], check=True, env=env)
+    subprocess.run(["git", "clone", "-q", str(src), str(tmp_path / "clone")], check=True)
+    r = adopt(tmp_path / "clone", "--apply", "--yes")
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_the_validator_unit(tmp_path):
+    m = load_module()
+    ok = lambda text: not m.validate_git_config(text.encode())[1]  # noqa: E731
+    assert ok("[core]\n\trepositoryformatversion = 0\n\tfilemode = true\n\tbare = false\n\tlogallrefupdates = true\n")
+    assert ok("[core]\n\thooksPath = .githooks\n[cogiforge]\n\thome = " + str(ROOT) + "\n")
+    assert not ok("[cogiforge]\n\thome = /somewhere/else\n")
+    assert not ok("[core]\n\tfsmonitor = true\n")           # even the harmless-looking value: not in the allowlist
+    assert not ok("[core]\n\tfilemode = true # trailing\n")   # a comment after a value is not parsed
+    assert not ok("[core]\n\tfilemode=TRUE\n")               # exact values only
+    assert not ok("\ufeff[core]\n\tfilemode = true\n")       # BOM
+    viol = m.validate_git_config(b"[core]\n\tfsmonitor = /x\n")[1]
+    assert viol and viol[0][0] == 2 and "fsmonitor" in viol[0][1]  # the line is cited
+    assert not m.validate_git_config(b"\xff\xfe")[0]
+
+
+def test_each_variant_is_blocked_with_the_line_cited_and_nothing_executes(tmp_path):
+    # the decoy script path is ABSOLUTE and already expanded (format), never a `$VAR` that would prove nothing
     for name, cfg in RISKY_CONFIGS.items():
         v = tmp_path / name
         build(v, MINI)
         git_init(v)
         marker = plant_decoy(v, tmp_path, cfg)
+        assert str(tmp_path) in (v / ".git" / "config").read_text(encoding="utf-8") or "{decoy}" not in cfg, name
         before = tree(v)
         plan = adopt(v)
-        assert plan.returncode == 1 and ".git/config" in plan.stdout, (name, plan.stdout)
+        assert plan.returncode == 1 and "allowlist" in plan.stdout and "line " in plan.stdout, (name, plan.stdout[-600:])
         r = adopt(v, "--apply", "--yes")
         assert r.returncode == 1 and "NOT APPLIED" in r.stderr, (name, r.stderr)
         assert tree(v) == before and not marker.exists(), name
-        assert not (v / ".githooks").exists()
-        assert "cogiforge" not in (v / ".git" / "config").read_text()
+        assert not (v / ".githooks").exists() and "cogiforge" not in (v / ".git" / "config").read_text(encoding="utf-8")
 
 
-def test_control_plain_git_would_run_the_decoy(tmp_path):
-    """The risk is real: this is what the block is for (git status runs core.fsmonitor)."""
-    build(tmp_path / "v", MINI)
-    git_init(tmp_path / "v")
-    marker = plant_decoy(tmp_path / "v", tmp_path, RISKY_CONFIGS["fsmonitor"])
-    subprocess.run(["git", "-C", str(tmp_path / "v"), "status"], capture_output=True)
-    if not marker.exists():
-        import pytest
-        pytest.skip("this git does not run core.fsmonitor on status")
-    assert marker.exists()
+def _plain_git_runs_decoy(kind, tmp_path):
+    v = tmp_path / ("ctl-" + kind)
+    build(v, MINI)
+    git_init(v)
+    env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+           "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com"}
+
+    def git(*a):
+        return subprocess.run(["git", "-C", str(v), *a], capture_output=True, text=True, env=env)
+    git("add", "-A")
+    git("commit", "-qm", "i")
+    marker = plant_decoy(v, tmp_path, RISKY_CONFIGS[{"fsmonitor": "fsmonitor", "alias": "alias", "filter": "filter",
+                                                     "diff": "diff-external"}[kind]])
+    if kind == "fsmonitor":
+        git("status")
+    elif kind == "alias":
+        git("st")
+    elif kind == "filter":
+        (v / ".gitattributes").write_text("* filter=x\n")
+        (v / "Ideas" / "a.md").write_text("changed\n")
+        git("add", "Ideas/a.md")
+    elif kind == "diff":
+        (v / "Ideas" / "a.md").write_text("changed again\n")
+        git("diff", "--ext-diff")
+    return marker.exists()
 
 
-def test_harmless_local_config_does_not_block(tmp_path):
-    build(tmp_path, MINI)
-    git_init(tmp_path)
-    with open(tmp_path / ".git" / "config", "a") as fh:
-        fh.write('[user]\n\tname = t\n[core]\n\tfsmonitor = false\n\thooksPath = .githooks\n[alias]\n\tco = checkout\n'
-                 '[remote "origin"]\n\turl = https://example.com/x.git\n')
-    assert adopt(tmp_path, "--apply", "--yes").returncode == 0
-
-
-def test_the_config_parser_flags_what_it_should():
-    m = load_module()
-    f = lambda t: [n for n, _ in m.risky_entries(m.parse_git_config(t))]  # noqa: E731
-    assert f("[core]\n\tfsmonitor = /x\n") == ["core.fsmonitor"]
-    assert f("[CORE]\n\tFsMonitor = /x\n") == ["core.fsmonitor"]
-    assert f('[filter "lfs"]\n\tclean = x\n') == ["filter.lfs.clean"]
-    assert f("[core]\n\tfsmonitor = true\n") == [] and f("[core]\n\tfsmonitor = false\n") == []
-    assert f("[alias]\n\ta = status\n") == [] and f("[alias]\n\ta = !x\n") == ["alias.a"]
-    assert f("[user]\n\tname = x\n") == []
+def test_controls_plain_git_does_run_the_decoy(tmp_path):
+    """The risk is real: plain git executes each of these. Without this, the block tests above would prove nothing."""
+    results = {k: _plain_git_runs_decoy(k, tmp_path) for k in ("fsmonitor", "alias", "filter", "diff")}
+    assert all(results.values()), results
 
 
 def test_git_dir_that_is_a_symlink_or_file_is_unsafe(tmp_path):
@@ -437,3 +495,86 @@ def test_yes_never_skips_the_plan_or_the_blocks(tmp_path):
     r = adopt(tmp_path, "--apply", "--yes")
     assert "adopt plan for" in r.stdout and r.returncode == 1 and not (tmp_path / ".cogiforge").exists()
     assert adopt(tmp_path, "--yes").returncode == 2  # --yes without --apply is a usage error
+
+
+def test_other_files_in_githooks_block_even_with_our_identical_hook(tmp_path):
+    m = load_module()
+    for extra in ("post-checkout", "prepare-commit-msg", "sub/x"):
+        v = tmp_path / extra.replace("/", "_")
+        build(v, {**MINI, ".githooks/pre-commit": m.HOOK_TEXT, f".githooks/{extra}": "#!/bin/sh\necho hostile\n"})
+        git_init(v)
+        before = tree(v)
+        r = adopt(v, "--apply", "--yes")
+        assert r.returncode == 1 and "other files" in (r.stdout + r.stderr) and tree(v) == before, extra
+        assert local_cfg(v, "core.hooksPath") == ""
+
+
+def test_a_dangling_areas_symlink_is_a_conflict_and_never_written_through(tmp_path):
+    build(tmp_path / "v", MINI)
+    git_init(tmp_path / "v")
+    target = tmp_path / "outside.txt"
+    (tmp_path / "v" / "areas.txt").symlink_to(target)
+    r = adopt(tmp_path / "v", "--apply", "--yes")
+    assert r.returncode == 1 and not target.exists()
+
+
+def test_apply_rechecks_the_disk_after_the_plan(tmp_path):
+    build(tmp_path, MINI)
+    git_init(tmp_path)
+    m = load_module()
+    plan = m.build_plan(tmp_path)
+    assert not plan["blocking"]
+    marker = plant_decoy(tmp_path, tmp_path, RISKY_CONFIGS["fsmonitor"])  # hostile config appears after the plan
+    import pytest
+    with pytest.raises(m.Blocked):
+        m.apply(plan, tmp_path)
+    assert not (tmp_path / ".githooks").exists() and not marker.exists()
+
+
+def test_an_unsafe_checkout_path_blocks(tmp_path, monkeypatch):
+    build(tmp_path, MINI)
+    git_init(tmp_path)
+    m = load_module()
+    monkeypatch.setattr(m, "ROOT", Path('/tmp/a"b'))
+    assert any("cannot verify" in b for b in m.guard(tmp_path)["blocking"])
+
+
+def test_the_hook_refuses_a_noncanonical_cogiforge_home(tmp_path):
+    v = tmp_path / "v"
+    build(v, MINI)
+    git_init(v)
+    assert adopt(v, "--apply", "--yes").returncode == 0
+    link = tmp_path / "link-to-root"
+    link.symlink_to(ROOT)
+    for bad in (str(ROOT) + "/../" + ROOT.name, str(ROOT) + "/", str(ROOT) + "/./", str(link), "/" + str(ROOT)):
+        r = _hook_run(v, bad)
+        assert r.returncode != 0 and "COMMIT BLOCKED" in r.stdout + r.stderr, (bad, r.stdout + r.stderr)
+    assert _hook_run(v, str(ROOT)).returncode == 0
+
+
+def test_hostile_names_never_reach_the_terminal_raw_nor_areas_txt(tmp_path):
+    build(tmp_path, {**MINI, "Evil\nFolder/n.md": "x\n", "Spaced Folder/s.md": "y\n", "x\nFAKE LINE.md": "z\n",
+                     "\x1b[31mred.md": "r\n"})
+    plan = json.loads(adopt(tmp_path, "--json").stdout)
+    assert "Evil\nFolder" not in plan["areas"] and "Spaced Folder" in plan["areas"]
+    out = adopt(tmp_path).stdout
+    assert "\nFAKE LINE" not in out and "\x1b" not in out
+    git_init(tmp_path)
+    assert adopt(tmp_path, "--apply", "--yes").returncode in (0, 1)
+    areas = (tmp_path / "areas.txt").read_text(encoding="utf-8")
+    assert "Evil" not in areas and all(":" in l for l in areas.splitlines() if l and not l.startswith("#"))
+
+
+def test_a_note_with_a_newline_or_space_in_its_name_is_judged_by_the_hook(tmp_path):
+    v = tmp_path / "v"
+    build(v, MINI)
+    git_init(v)
+    assert adopt(v, "--apply", "--yes").returncode == 0
+    env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+           "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com", "LEAK_BLOCKLIST": str(v / "absent.txt")}
+    for name in ("Ideas/with space.md", "Ideas/new\nline.md"):
+        build(v, {name: "---\narea: ideas\n---\nsee [[a]] and [[ghost-nl]]\n"})
+        subprocess.run(["git", "-C", str(v), "add", "--", name], check=True)
+        r = subprocess.run(["git", "-C", str(v), "commit", "-m", "n"], capture_output=True, text=True, env=env)
+        assert r.returncode != 0 and "ghost-nl" in r.stdout + r.stderr, (name, r.stdout + r.stderr)
+        subprocess.run(["git", "-C", str(v), "reset", "-q"], check=True)
