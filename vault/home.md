@@ -15,3 +15,15 @@ The files that organize the work here:
 - [[_questions_about_me]], the onboarding questionnaire
 - [[memory/profile]], [[memory/patterns]] and [[memory/decisions]], the memory, only in your words
 - [[memory/ideas/_pains]], the queue of pains
+
+## Worksheets
+
+Fill-in sheets, each with a short list of questions. CSV versions of `pains` and `decisions-log` are in
+`worksheets/csv/`.
+
+- [[worksheets/product-brief]], who uses it, the problem, what it is not
+- [[worksheets/pains]], a log of pains with the literal quote
+- [[worksheets/audience]], who the work is for
+- [[worksheets/project-brief]], target, deadline, risk, what decides
+- [[worksheets/decisions-log]], what was decided and why
+- [[worksheets/weekly-review]], ten minutes a week

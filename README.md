@@ -65,6 +65,16 @@ project, `/open-session <name>` to start and `/close-session` to end the day. Th
 (install it from Obsidian's community plugins), and the optional connection map needs graphify: both are
 in the [tutorial](TUTORIAL.md).
 
+## Context, worksheets and pains
+
+Claude helps in proportion to the context it has, so the workbench teaches you to keep that context small,
+specific and in your own words.
+
+- [docs/CONTEXT.md](docs/CONTEXT.md): what loads in every session, what loads only on demand, where each thing lives, signs of bad context, and tips for personal, team and school use.
+- [docs/PRODUCT-AND-PAINS.md](docs/PRODUCT-AND-PAINS.md): how the workbench learns your product and collects your pains, and how to ask "what do I build first?".
+- Worksheets in [`vault/worksheets/`](vault/worksheets/): [product-brief](vault/worksheets/product-brief.md), [pains](vault/worksheets/pains.md), [audience](vault/worksheets/audience.md), [project-brief](vault/worksheets/project-brief.md), [decisions-log](vault/worksheets/decisions-log.md), [weekly-review](vault/worksheets/weekly-review.md). `pains` and `decisions-log` also come as CSV in `vault/worksheets/csv/` for Sheets or Excel.
+- `/know-my-product <project>`: interviews you one question at a time and fills the product brief with your words only.
+
 ## What keeps it healthy
 
 This is the foundation under the workbench. It is deliberately small and runs on Python's standard library only.

@@ -82,6 +82,9 @@ on its own; a note in `notes/` only shows up there through the link in the body.
 | `claude-corner` | when the user says they are leaving: Claude rereads, connects and tests outside `vault/`, and **only proposes** |
 | `onboard` | the first time and when the user wants to update the profile: one question at a time, the output is the user's own words |
 | `adapt-skill` | when the user wants a skill of their own from a worksheet in `skill-worksheets/`; Claude does not write the skill alone |
+| `know-my-product` | when the user wants Claude to understand their product and pains: one question at a time, fills `projects/<name>/product.md` in their words, proposes the pain ranking |
+
+How context loads and how to keep it small: `docs/CONTEXT.md`.
 
 ## Never
 
