@@ -2,11 +2,47 @@
   <img src="assets/banner-v2.svg" alt="cogiforge: a second brain that learns how you work. Obsidian and Claude Code. It writes nothing about you that you did not say." width="100%">
 </p>
 
+<p align="center">
+  <a href="https://github.com/Arthuro0103/cogiforge/actions/workflows/prova.yml"><img src="https://github.com/Arthuro0103/cogiforge/actions/workflows/prova.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/license-MIT-555?labelColor=1c1c1c" alt="MIT license">
+  <img src="https://img.shields.io/badge/python-3.10%E2%80%933.13-555?labelColor=1c1c1c" alt="Python 3.10 to 3.13">
+</p>
+
 **cogiforge is a second brain on Obsidian + Claude Code that learns how you work, and writes nothing about you that you did not say.** *Cogito, ergo sum*: a creative workbench for your head. It holds your work, your school and your personal life in one place, **organizes your projects, ideas and tasks, helps you write and plan, and gets better with you** as you use it.
 
 > **Status: alpha (v0.x).** Built from the author's own working vault and used, so far, only by the
 > author. Skills, docs and the vault template are in English. If you want to use it in Portuguese, see
 > docs/TRANSLATING.md (glossary and a checklist). Step by step for each part: [TUTORIAL.md](TUTORIAL.md).
+
+## Quickstart
+
+You need `git`, Python 3.10+, Obsidian and Claude Code. macOS and Linux are what the CI proves. Windows has an installer (`install.ps1`) and an informational CI job that is not guaranteed green; see [docs/WINDOWS.md](docs/WINDOWS.md), where every unconfirmed claim is marked `[VERIFY]`. To run this
+repo's own tests you also need `pytest` (`python3 -m pip install pytest`); nothing else in the repo uses it.
+
+```sh
+git clone https://github.com/Arthuro0103/cogiforge.git
+cd cogiforge
+sh install.sh      # turns the pre-commit hook on and proves it works
+claude              # run Claude Code at the repo root
+```
+
+Then, inside Claude Code, type `/cf-onboard`. Open `vault/` as a vault in Obsidian. When you have a
+project, `/cf-open-session <name>` to start and `/cf-close-session` to end the day. The example project
+`vault/projects/example-my-first-project/` shows the shape. Tasks need the public TaskNotes plugin
+(install it from Obsidian's community plugins), and the optional connection map needs graphify: both are
+in the [tutorial](TUTORIAL.md).
+
+![Onboarding and the commit gate: one question at a time, and a note that links to nothing cannot be committed.](assets/demo.gif)
+
+*Onboarding and the commit gate, 14 s. Terminal and Obsidian recreated in code from the repo's real outputs; not a screen recording.*
+
+## Who it is for
+
+| You | Start here |
+|---|---|
+| **Just you** | `/cf-onboard`, then `/cf-open-session <project>` and `/cf-close-session`. |
+| **Studying** | `/cf-study <topic>`: you choose how you learn, recall comes first, "mastered" needs a retest on another day. See [docs/STUDENTS.md](docs/STUDENTS.md). |
+| **A team or a school** | `sh install.sh --team <handle>`, one folder per person, admin and member roles. See *Teams and schools* below, [docs/SYNC.md](docs/SYNC.md) and [docs/WINDOWS.md](docs/WINDOWS.md). |
 
 <p align="center">
   <img src="assets/brain-graph.svg" alt="A brain drawn as a graph of notes and links, with one lit path from an idea to the note that uses it." width="100%">
@@ -60,24 +96,6 @@ Three loops, and in all of them the decision stays with you:
 One hard rule runs through everything: **Claude does not write anything about you that you did not say.**
 It proposes; a line only enters your profile with your "yes", with the date and your literal quote.
 
-## Quickstart
-
-You need `git`, Python 3.10+, Obsidian and Claude Code. macOS and Linux are what the CI proves. Windows has an installer (`install.ps1`) and an informational CI job that is not guaranteed green; see [docs/WINDOWS.md](docs/WINDOWS.md), where every unconfirmed claim is marked `[VERIFY]`. To run this
-repo's own tests you also need `pytest` (`python3 -m pip install pytest`); nothing else in the repo uses it.
-
-```sh
-git clone https://github.com/Arthuro0103/cogiforge.git
-cd cogiforge
-sh install.sh      # turns the pre-commit hook on and proves it works
-claude              # run Claude Code at the repo root
-```
-
-Then, inside Claude Code, type `/cf-onboard`. Open `vault/` as a vault in Obsidian. When you have a
-project, `/cf-open-session <name>` to start and `/cf-close-session` to end the day. The example project
-`vault/projects/example-my-first-project/` shows the shape. Tasks need the public TaskNotes plugin
-(install it from Obsidian's community plugins), and the optional connection map needs graphify: both are
-in the [tutorial](TUTORIAL.md).
-
 ## Teams and schools
 
 ![One shared vault in the middle and one personal folder per person around it; an admin and members; the pre-commit gate guards the personal folders.](assets/team.svg)
@@ -129,11 +147,12 @@ dated failure, and each one has a test that fails without it: see [WHY.md](WHY.m
 
 ## What is verified, and what is not
 
-Measured on 2026-10-07, after team mode, the importers and the new skills were merged, on one machine (macOS), in the merged checkout:
+Measured on 2026-10-07, after team mode, the importers, the sync guard, `/cf-adopt`, `/cf-study`, private folders and the `cf-` skill names were merged, on one machine (macOS):
 
-- Tests: after `sh install.sh` and `python3 -m pip install pytest`, `python3 -m pytest -q` gave **371 passed, 2 skipped**. Run before `sh install.sh`, one test fails on purpose: it checks that the hook is active.
-- Mutation: `python3 tests/mutate.py` breaks every check one at a time and gave **196 of 196 mutants killed, 0 alive** (measured on the team-mode branch; the merge changed none of the mutated files). `python3 tests/mutate.py --dry` only checks, in seconds, that every mutant still applies (196 do, 0 inapplicable, run again on the merged tree), so a rename that breaks one is caught before the long run.
-- CI: the run for the merged version ([run 37625368269](https://github.com/Arthuro0103/cogiforge/actions/runs/37625368269), 2026-10-07, commit `a73202a`) had **8 of 8 jobs green**, on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. Each job starts from a clean checkout, runs `install.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end.
+- Tests: after `sh install.sh` and `python3 -m pip install pytest`, `python3 -m pytest -q` gave **543 passed, 2 skipped** (commit `79ecad2`). Run before `sh install.sh`, one test fails on purpose: it checks that the hook is active.
+- Mutation: `python3 tests/mutate.py` breaks every check one at a time and gave **236 of 236 mutants killed, 0 alive, 0 inapplicable** (commit `2d54a04`; the later commit `79ecad2` changed only `tools/adopt.py`, its tests and its skill, which the mutation check does not cover). `python3 tests/mutate.py --dry` only checks, in seconds, that every mutant still applies (all 236 apply), so a rename that breaks one is caught before the long run.
+- CI: the run for commit `2d54a04` ([run 37642244068](https://github.com/Arthuro0103/cogiforge/actions/runs/37642244068), 2026-10-07) had **8 of 8 jobs green**, on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. Each job starts from a clean checkout, runs `install.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end.
+- Windows: the first `windows-latest` run (same commit, informational job) installed fine with `install.ps1` (hook active, ring selftest passed), then **468 tests passed and 67 failed**. The failures sit mostly in the tests of the leak scanner and of `adopt`; they are not fixed yet, so Windows is **not** claimed as supported.
 - Two tests compare this link checker with the author's private vault, which is not in this repo. They are **skipped** (reported as skipped, not as passed).
 - **Nobody other than the author has used it yet.** If you are the first, tell us where you got stuck: that is the most useful thing you can send.
 
