@@ -39,6 +39,10 @@ git config core.hooksPath .githooks || fail "could not write core.hooksPath."
 python3 core/ring.py --selftest >/dev/null 2>&1 \
     || { python3 core/ring.py --selftest >&2; fail "the ring selftest failed: the gate does not catch an orphan."; }
 
+# vault/private.txt -> read-deny rules for Claude Code in .claude/settings.json (idempotent; a malformed
+# settings file is an error here, never overwritten). See docs/PRIVATE.md for what this does NOT cover.
+python3 core/private.py --apply >/dev/null || { python3 core/private.py --apply >&2; fail "could not write the read-deny rules from vault/private.txt into .claude/settings.json."; }
+
 if [ -n "$TEAM" ]; then
     email=$(git config user.email)
     [ -n "$email" ] || fail "team mode needs your git e-mail: git config user.email you@example.com"
@@ -55,4 +59,5 @@ if [ -n "$TEAM" ]; then
 fi
 
 echo "OK — hook active (core.hooksPath=.githooks) and the ring selftest passed."
+[ -f vault/private.txt ] && echo "Claude Code read-deny rules from vault/private.txt are in .claude/settings.json."
 echo "Test it yourself: create a note without a link in vault/notes/ and run git commit."

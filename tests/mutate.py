@@ -171,6 +171,21 @@ PIECES = {
         ("broken selftest passes", '    || { python3 core/ring.py --selftest >&2; fail "the ring selftest failed: the gate does not catch an orphan."; }', '    || true'),
         ("outside a git repo passes", "    || fail \"this is not a git repository. Use 'git clone', not the zip, or run 'git init' here.\"", '    || true'),
     ]),
+    "private": dict(file="core/private.py", suite=["tests/test_private.py"], texts=[
+        ("rules are not derived from the lines", 'return [f"Read({PREFIX}{g})" for g in globs]', 'return ["Read(/vault/people/*/private/**)"]'),
+        ("rules are not anchored", 'PREFIX = "/vault/"', 'PREFIX = "vault/"'),
+        ("duplicates are added", 'added = [r for r in wanted if r not in deny]', 'added = list(wanted)'),
+        ("foreign rules are dropped", 'deny.extend(added)', 'deny[:] = added'),
+        ("malformed JSON is overwritten", 'except (OSError, UnicodeDecodeError, ValueError) as e:', 'except (OSError, UnicodeDecodeError) as e:'),
+        ("wrong shape is accepted", 'if not isinstance(perms, dict) or not isinstance(perms.get("deny", []), list):', 'if False:'),
+        ("dot-dot is accepted", 'if ".." in line.split("/"):', 'if False:'),
+        ("leading slash is accepted", 'if line.startswith(("/", "~", "!")) or DRIVE.match(line) or "\\\\" in line:', 'if False:'),
+        ("--check never fails", 'return 1 if missing else 0', 'return 0'),
+    ]),
+    "private-install": dict(file="install.sh", suite=["tests/test_private.py"], texts=[
+        ("install does not apply the rules", 'python3 core/private.py --apply >/dev/null || {', 'true || {'),
+        ("install ignores a failed apply", 'fail "could not write the read-deny rules', 'true "could not write the read-deny rules'),
+    ]),
     "ask": dict(file="tools/ask.py", suite=["tools/test_ask.py"], texts=[
         ("no accent folding", '    return "".join(c for c in folded if not unicodedata.combining(c))', '    return folded'),
         ("path not indexed", 'tokens(c["path"]) * 2 + tokens(c["text"])', 'tokens(c["text"])'),
