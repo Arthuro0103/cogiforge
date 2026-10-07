@@ -97,6 +97,7 @@ on its own; a note in `notes/` only shows up there through the link in the body.
 | `whats-real` | before a demo, delivery or launch: what works (with proof), what is simulated, what is unknown; checked again afterwards |
 | `adapt-skill` | when the user wants a skill of their own from a worksheet in `skill-worksheets/`; Claude does not write the skill alone |
 | `import-knowledge` | when the user brings an existing base (another vault, a folder, documents): runs `tools/import.py`, reads the report, then proposes the triage from the inbox to `notes/`, target first; the user approves |
+| `adopt` | when the user already has an Obsidian vault and does not want to start from zero or copy anything: dry-runs `tools/adopt.py`, explains the plan and the debt measured today, and applies only after a clear yes |
 | `know-my-product` | when the user wants Claude to understand their product and pains: one question at a time, fills `projects/<name>/product.md` in their words, proposes the pain ranking |
 
 How context loads and how to keep it small: `docs/CONTEXT.md`.

@@ -163,6 +163,24 @@ one into `notes/` takes a named target and a link in the body: the `import-knowl
 Ignored and listed: `.git`, `.obsidian`, `.trash`, `node_modules`, `__pycache__` and hidden files. Skipped and
 listed: iCloud files that are not downloaded yet, unreadable files and symlinks.
 
+## Adopting a vault you already have
+
+If your notes already live in an Obsidian vault, you do not need to start from zero or copy them anywhere.
+`tools/adopt.py` works in place:
+
+```sh
+python3 tools/adopt.py ~/my-vault                  # dry run (the default): prints the plan, writes nothing
+python3 tools/adopt.py ~/my-vault --apply --yes    # writes only what the plan listed
+```
+
+The plan lists the areas it infers from your top-level folders (a proposed `areas.txt`), what it would install
+(a pre-commit hook that calls this repo's gate, ring and leak scan, plus a small config), and the **debt you have
+today**: orphan notes, dead links and notes without `area:`, saved as `.cogiforge/baseline.json`. The hook only
+judges the notes in each commit, so the old debt blocks nothing; it only stops new problems from entering.
+An existing file is never overwritten (it becomes a conflict in the report), no note is ever touched, and the tool
+never runs `git init` for you. Notes that are iCloud placeholders not yet downloaded, or unreadable, are skipped
+and listed, never counted as fine. The `adopt` skill walks you through it.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
