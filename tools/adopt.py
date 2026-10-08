@@ -97,14 +97,17 @@ cd "$root" || exit 1
 home=$(git config --local --get cogiforge.home)
 block() { echo "  COMMIT BLOCKED: $1" >&2; echo "  Fix: git config --local cogiforge.home <absolute path of your cogiforge checkout>" >&2; exit 1; }
 case "$home" in
-    /*) ;;
+    /*|[A-Za-z]:/*) ;;  # POSIX, or a Windows drive path written with `/` (D:/a/x)
     *) block "cogiforge.home is not set to an absolute path." ;;
 esac
 case "$home/" in
     */../*|*/./*|*//*) block "cogiforge.home has a . or .. or empty component." ;;
 esac
 [ -d "$home" ] || block "cogiforge.home is not a folder."
-[ "$(cd "$home" 2>/dev/null && pwd -P)" = "$home" ] || block "cogiforge.home is not a canonical path (a symlink in it?)."
+canon=$(cd "$home" 2>/dev/null && pwd -P)
+# Git for Windows prints /d/a/x for D:/a/x; cygpath -m gives back the drive form that cogiforge.home uses
+if command -v cygpath >/dev/null 2>&1; then canon=$(cygpath -m "$canon" 2>/dev/null); fi
+[ "$canon" = "$home" ] || block "cogiforge.home is not a canonical path (a symlink in it?)."
 for f in core/gate.py core/ring.py core/leak.py; do
     [ -f "$home/$f" ] || block "cogiforge.home does not contain $f."
 done
@@ -181,7 +184,7 @@ ALLOWED_KEYS = [
     (r"user\.name", r"[\w.@+' ,()-]{1,100}"), (r"user\.email", r"[\w.@+'-]{1,100}"),
     (r"cogiforge\.home", None),  # compared with the checkout path, not by pattern
 ]
-ROOT_SAFE = re.compile(r"^/[A-Za-z0-9_./+@~ -]+$")  # a path adopt can write to the config and read back exactly
+ROOT_SAFE = re.compile(r"^(?:[A-Za-z]:)?/[A-Za-z0-9_./+@~ -]+$")  # a path adopt can write to the config and read back exactly
 MAX_CONFIG_BYTES = 64 * 1024
 CLEAN_GIT_ENV_KEEP = ("PATH",)
 
@@ -189,6 +192,9 @@ CLEAN_GIT_ENV_KEEP = ("PATH",)
 def clean_git_env(home):
     """An environment that gives git nothing to read or run beyond the file it is pointed at."""
     env = {k: os.environ[k] for k in CLEAN_GIT_ENV_KEEP if k in os.environ}
+    if sys.platform == "win32":  # git for Windows cannot start without these two
+        env.update({k: os.environ[k] for k in ("SYSTEMROOT", "USERPROFILE") if k in os.environ})
+        env["USERPROFILE"] = str(home)
     env.update({"HOME": str(home), "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null",
                 "GIT_CONFIG_SYSTEM": "/dev/null", "GIT_TERMINAL_PROMPT": "0"})
     return env
@@ -219,7 +225,7 @@ def judge(pairs):
                 if val is None:
                     why = "key without a value"
                 elif key == "cogiforge.home":
-                    why = None if val == str(ROOT) else "cogiforge.home is not this checkout"
+                    why = None if val == ROOT.as_posix() else "cogiforge.home is not this checkout"
                 elif not re.fullmatch(vre, val):
                     why = "value outside the accepted pattern"
                 break
@@ -422,7 +428,7 @@ def guard(vault):
             blocking.append("the repo's .git/config has content outside the allowlist of what `git init` writes, so adopt "
                             "will not run git against this vault. Read .git/config, remove what is not yours, then adopt again: "
                             + "; ".join(f"entry `{safe(k)}{'' if v is None else ' = ' + safe(v)[:80]}` ({why})" for k, v, why in violations[:8]))
-    if not ROOT_SAFE.match(str(ROOT)):
+    if not ROOT_SAFE.match(ROOT.as_posix()):
         blocking.append("the path of this cogiforge checkout has characters adopt cannot verify safely: move the checkout")
     for rel in (AREAS, HOOK, BASELINE):
         why = unsafe_path(vault, rel)
@@ -554,7 +560,7 @@ def build_plan(vault):
                       "status": "create"})
     item(BASELINE, "debt measured today, saved as the baseline")
     hooks_path, home_cfg = lookup(entries, "core.hookspath"), lookup(entries, "cogiforge.home")
-    items.append({"path": "git config cogiforge.home", "what": f"where the cogiforge checkout lives: {ROOT}",
+    items.append({"path": "git config cogiforge.home", "what": f"where the cogiforge checkout lives: {ROOT.as_posix()}",
                   "status": "already set" if home_cfg else "set"})
     if blocking:
         items.append({"path": "git config core.hooksPath", "what": "activate the hook", "status": "NOT set (see pending)"})
@@ -639,7 +645,7 @@ def apply(plan, vault):
     # order: the config key first (if git fails, nothing else was written), the files, and the activation LAST
     for i in plan["items"]:
         if i["path"] == "git config cogiforge.home" and i["status"] == "set":
-            write_local_config(vault, "cogiforge.home", str(ROOT))
+            write_local_config(vault, "cogiforge.home", ROOT.as_posix())
             written.append("git config cogiforge.home")
     for i in plan["items"]:
         rel = i["path"]

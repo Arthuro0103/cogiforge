@@ -98,6 +98,7 @@ def run(args, cwd, blocklist=None, env=None):
     if env is not None:  # explicit env: replaces the default one (so a test can leave LEAK_BLOCKLIST unset)
         base = {"PATH": "/usr/bin:/bin:/usr/local/bin", **env}
     if sys.platform == "win32":  # a replaced env still needs the Windows basics; Path.home() reads USERPROFILE, not HOME
+        base["PATH"] = os.environ["PATH"]  # git (called by leak.py) is not under /usr/bin here
         base.setdefault("SYSTEMROOT", os.environ.get("SYSTEMROOT", ""))
         base.setdefault("USERPROFILE", base.get("HOME", str(cwd)))
     return subprocess.run([sys.executable, str(SCRIPT), *args], cwd=cwd, env=base,

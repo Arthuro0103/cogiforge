@@ -186,7 +186,7 @@ def main(argv=None) -> int:
         print("Nothing was written.", file=sys.stderr)
         return 1
     if args.dry_run:
-        print(f"DRY RUN (nothing written). Would create:\n--- {plan['file'].relative_to(vault)}\n{plan['text']}"
+        print(f"DRY RUN (nothing written). Would create:\n--- {plan['file'].relative_to(vault).as_posix()}\n{plan['text']}"
               f"--- append to projects/_index.md after the last table row:\n{plan['row']}")
         return 0
     plan["dir"].mkdir(parents=True)
