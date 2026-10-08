@@ -183,3 +183,72 @@ def test_install_with_an_old_python_fails(clone, tmp_path):
     (fake / "python3").chmod(0o755)
     r = sh(clone, "sh", "install.sh", env={"PATH": f"{fake}:{os.environ['PATH']}"})
     assert r.returncode != 0 and "3.10" in r.stdout + r.stderr
+
+
+# ---- target (warns) and budget (blocks the commit that makes a loaded file bigger while over the ceiling) -------
+
+LINKED = "---\narea: life\n---\n# A linked note\n\nBack to [[home]].\n"
+
+
+def test_a_new_note_without_target_warns_and_the_commit_passes(clone):
+    r = commit(clone, "vault/notes/life/n.md", LINKED)
+    assert r.returncode == 0, r.stdout + r.stderr
+    out = r.stdout + r.stderr
+    assert "WARNING" in out and "notes/life/n.md" in out and "target: none" in out
+
+
+def test_a_new_note_with_a_target_does_not_warn(clone):
+    r = commit(clone, "vault/notes/life/n.md", LINKED.replace("area: life\n", "area: life\ntarget: none\n"))
+    assert r.returncode == 0 and "WARNING" not in r.stdout + r.stderr
+
+
+def test_an_edited_note_is_not_asked_for_a_target(clone):
+    commit(clone, "vault/notes/life/n.md", LINKED)
+    r = commit(clone, "vault/notes/life/n.md", LINKED + "\nmore text\n")
+    assert r.returncode == 0 and "target" not in (r.stdout + r.stderr).replace("NOT_VERIFIED", "")
+
+
+def test_target_block_in_gate_txt_blocks_the_commit(clone):
+    (clone / "vault/gate.txt").write_text("orphan: block\ntarget: block\n", encoding="utf-8")
+    r = commit(clone, "vault/notes/life/n.md", LINKED)
+    out = r.stdout + r.stderr
+    assert r.returncode == 1 and "COMMIT BLOCKED" in out and "no target" in out and "FAILS" in out
+
+
+def test_a_malformed_target_mode_blocks_the_commit(clone):
+    (clone / "vault/gate.txt").write_text("orphan: block\ntarget: maybe\n", encoding="utf-8")
+    r = commit(clone, "vault/notes/life/n.md", LINKED)
+    assert r.returncode == 1 and "maybe" in r.stdout + r.stderr
+
+
+def test_growing_a_loaded_file_over_the_ceiling_blocks_the_commit(clone):
+    r = commit(clone, "vault/CLAUDE.md", (clone / "vault/CLAUDE.md").read_text(encoding="utf-8") + "x" * 33_000)
+    out = r.stdout + r.stderr
+    assert r.returncode == 1 and "COMMIT BLOCKED" in out and "ceiling" in out and "tools/cool.py" in out
+
+
+def test_a_commit_that_does_not_touch_the_loaded_files_passes_even_when_over(clone):
+    big = (clone / "vault/CLAUDE.md").read_text(encoding="utf-8") + "x" * 33_000
+    assert commit(clone, "vault/CLAUDE.md", big, "--no-verify").returncode == 0     # already over, committed on purpose
+    r = commit(clone, "vault/notes/life/n.md", LINKED.replace("area: life\n", "area: life\ntarget: none\n"))
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_a_commit_that_shrinks_a_loaded_file_over_the_ceiling_passes(clone):
+    big = (clone / "vault/CLAUDE.md").read_text(encoding="utf-8") + "x" * 40_000
+    commit(clone, "vault/CLAUDE.md", big, "--no-verify")
+    r = commit(clone, "vault/CLAUDE.md", big[:-5_000])
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+@pytest.mark.parametrize("missing", ["target.py", "budget.py"])
+def test_the_hook_without_a_new_check_is_an_incomplete_installation(clone, missing):
+    (clone / "core" / missing).unlink()
+    r = commit(clone, "docs/ok.txt", "clean\n")
+    assert r.returncode == 1 and "install.sh" in r.stdout + r.stderr
+
+
+def test_the_hook_leaves_its_edge_cache_inside_git_never_in_the_vault(clone):
+    assert commit(clone, "vault/notes/life/n.md", LINKED.replace("area: life\n", "area: life\ntarget: none\n")).returncode == 0
+    assert (clone / ".git" / "cogiforge-edges.json").is_file()
+    assert not list((clone / "vault").rglob("cogiforge-edges.json"))

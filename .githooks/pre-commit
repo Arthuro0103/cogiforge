@@ -1,13 +1,15 @@
 #!/bin/sh
 # pre-commit — the tap, not the bucket.
 #
-# Four guards, and all only look at what THIS commit carries (a gate that fails you for something you
+# Six guards, and all only look at what THIS commit carries (a gate that fails you for something you
 # did not do is a gate people learn to skip):
 #   1. ring   a vault/ .md note with no inbound or outbound link
 #   2. leak   machine path, e-mail, phone, CPF and your private blocklist
 #   3. people team mode only (vault/roles.txt exists): a member touching another person's folder,
 #             roles.txt, areas.txt, or creating a project. Without roles.txt it is silent.
 #   4. sync   a sync-tool conflict or duplicate file (`x (1).md`, conflicted copy, .sync-conflict-, .icloud)
+#   5. target a NEW note under vault/notes/ with no `target:` (a warning; vault/gate.txt `target: block` blocks)
+#   6. budget a commit that makes a file loaded in every session bigger while the context is over its ceiling
 #
 # Versioned in .githooks/ because a hook in .git/hooks/ vanishes on the next clone, and
 # `core.hooksPath` is LOCAL config: after cloning, run `sh install.sh`.
@@ -16,7 +18,7 @@
 root=$(git rev-parse --show-toplevel) || exit 1
 cd "$root" || exit 1
 
-for f in core/ring.py core/leak.py core/people.py core/conflicts.py; do
+for f in core/ring.py core/leak.py core/people.py core/conflicts.py core/target.py core/budget.py; do
     if [ ! -f "$f" ]; then
         echo "" >&2
         echo "  ⛔ COMMIT BLOCKED — $f does not exist: the installation is incomplete." >&2
@@ -96,6 +98,36 @@ if [ "$rc" -ne 0 ]; then
         echo "  delete the other, then commit again. See docs/SYNC.md."
     fi
     blocked=1
+fi
+
+# 5. the target. A new note says what it is for. rc 0 = ok or a warning; rc 1 = vault/gate.txt asked to block; rc 2/3 = it could not judge
+if git diff --cached --name-only --diff-filter=A | grep -q '^vault/notes/.*\.md$'; then
+    python3 core/target.py --vault vault --staged >"$out" 2>&1
+    rc=$?
+    if [ "$rc" -gt 0 ]; then
+        echo ""
+        echo "  ⛔ COMMIT BLOCKED — a new note has no target (vault/gate.txt: target: block), or the check could not run"
+        echo ""
+        sed 's/^/     /' "$out" | head -15
+        blocked=1
+    fi
+    if grep '^WARNING' "$out" >/dev/null 2>&1; then
+        sed -n '/^WARNING/,$p' "$out" | sed 's/^/  /'
+    fi
+fi
+
+# 6. the budget. rc 1 = this commit grows a loaded file and the context is over its ceiling; rc 3 = it could not measure (a warning, not a block)
+python3 core/budget.py --vault vault --root . --staged >"$out" 2>&1
+rc=$?
+if [ "$rc" -eq 1 ]; then
+    echo ""
+    echo "  ⛔ COMMIT BLOCKED — the context a session loads is over its ceiling, and this commit makes it bigger"
+    echo ""
+    sed 's/^/     /' "$out" | head -24
+    blocked=1
+fi
+if [ "$rc" -eq 3 ]; then
+    grep 'NOT_VERIFIED' "$out" | sed 's/^/  /'
 fi
 
 [ "$blocked" -eq 0 ] || { echo "  Deliberate bypass: git commit --no-verify"; echo ""; exit 1; }

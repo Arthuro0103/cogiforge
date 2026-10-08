@@ -152,6 +152,102 @@ there, and the folder is exempt from the orphan rule (like `inbox/`). A dead lin
 `test_only_tasks_at_the_root_is_exempt_not_a_similar_name`. There are three dedicated mutants in
 `tests/mutate.py`. The tests were written before the fix and failed.
 
+### 11. Notes were kept and never used (Oct 8)
+
+**What broke.** The author's own vault holds 3,795 notes. Measured by `type:`, the share of notes that ever
+reached a project file was 4 of 4 for notes born in a conversation, 19 of 165 for videos, 11 of 199 for books and
+**0 of 43** for loose archive files. The notes were kept, linked (the orphan gate saw to that) and never used: a
+link between two notes proves they were filed, not that anything came out of them.
+
+**The rule.** A note under `notes/` is **used** when something that leaves the notes points at it or answered
+from it: a project file (anything under `projects/`) or a note of `type:` article, brief or routine links to it, or
+a `/cf-ask` answer that passed `ask.py cite --log` cited it. Everything else is unused; unused and `--days` old
+(default 90) is **stale**, unused and younger is **idle**, and a note with no readable `date:` is **undated**,
+counted and never guessed. `tools/usage.py` reports it by area. With no note it says `NOT_VERIFIED`, never "0% stale".
+`/cf-open-session` and `/cf-close-session` bring back up to 3 unused notes of the project of the day.
+
+**What it does not say.** A link from a project file is evidence that the note was **put to use**, not that it
+helped. The third signal one would want, "the target the note declared changed", is not measured: it needs the
+history of the target file, and an honest zero is better than a guess. And the only vault it has been measured on is
+the author's: nobody else has used it yet.
+
+**Who catches it.** `tools/usage.py`; the log is written by `tools/ask.py cite --log`.
+**The tests.** `tools/test_usage.py` (a project file, an output type and an answer count; a plain note, a self link,
+a link in code and a link out do not; the stale limit is inclusive at exactly 90 days; no notes is rc 3) and
+`tools/test_ask.py::test_a_failed_citation_logs_nothing`. 19 mutants in `tests/mutate.py` (`usage`).
+
+### 12. A commit gate that reads the whole vault gets slower with every note (Oct 8)
+
+**What broke.** Nobody had measured a big vault. On a synthetic one with the shape of the author's (6 areas, links
+by full path, a heavy tail of links, @@N10K@@ notes), committing ONE note took @@PRE_BEFORE@@ in the hook, almost all of
+it in `core/ring.py`, which read and parsed every note to decide whether the one in the commit was an orphan. A
+gate that costs seconds is a gate people skip (see 8).
+
+**The rule.** The commit of one note takes under 2 seconds at 10,000 notes. The ring keeps the links it read from
+each note in `<git dir>/cogiforge-edges.json` (never in the vault, never committed), keyed by the file's size and
+modification time, and re-reads only what changed. The answer must be **identical** to the one without the
+cache, so: a file changed in the last 2 seconds is never cached (size and time could not tell two edits apart), a
+corrupt, old or unwritable cache is ignored and rebuilt, and what the cache keeps is the raw link text, not where it
+pointed, so a note created later still resolves.
+
+**Who catches it.** `core/ring.py` (`--gate --stage` is the only path that uses the cache).
+**The tests.** `tests/test_ring_cache.py` (22 cases, among them `test_a_stale_cache_never_hides_an_orphan_in_the_commit`
+and `test_a_corrupt_cache_is_ignored_and_rewritten`, which went red on the first draft: a cache whose `notes` was not a
+map crashed the gate). 16 mutants in `tests/mutate.py` (`ring`). `tools/bench.py` measures it again whenever you want.
+
+### 13. A project root that grows with the project (Oct 8)
+
+**What broke.** Each project root carries a generated list of every file of the project, so that none is an
+orphan. `/cf-open-session` reads the root. At 10,000 synthetic notes, with a few projects holding most of the files
+(as in a real vault), the biggest root was **26 KB**: opening that project cost more than the whole fixed context.
+
+**The rule.** A root lists at most 40 files itself. Past that it keeps one link, `[[projects/<name>/_files|all N files of
+this project]]`, and the full list moves to a generated `_files.md` in the same folder. Every file still has an edge
+(root, then `_files`, then file), so nothing becomes an orphan; `_files.md` goes away when the project shrinks back, and
+a `_files.md` the user wrote is never deleted.
+
+**Who catches it.** `tools/hub.py` (and `hub.py --check` for the list).
+**The tests.** `tools/test_hub.py` (the boundary at exactly 40 and 41 files, the root under 600 bytes at 500 files, no
+orphan after the move). 10 mutants in `tests/mutate.py` (`hub`).
+
+### 14. The context a session loads is cut in silence (Sep 22, and measured Oct 8)
+
+**What broke.** On Sep 22, in the author's vault, an index that loaded in every session grew past the point where it
+is cut, and the cut was silent: a new session answered "I do not know" to 3 of 3 questions whose hook had been
+cut off the end. On Oct 8 the same question was asked of this repo. The empty skeleton already loads **24.5 KB**
+before any work, and 11.6 KB of that is the `description` of the 14 skills; the three memory files are what grows
+with use, and nothing watched them.
+
+**The rule.** The bytes a session loads have a ceiling, and the commit that crosses it says so. `core/budget.py` counts
+both `CLAUDE.md` files, the three memory files and every skill description (ceiling 32,000 bytes, about 8k tokens:
+the skeleton plus about 7 KB of what you say), and, for opening a project, its root, the 3 newest diary entries and 5
+open tasks (ceiling 48,000). The hook blocks a commit only when it makes one of those files **bigger** while the total is
+over: a commit that shrinks, or touches something else, always passes, so the way out is never blocked. The fix is
+`tools/cool.py`: the older dated lines of a memory file move, word for word, to `memory/archive/`, one link stays
+behind, and it writes only with `--apply` and the user's yes (rule 2 of the repo: nothing about the user is rewritten).
+
+**What it does not do.** It does not shorten the skill descriptions, which are the biggest piece (a decision for the
+skill author, since each one is what lets Claude know when to use it).
+
+**Who catches it.** `core/budget.py` through `.githooks/pre-commit`.
+**The tests.** `tests/test_budget.py` (the ceiling is inclusive and 1 byte over fails; a shrinking commit passes while over;
+a skill that grows counts), `tests/test_hook_e2e.py::test_growing_a_loaded_file_over_the_ceiling_blocks_the_commit`,
+`tools/test_cool.py` (the whole text is conserved, the archive is never an orphan). 19 mutants (`budget`), 15 (`cool`).
+
+### 15. A new note that says nothing about what it is for (Oct 8)
+
+**What broke.** "The target comes first" lived only in the manual (`vault/CLAUDE.md`): an item is only processed when a file
+that already existed changed. Nothing checked it, so the notes born from loose files reached a project 0 times in 43.
+
+**The rule.** A **new** note under `notes/` declares `target:` (a path that exists, or `none`). Without it the commit
+only gets a warning: quick capture is never blocked. Whether to block is the user's choice, and it is one line:
+`target: block` in `vault/gate.txt`. `target: none` is a real answer, not a way around the check: it says out loud that
+the note changes nothing yet.
+
+**Who catches it.** `core/target.py` through `.githooks/pre-commit`; the path itself is judged by `gate.py` (`dead-target`).
+**The tests.** `tests/test_target.py` (a note that is only edited, and `inbox/`, `tasks/`, `projects/`, are never asked; the
+two modes; a bad mode is rc 2) and the end-to-end cases in `tests/test_hook_e2e.py`. 13 mutants (`target`).
+
 ## What is not covered yet
 
 ### A regex that cut the extension and fabricated 18 "dead" paths (Sep 6)

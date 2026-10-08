@@ -6,7 +6,7 @@ this script only retrieves passages and verifies citations.
 
 Usage:
     python3 tools/ask.py search "<question>" [--vault PATH] [--top N] [--links] [--json]
-    python3 tools/ask.py cite <answer.md> [--vault PATH]
+    python3 tools/ask.py cite <answer.md> [--vault PATH] [--log "<the question>"]
 
 How search works: every vault/**/*.md is split by H1-H3 headings into chunks. Each chunk keeps its
 path `note title > H2 > H3`, and that path is indexed (twice, so it weighs more) and printed. A big
@@ -21,10 +21,15 @@ marked `via link`, up to twice --top in total.
 How cite works: every [[path#Heading]] / [[path]] in the answer must exist in the vault. rc=0 all
 exist; rc=1 something is missing or the answer has no citation; rc=3 NOT_VERIFIED (the vault or the
 answer could not be read, or the vault has no chunks): a check that touched nothing is never OK.
+
+How the use of a note is measured: `cite --log "<question>"`, when every citation exists, appends one JSON
+line `{"date", "question", "cited"}` to vault/memory/ask-log.jsonl. tools/usage.py reads that file: a note that
+an answer cited counts as USED. Nothing is logged when a citation fails, and `search` never writes.
 """
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import math
 import re
@@ -204,6 +209,19 @@ def indent(text: str) -> str:
     return "\n".join("   | " + ln for ln in text.splitlines())
 
 
+ASK_LOG = Path("memory") / "ask-log.jsonl"
+QUESTION_MAX = 200
+
+
+def log_consultation(vault: Path, question: str, cited: list[str], today: str | None) -> None:
+    row = {"date": today or datetime.date.today().isoformat(), "question": " ".join(question.split())[:QUESTION_MAX],
+           "cited": sorted(cited)}
+    f = vault / ASK_LOG
+    f.parent.mkdir(parents=True, exist_ok=True)
+    with f.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
 def cmd_cite(a) -> int:
     try:
         answer = Path(a.answer).read_text(encoding="utf-8")
@@ -239,6 +257,9 @@ def cmd_cite(a) -> int:
     if bad:
         return 1
     print(f"OK: {len(seen)} distinct citation(s) exist in the vault")
+    if a.log is not None:
+        log_consultation(vault, a.log, sorted({p for p, _ in seen}), a.today)
+        print(f"logged in {ASK_LOG.as_posix()}")
     return 0
 
 
@@ -254,6 +275,8 @@ def main(argv: list[str]) -> int:
     c = sub.add_parser("cite")
     c.add_argument("answer")
     c.add_argument("--vault", default=str(VAULT))
+    c.add_argument("--log", metavar="QUESTION", help="when every citation exists, record this consultation in memory/ask-log.jsonl")
+    c.add_argument("--today", help=argparse.SUPPRESS)
     a = p.parse_args(argv)
     if a.cmd == "search":
         if a.top < 1:

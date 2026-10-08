@@ -3,7 +3,11 @@
 #   orphan: block   the commit is refused until the note is linked (the default; same as no file)
 #   orphan: warn    the same report is printed as a WARNING and the commit goes through
 #
-# Only the orphan check reads this file. The personal-data scanner (core/leak.py) never does:
+#   target: warn    a NEW note under notes/ with no `target:` in its frontmatter only gets a warning (the default)
+#   target: block   the same report blocks the commit (core/target.py)
+#
+# Only the orphan and target checks read this file. The personal-data scanner (core/leak.py) never does:
 # it always blocks, and no setting turns it off. A line this file cannot understand blocks the
 # commit with an error, so a typo never silently disables the check.
 orphan: block
+target: warn

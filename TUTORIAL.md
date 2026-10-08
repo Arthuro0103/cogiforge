@@ -383,6 +383,8 @@ most connected concepts and the surprising connections) and `graph.json`. To que
 | `a note in this commit has no edge in the graph` | Connect the note to another one that **exists**, with `[[full/path\|text]]` in the middle of the text. Or drop the capture in `vault/inbox/`. |
 | `personal data leak` + `file:line:type` | Remove the data from the file (the hook does not show the data, only the place). |
 | `NOT IN INDEX <project>` (from `hub.py`) | Add the project as a row inside the table in `vault/projects/_index.md`. |
+| `WARNING ... new note(s) without target:` | Not a block. Add `target:` to the note's header: the path of the file that already existed and that the note changes, or `target: none`. Writing `target: block` in `vault/gate.txt` makes the same report block. |
+| `the context a session loads is over its ceiling` | A file that loads in every session got bigger while the total is over 32,000 bytes. `python3 tools/cool.py memory/<file>.md` plans which older dated lines would move, word for word, to `vault/memory/archive/` (add `--apply` to do it). |
 | `NOT_VERIFIED: private blocklist missing` | Not an error. Create `~/.config/cogiforge/blocklist.txt` if you want to check the private part. |
 | `UNREADABLE` / exit code 3 from the gate | The file could not be read (permission, or not UTF-8 text). It does not mean "clean". |
 | `ERROR: ... is outside vault` | The gate only checks what is inside `vault/`. Copy the file inside. |
@@ -398,6 +400,8 @@ most connected concepts and the surprising connections) and `graph.json`. To que
 | look for personal data | `python3 core/leak.py .` |
 | rewrite the file list of each project | `python3 tools/hub.py` |
 | check that the hub is up to date | `python3 tools/hub.py --check` |
+| which notes were used and which sit still, by area | `python3 tools/usage.py` |
+| how many bytes a session loads before any work, against its ceiling | `python3 core/budget.py` |
 | run the repo tests (needs `pytest`; run **after** `sh install.sh`, otherwise the hook test fails on purpose) | `python3 -m pytest -q` |
 | break each check and require a red test | `python3 tests/mutate.py` |
 

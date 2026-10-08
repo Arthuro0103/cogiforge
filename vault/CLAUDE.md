@@ -38,7 +38,7 @@ born from a loose file, in 0 of 43. So:
 
 1. Name the target **before** writing: `project::` · `article::` · `question::` · `task::` · `none`.
    `none` is a legitimate answer; the item stays in the inbox with a date, it is not deleted.
-2. Write the note and the diff in the target in the same commit.
+2. Write the note and the diff in the target in the same commit. The note's frontmatter carries `target:` (the path that changed, or `none`); a new note under `notes/` without it only gets a warning from the commit hook (`target: block` in `gate.txt` makes it block).
 3. A direct conversation is worth more than the inbox. The inbox is a fallback.
 
 ## Writing rules
@@ -76,6 +76,7 @@ type: note
 area: learning
 project: example-my-first-project
 date: 2026-10-03
+target: none
 ---
 # A title that is a statement of up to ten words
 
