@@ -1,6 +1,6 @@
 ---
 name: cf-ask
-description: Answers a question about the user's own workbench using ONLY what the notes say, and cites every claim with [[path#Heading]] that a script then checks exists. Rewrites the question into 3-5 short queries, retrieves passages with tools/ask.py (local BM25, no API, no network), discards the irrelevant ones saying why, answers from what is left. If no passage supports the answer it says "the vault does not cover this". TRIGGERS - "ask the vault", "what do my notes say about X", "what do I know about X", "/cf-ask <question>". Do NOT trigger for questions about code or the world outside the vault, for writing or editing notes, for deciding between paths, nor to get to know the user (that is onboard).
+description: Answers a question about the user's own workbench using ONLY what the notes say, and cites every claim with [[path#Heading]] that a script then checks exists. Rewrites the question into 3-5 short queries, retrieves passages with tools/ask.py (local BM25, no API, no network), discards the irrelevant ones saying why, answers from what is left. If no passage supports the answer it says "the vault does not cover this". TRIGGERS - "ask the vault", "what do my notes say about X", "what do I know about X", "/cf-ask <question>". Do NOT trigger for questions about code or the world outside the vault, for writing or editing notes, for deciding between paths, nor to get to know the user (that is onboard). OPTIONAL MODE - "/cf-ask --try-first <question>" (or "let me try first"): it asks for the user's own attempt before showing the answer.
 ---
 
 # cf-ask: answer from the notes, and prove the citations exist
@@ -23,6 +23,26 @@ You are the intelligence here: `tools/ask.py` only retrieves and verifies. No AP
 6. **Read-only.** This skill writes nothing in `vault/`. The draft answer goes in a scratch file outside the repo.
 
 > Talk to the user in the language the user writes in. Never translate a quote.
+
+## Optional mode: try first (`--try-first`)
+
+**Off by default.** When the user does not ask for it, nothing below changes anything above.
+
+Trigger: the user writes `/cf-ask --try-first <question>`, or says "let me try first" / "me deixa tentar primeiro".
+
+Why it exists: reading an answer you did not first try to recall feels like learning and teaches less than trying first (retrieval practice, in `docs/`). Use it for questions the user wants to *learn*, not to look up.
+
+1. Do steps 1 to 3 (rewrite, search, read and discard) **silently**. Do NOT show a passage, a title or a hint yet.
+2. Ask once: "Write what you remember, in your own words. A few lines is enough. Optional: how sure are you, 0 to 100?" Then **STOP and wait** for the reply.
+3. "I do not remember" or "skip" counts as an attempt. Go on, without comment.
+4. Do steps 4 to 6 as usual (answer from the kept passages, run `cite`, deliver). Rules 1 to 6 still hold.
+5. After the delivered answer, add a short comparison, **built only from the answer you just checked**:
+   - **Matched:** what the user said that the passages support, with the citation.
+   - **Missing from your attempt:** what the passages say that the user did not mention, with the citation.
+   - **Not in the vault:** what the user said that no retrieved passage covers. Say "not in the vault", never "wrong": the vault may simply not have it.
+   - If the user gave a confidence, repeat it next to the result in one line (for example: "you said 70; you matched 2 of 3 points"). Do not grade the person.
+6. If the vault does not cover the question (rule 5), say so right after the attempt and skip the comparison.
+7. Read-only, as always: the comparison stays in the chat.
 
 ## The steps
 
@@ -71,3 +91,4 @@ The answer, then one line: `citations checked: <n>, rc=<rc>`. If nothing support
 - Fill a gap with general knowledge without marking it clearly as not from the vault.
 - Deliver an answer whose `cite` run failed or was not run.
 - Write a conclusion about the user that no note states.
+- In `--try-first` mode: show or paraphrase a retrieved passage before the user's attempt, or call an attempt "wrong".
