@@ -10,8 +10,8 @@
 
 **cogiforge is a second brain on Obsidian + Claude Code that learns how you work, and writes nothing about you that you did not say.** *Cogito, ergo sum*: a creative workbench for your head. It holds your work, your school and your personal life in one place, **organizes your projects, ideas and tasks, helps you write and plan, and gets better with you** as you use it.
 
-> **Status: alpha (v0.x).** Built from the author's own working vault and used, so far, only by the
-> author. Skills, docs and the vault template are in English. If you want to use it in Portuguese, see
+> **Status: alpha (v0.x).** Built from the author's own working vault. It is new, so expect rough edges:
+> if something breaks, open an issue. Skills, docs and the vault template are in English. If you want to use it in Portuguese, see
 > docs/TRANSLATING.md (glossary and a checklist). Step by step for each part: [TUTORIAL.md](TUTORIAL.md).
 
 ## Quickstart
@@ -155,7 +155,7 @@ Measured on 2026-10-07, after team mode, the importers, the sync guard, `/cf-ado
 - CI: the run for commit `2d54a04` ([run 37642244068](https://github.com/Arthuro0103/cogiforge/actions/runs/37642244068), 2026-10-07) had **8 of 8 jobs green**, on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. Each job starts from a clean checkout, runs `install.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end.
 - Windows: the first `windows-latest` run (same commit, informational job) installed fine with `install.ps1` (hook active, ring selftest passed), then **468 tests passed and 67 failed**. The failures sit mostly in the tests of the leak scanner and of `adopt`; they are not fixed yet, so Windows is **not** claimed as supported.
 - Two tests compare this link checker with the author's private vault, which is not in this repo. They are **skipped** (reported as skipped, not as passed).
-- **Nobody other than the author has used it yet.** If you are the first, tell us where you got stuck: that is the most useful thing you can send.
+- **It is new.** If something breaks or you get stuck, tell us where: that is the most useful thing you can send.
 
 ## Roadmap
 
