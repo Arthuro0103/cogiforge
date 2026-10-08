@@ -178,7 +178,8 @@ ALLOWED_KEYS = [
     (r"remote\." + _NAME + r"\.url", r"(?:(?:https?|ssh|git)://(?:[A-Za-z0-9_][A-Za-z0-9_.~%+-]*@)?[A-Za-z0-9][A-Za-z0-9_.-]*"
                                       r"(?::[0-9]{1,5})?(?:/[A-Za-z0-9_.~%+@:/-]*)?"
                                       r"|(?:[A-Za-z0-9_][A-Za-z0-9_.-]*@)?[A-Za-z0-9][A-Za-z0-9_.-]*:(?!//)[A-Za-z0-9_.~/+-]*"
-                                      r"|/" + _PATH + r"|\.{1,2}/" + _PATH + ")"),
+                                      r"|/" + _PATH + r"|\.{1,2}/" + _PATH
+                                      + r"|[A-Za-z]:[\\/]" + r"[A-Za-z0-9_./+~ \\-]*)"),  # a local clone on Windows: C:\x\y or C:/x/y
     (r"remote\." + _NAME + r"\.fetch", r"\+?[A-Za-z0-9_./*-]+:[A-Za-z0-9_./*-]+"),
     (r"branch\." + _NAME + r"\.remote", r"\.|[A-Za-z0-9_.-]+"), (r"branch\." + _NAME + r"\.merge", r"refs/[A-Za-z0-9_./-]+"),
     (r"user\.name", r"[\w.@+' ,()-]{1,100}"), (r"user\.email", r"[\w.@+'-]{1,100}"),
@@ -688,7 +689,12 @@ def run(args):
         if not sys.stdin.isatty():
             emit("\nNOT APPLIED: --apply needs --yes (or an interactive terminal). Nothing was written.", file=sys.stderr)
             return 2
-        if input("\nApply this plan? Type 'yes': ").strip().lower() != "yes":
+        try:
+            answer = input("\nApply this plan? Type 'yes': ").strip().lower()
+        except EOFError:  # on Windows a null stdin (NUL) reports isatty() True, but there is nobody to answer
+            emit("\nNOT APPLIED: --apply needs --yes (or an interactive terminal). Nothing was written.", file=sys.stderr)
+            return 2
+        if answer != "yes":
             emit("NOT APPLIED: no confirmation. Nothing was written.", file=sys.stderr)
             return 2
     try:

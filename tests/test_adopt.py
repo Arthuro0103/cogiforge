@@ -381,6 +381,8 @@ def test_the_validator_unit(tmp_path):
     assert ok("[core]\n\trepositoryformatversion = 0\n\tfilemode = true\n\tbare = false\n\tlogallrefupdates = true\n")
     assert ok("[core]\n\thooksPath = .githooks\n[cogiforge]\n\thome = " + ROOT.as_posix() + "\n")
     assert ok("[core]\n\tfilemode = true # a comment git itself understands\n")  # git says value=true, so it is judged as true
+    assert ok('[remote "origin"]\n\turl = C:\\\\Users\\\\ana\\\\repo\n')  # a local clone path on Windows
+    assert not ok('[remote "origin"]\n\turl = C:$HOME\n')
     assert not ok("[cogiforge]\n\thome = /somewhere/else\n")
     assert not ok("[core]\n\tfsmonitor = true\n")           # even the harmless-looking value: not in the allowlist
     assert not ok("[core]\n\tfilemode=TRUE\n")               # exact values only
