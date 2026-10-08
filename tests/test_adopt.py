@@ -313,7 +313,7 @@ def plant_decoy(vault, tmp_path, lines):
     """A script that leaves a marker when run, and the `.git/config` lines that would make git run it."""
     marker = tmp_path / "MARKER"
     decoy = tmp_path / "decoy.sh"
-    decoy.write_text(f"#!/bin/sh\ntouch '{marker.as_posix()}'\n")
+    decoy.write_bytes(f"#!/bin/sh\ntouch '{marker.as_posix()}'\n".encode())  # bytes: no CRLF in a shell script
     decoy.chmod(0o755)
     with open(Path(vault) / ".git" / "config", "a", encoding="utf-8") as fh:
         fh.write(lines.format(decoy=decoy.as_posix()))
@@ -398,7 +398,7 @@ def test_each_variant_is_blocked_with_the_line_cited_and_nothing_executes(tmp_pa
         build(v, MINI)
         git_init(v)
         marker = plant_decoy(v, tmp_path, cfg)
-        assert str(tmp_path) in (v / ".git" / "config").read_text(encoding="utf-8") or "{decoy}" not in cfg, name
+        assert tmp_path.as_posix() in (v / ".git" / "config").read_text(encoding="utf-8") or "{decoy}" not in cfg, name
         before = tree(v)
         plan = adopt(v)
         assert plan.returncode == 1 and "allowlist" in plan.stdout and "entry" in plan.stdout, (name, plan.stdout[-600:])

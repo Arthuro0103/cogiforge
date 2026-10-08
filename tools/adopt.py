@@ -653,7 +653,7 @@ def apply(plan, vault):
             continue
         p = vault / rel
         p.parent.mkdir(parents=True, exist_ok=True)
-        with open(p, "x", encoding="utf-8") as fh:  # "x": refuses to overwrite even if it appeared meanwhile
+        with open(p, "x", encoding="utf-8", newline="\n") as fh:  # "x": refuses to overwrite even if it appeared meanwhile
             fh.write(contents[rel])
         if rel == HOOK:
             p.chmod(0o755)
