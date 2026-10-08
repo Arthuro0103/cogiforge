@@ -9,6 +9,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 IMPORT = os.environ.get("IMPORT_PATH") or str(ROOT / "tools" / "import.py")
 REPORT = "_import-report.md"
@@ -226,6 +228,7 @@ def test_dataless_detection_is_exact():
     assert mod.is_dataless(St(0, 0)) is False  # an empty file legitimately has no blocks
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="chmod(0) cannot make a file unreadable on Windows (POSIX permission bits)")
 def test_unreadable_file_is_skipped_and_registered(tmp_path):
     if os.geteuid() == 0:
         return  # root reads everything: the situation cannot be built

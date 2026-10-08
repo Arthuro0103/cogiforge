@@ -165,7 +165,17 @@ def staged_text(path):
     return decode(r.stdout)
 
 
+def shown(name):
+    """Path as printed: always with `/`, so the report reads the same on every OS."""
+    return str(name).replace(os.sep, "/")
+
+
 def main(argv=None):
+    # the report carries non-ASCII text; the Windows console/pipe default (cp1252) would make it
+    # invalid UTF-8 for the shell tools that read it back (grep calls such a file "binary")
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("paths", nargs="*")
     ap.add_argument("--staged", action="store_true")
@@ -206,7 +216,7 @@ def main(argv=None):
     for name, text in sources:
         if Path(name).name in BLOCKLIST_NAMES and (args.staged or os.path.normpath(name) in versioned):
             # the private list can never be in a commit; only the local copy, outside git, is ignored
-            print(f"{name}:0: {'blocklist-staged' if args.staged else 'blocklist-in-repo'}")
+            print(f"{shown(name)}:0: {'blocklist-staged' if args.staged else 'blocklist-in-repo'}")
             total += 1
             with_findings += 1
             continue
@@ -217,15 +227,15 @@ def main(argv=None):
             continue
         found = findings_of_text(text, terms or [])
         for n, kind in found:
-            print(f"{name}:{n}: {kind}")
+            print(f"{shown(name)}:{n}: {kind}")
         total += len(found)
         with_findings += bool(found)
 
     for name in exempted:
-        print(f"exempt ({IGNORE_FILE}): {name}")
+        print(f"exempt ({IGNORE_FILE}): {shown(name)}")
     print(f"{total} finding(s) in {with_findings} file(s), of {len(sources)} scanned")
     for name in unreadable:
-        print(f"{name}: unreadable")
+        print(f"{shown(name)}: unreadable")
     if unreadable:
         print(f"NOT_VERIFIED: {len(unreadable)} file(s) not read; the result above does not cover them.")
     if terms is None:

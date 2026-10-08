@@ -139,7 +139,8 @@ exit 0
 def is_dataless(path):
     """iCloud placeholder that is not downloaded: no blocks on disk, but a size."""
     st = os.lstat(path)
-    return st.st_blocks == 0 and st.st_size > 0
+    # Windows has no st_blocks (and no iCloud placeholders): there it is never dataless.
+    return st.st_size > 0 and getattr(st, "st_blocks", 1) == 0
 
 
 def git_state(vault):

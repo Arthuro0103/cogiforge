@@ -9,6 +9,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 ADOPT = os.environ.get("ADOPT_PATH") or str(ROOT / "tools" / "adopt.py")
 
@@ -466,6 +468,7 @@ def test_a_symlinked_githooks_or_cogiforge_folder_is_never_written_through(tmp_p
         assert r.returncode == 1 and not any(out.iterdir()), name
 
 
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes (os.mkfifo) do not exist on Windows")
 def test_a_fifo_named_md_is_skipped_and_never_opened(tmp_path):
     build(tmp_path, MINI)
     os.mkfifo(tmp_path / "Ideas" / "pipe.md")
