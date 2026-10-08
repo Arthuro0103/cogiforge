@@ -14,6 +14,8 @@ OLD_NAMES = [
     "adapt-skill", "adopt", "ask", "brainstorm", "claude-corner", "close-session", "extract-routine",
     "import-knowledge", "know-my-product", "onboard", "open-session", "study", "task-observer", "whats-real",
 ]
+# Skills born after the prefix existed: they never had an old name, so they are not in OLD_NAMES.
+NEW_NAMES = ["new-project"]
 TEXT_SUFFIXES = {".md", ".py", ".sh", ".yml", ".yaml", ".svg"}
 
 # A slash-command is a "/" that starts a word: not after a word char, "/", "." or "-" (so paths such as
@@ -56,8 +58,8 @@ def tracked_files():
     return [f for f in out.split("\n") if f]
 
 
-def test_there_are_fourteen_skills():
-    assert len(skill_dirs()) == 14
+def test_there_are_fifteen_skills():
+    assert len(skill_dirs()) == 15
 
 
 @pytest.mark.parametrize("d", skill_dirs(), ids=lambda d: d.name)
@@ -80,7 +82,7 @@ def test_name_follows_the_specification(d):
 
 
 def test_the_prefixed_folders_are_the_old_names_plus_the_prefix():
-    assert [d.name for d in skill_dirs()] == sorted(PREFIX + n for n in OLD_NAMES)
+    assert [d.name for d in skill_dirs()] == sorted(PREFIX + n for n in OLD_NAMES + NEW_NAMES)
 
 
 def test_no_file_cites_a_slash_command_without_the_prefix():

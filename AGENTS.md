@@ -75,6 +75,7 @@ the commands above. Where a skill says "ask the user one question at a time", do
 | `cf-task-observer` | during work: notice what repeats or was corrected, and only propose improvements |
 | `cf-claude-corner` | the user is away: reread, connect and test outside `vault/`, and only propose |
 | `cf-adapt-skill` | the user wants their own skill from a worksheet in `vault/skill-worksheets/`: you do not write it alone |
+| `cf-new-project` | the user wants a new project: ask the name, then their own one-sentence target (copied unchanged), `--dry-run`, their "yes", then `tools/new_project.py` |
 
 Features that exist only in Claude Code (running a skill by `/name`, automatic loading by description)
 are conveniences. The rules in this file do not depend on them. More in

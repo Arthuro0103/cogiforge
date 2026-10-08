@@ -29,6 +29,7 @@ The same rules, written for any agent and not only Claude, are in [AGENTS.md](AG
 | list orphan notes | `python3 core/ring.py` |
 | look for personal data | `python3 core/leak.py .` |
 | rewrite each project's file-list block | `python3 tools/hub.py` |
+| create a project (root, index row, checks) | `python3 tools/new_project.py <name> --target "<sentence>" [--dry-run]` |
 | find passages in the vault / check an answer's citations exist | `python3 tools/ask.py search "<question>"` · `python3 tools/ask.py cite <answer.md>` |
 | connection map (optional, needs graphify installed) | `/graphify vault` at the repo root |
 | run the tests (needs `pytest`; after `sh install.sh`) | `python3 -m pytest -q` |
@@ -40,7 +41,7 @@ The gate only checks what is **inside** `vault/`: a file outside fails with an e
 
 `cf-onboard` (onboarding) · `cf-open-session <project>` · `cf-ask <question>` (answers only from the notes, citations checked) · `cf-close-session` · `cf-task-observer` (only proposes) ·
 `cf-claude-corner` (when the user leaves; only proposes) · `cf-adapt-skill` (the user makes their own skill from
-a worksheet; you do not write the skill alone). The worksheets live in `vault/skill-worksheets/`.
+a worksheet; you do not write the skill alone) · `cf-new-project` (creates a project with the user's own target sentence; `tools/new_project.py`). The worksheets live in `vault/skill-worksheets/`.
 
 ## Language
 

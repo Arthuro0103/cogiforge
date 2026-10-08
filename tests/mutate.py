@@ -263,6 +263,22 @@ PIECES = {
         ("NOT_VERIFIED becomes OK", 'print(f"NOT_VERIFIED: {len(unreadable)} folder(s)', 'print(f"OK: {len(unreadable)} folder(s)'),
         ("missing path is not rc 2", "nothing was scanned: {', '.join(missing)}\", file=sys.stderr)\n            return 2", "nothing was scanned: {', '.join(missing)}\", file=sys.stderr)\n            return 0"),
     ]),
+    "new-project": dict(file="tools/new_project.py", suite=["tools/test_new_project.py"], texts=[
+        ("name pattern accepts anything", 'if not NAME_RE.fullmatch(name):', 'if False:'),
+        ("existing folder is accepted", 'if (projects / name).exists():', 'if False:'),
+        ("index row lands before the table end", 'lines.insert(plan["row_at"] + 1, plan["row"])', 'lines.insert(plan["row_at"], plan["row"])'),
+        ("empty target is accepted", 'if not target.strip():', 'if False:'),
+        ("placeholder target is accepted", 'elif target.strip().casefold() == EXAMPLE_TARGET:', 'elif False:'),
+        ("dry run writes", 'if args.dry_run:', 'if False:'),
+        ("failed check still exits 0", '''        return 1
+    print("OK: hub, gate and ring pass.")''', '''        return 0
+    print("OK: hub, gate and ring pass.")'''),
+    ]),
+    "new-project-skill": dict(file=".claude/skills/cf-new-project/SKILL.md", suite=["tests/test_new_project_skill.py"], texts=[
+        ("skill creates without the yes", '4. **Never create without the "yes".**', '4. **Create when it seems right.**'),
+        ("skill lets the target be edited", 'Copy it into `--target` unchanged: no fixing, no\n   shortening, no translating.', 'Copy it into `--target`, tidied up.'),
+        ("skill asks everything at once", '1. **One question per message.**', '1. **Ask everything at once.**'),
+    ]),
     "hook-sync": dict(file=".githooks/pre-commit", suite=["tests/test_conflicts.py"], texts=[
         ("sync guard does not run", 'python3 core/conflicts.py --staged', 'true'),
         ("sync guard passes on any rc", 'if [ "$rc" -ne 0 ]; then', 'if false; then'),
