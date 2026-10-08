@@ -229,6 +229,7 @@ def test_dead_link_inside_the_task_still_fails(tmp_path):
     assert checks_of(tmp_path, {"tasks/t.md": task}) == [("tasks/t.md", "dead-link")]
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="chmod(0) cannot make a file unreadable on Windows (POSIX permission bits)")
 def test_cli_unreadable_file_exits_3_never_clean(tmp_path):
     v = vault(tmp_path, {"a.md": "clean\n"})
     (v / "a.md").chmod(0)

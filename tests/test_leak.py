@@ -2,6 +2,7 @@
 
 Leaky strings are assembled at runtime so this file itself never trips the scanner.
 """
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -96,6 +97,10 @@ def run(args, cwd, blocklist=None, env=None):
     base = {"PATH": "/usr/bin:/bin:/usr/local/bin", "LEAK_BLOCKLIST": str(blocklist or cwd / "absent.txt")}
     if env is not None:  # explicit env: replaces the default one (so a test can leave LEAK_BLOCKLIST unset)
         base = {"PATH": "/usr/bin:/bin:/usr/local/bin", **env}
+    if sys.platform == "win32":  # a replaced env still needs the Windows basics; Path.home() reads USERPROFILE, not HOME
+        base["PATH"] = os.environ["PATH"]  # git (called by leak.py) is not under /usr/bin here
+        base.setdefault("SYSTEMROOT", os.environ.get("SYSTEMROOT", ""))
+        base.setdefault("USERPROFILE", base.get("HOME", str(cwd)))
     return subprocess.run([sys.executable, str(SCRIPT), *args], cwd=cwd, env=base,
                           capture_output=True, text=True)
 
@@ -189,6 +194,7 @@ def test_utf16_with_bom_is_read(tmp_path):
     assert run(["."], tmp_path).returncode == 1
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="chmod(0) cannot make a file unreadable on Windows (POSIX permission bits)")
 def test_unreadable_file_is_not_verified_and_never_clean(tmp_path):
     f = tmp_path / "x.md"
     f.write_text("clean\n", encoding="utf-8")

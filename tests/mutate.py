@@ -34,7 +34,7 @@ PIECES = {
         ("list is case-sensitive", 'lowered = line.casefold()', 'lowered = line'),
         ("blocklist does not skip comments", ' and not t.lstrip().startswith("#")', ''),
         ("scans .git", 'SKIP_DIRS = {".git", ', 'SKIP_DIRS = {'),
-        ("echoes the data", 'print(f"{name}:{n}: {kind}")', 'print(f"{name}:{n}: {kind} {text.splitlines()[n-1]}")'),
+        ("echoes the data", 'print(f"{shown(name)}:{n}: {kind}")', 'print(f"{shown(name)}:{n}: {kind} {text.splitlines()[n-1]}")'),
         ("no NFKC", 'unicodedata.normalize("NFKC", text)', 'text'),
         ("zero-width stays", 'if unicodedata.category(c) != "Cf")', 'if True)'),
         ("path is case-sensitive", '[A-Za-z0-9._-]+", re.IGNORECASE)', '[A-Za-z0-9._-]+")'),

@@ -9,6 +9,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 ADOPT = os.environ.get("ADOPT_PATH") or str(ROOT / "tools" / "adopt.py")
 
@@ -126,7 +128,7 @@ def test_apply_yes_installs_and_leaves_notes_alone(tmp_path):
     base = json.loads((tmp_path / ".cogiforge" / "baseline.json").read_text())
     assert len(base["orphans"]) == 3
     assert str(tmp_path) not in json.dumps(base) and str(ROOT) not in json.dumps(base)  # no absolute path
-    assert local_cfg(tmp_path, "cogiforge.home") == str(ROOT)
+    assert local_cfg(tmp_path, "cogiforge.home") == ROOT.as_posix()
     hp = subprocess.run(["git", "-C", str(tmp_path), "config", "--local", "core.hooksPath"],
                         capture_output=True, text=True).stdout.strip()
     assert hp == ".githooks"
@@ -231,7 +233,7 @@ def test_the_hook_refuses_an_invalid_cogiforge_home(tmp_path):
     for bad in (None, "relative/path", str(tmp_path / "missing"), str(some_file), str(empty)):
         r = _hook_run(v, bad)
         assert r.returncode != 0 and "COMMIT BLOCKED" in r.stdout + r.stderr, (bad, r.stdout, r.stderr)
-    assert _hook_run(v, str(ROOT)).returncode == 0  # the valid value passes
+    assert _hook_run(v, ROOT.as_posix()).returncode == 0  # the valid value passes
 
 
 def test_a_vault_with_a_different_cogiforge_home_in_git_config_blocks_the_apply(tmp_path):
@@ -311,10 +313,10 @@ def plant_decoy(vault, tmp_path, lines):
     """A script that leaves a marker when run, and the `.git/config` lines that would make git run it."""
     marker = tmp_path / "MARKER"
     decoy = tmp_path / "decoy.sh"
-    decoy.write_text(f"#!/bin/sh\ntouch '{marker}'\n")
+    decoy.write_bytes(f"#!/bin/sh\ntouch '{marker.as_posix()}'\n".encode())  # bytes: no CRLF in a shell script
     decoy.chmod(0o755)
     with open(Path(vault) / ".git" / "config", "a", encoding="utf-8") as fh:
-        fh.write(lines.format(decoy=decoy))
+        fh.write(lines.format(decoy=decoy.as_posix()))
     return marker
 
 
@@ -377,8 +379,10 @@ def test_the_validator_unit(tmp_path):
     m = load_module()
     ok = lambda text: not m.validate_git_config(text.encode())[1]  # noqa: E731
     assert ok("[core]\n\trepositoryformatversion = 0\n\tfilemode = true\n\tbare = false\n\tlogallrefupdates = true\n")
-    assert ok("[core]\n\thooksPath = .githooks\n[cogiforge]\n\thome = " + str(ROOT) + "\n")
+    assert ok("[core]\n\thooksPath = .githooks\n[cogiforge]\n\thome = " + ROOT.as_posix() + "\n")
     assert ok("[core]\n\tfilemode = true # a comment git itself understands\n")  # git says value=true, so it is judged as true
+    assert ok('[remote "origin"]\n\turl = C:\\\\Users\\\\ana\\\\repo\n')  # a local clone path on Windows
+    assert not ok('[remote "origin"]\n\turl = C:$HOME\n')
     assert not ok("[cogiforge]\n\thome = /somewhere/else\n")
     assert not ok("[core]\n\tfsmonitor = true\n")           # even the harmless-looking value: not in the allowlist
     assert not ok("[core]\n\tfilemode=TRUE\n")               # exact values only
@@ -396,7 +400,7 @@ def test_each_variant_is_blocked_with_the_line_cited_and_nothing_executes(tmp_pa
         build(v, MINI)
         git_init(v)
         marker = plant_decoy(v, tmp_path, cfg)
-        assert str(tmp_path) in (v / ".git" / "config").read_text(encoding="utf-8") or "{decoy}" not in cfg, name
+        assert tmp_path.as_posix() in (v / ".git" / "config").read_text(encoding="utf-8") or "{decoy}" not in cfg, name
         before = tree(v)
         plan = adopt(v)
         assert plan.returncode == 1 and "allowlist" in plan.stdout and "entry" in plan.stdout, (name, plan.stdout[-600:])
@@ -466,6 +470,7 @@ def test_a_symlinked_githooks_or_cogiforge_folder_is_never_written_through(tmp_p
         assert r.returncode == 1 and not any(out.iterdir()), name
 
 
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes (os.mkfifo) do not exist on Windows")
 def test_a_fifo_named_md_is_skipped_and_never_opened(tmp_path):
     build(tmp_path, MINI)
     os.mkfifo(tmp_path / "Ideas" / "pipe.md")
@@ -480,7 +485,7 @@ def test_a_note_name_starting_with_a_dash_is_not_an_option_for_the_hook(tmp_path
     build(v, {**MINI, "-x.md": "links to [[a]] and [[ghost-nowhere]]\n"})
     git_init(v)
     assert adopt(v, "--apply", "--yes").returncode == 0
-    r = _hook_run(v, str(ROOT))  # stages Ideas/a.md only
+    r = _hook_run(v, ROOT.as_posix())  # stages Ideas/a.md only
     assert r.returncode == 0
     env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
            "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com", "LEAK_BLOCKLIST": str(v / "absent.txt")}
@@ -546,12 +551,13 @@ def test_the_hook_refuses_a_noncanonical_cogiforge_home(tmp_path):
     assert adopt(v, "--apply", "--yes").returncode == 0
     link = tmp_path / "link-to-root"
     link.symlink_to(ROOT)
-    for bad in (str(ROOT) + "/../" + ROOT.name, str(ROOT) + "/", str(ROOT) + "/./", str(link), "/" + str(ROOT)):
+    for bad in (ROOT.as_posix() + "/../" + ROOT.name, ROOT.as_posix() + "/", ROOT.as_posix() + "/./", link.as_posix(), "/" + ROOT.as_posix()):
         r = _hook_run(v, bad)
         assert r.returncode != 0 and "COMMIT BLOCKED" in r.stdout + r.stderr, (bad, r.stdout + r.stderr)
-    assert _hook_run(v, str(ROOT)).returncode == 0
+    assert _hook_run(v, ROOT.as_posix()).returncode == 0
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows forbids newline/control characters in file names, so the hostile file cannot be created")
 def test_hostile_names_never_reach_the_terminal_raw_nor_areas_txt(tmp_path):
     build(tmp_path, {**MINI, "Evil\nFolder/n.md": "x\n", "Spaced Folder/s.md": "y\n", "x\nFAKE LINE.md": "z\n",
                      "\x1b[31mred.md": "r\n"})
@@ -565,6 +571,7 @@ def test_hostile_names_never_reach_the_terminal_raw_nor_areas_txt(tmp_path):
     assert "Evil" not in areas and all(":" in l for l in areas.splitlines() if l and not l.startswith("#"))
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows forbids newline/control characters in file names, so the hostile file cannot be created")
 def test_a_note_with_a_newline_or_space_in_its_name_is_judged_by_the_hook(tmp_path):
     v = tmp_path / "v"
     build(v, MINI)
@@ -728,6 +735,7 @@ def test_safe_escapes_every_control_format_and_surrogate_character():
     assert m.safe("\n") == "\\x0a"
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows forbids newline/control characters in file names, so the hostile file cannot be created")
 def test_untrusted_text_never_reaches_the_terminal_raw(tmp_path):
     m = load_module()
     esc = "\x1b]0;PWNED\x07"
@@ -871,7 +879,7 @@ def test_a_relative_vault_path_works_from_inside_the_vault(tmp_path):
         r = subprocess.run([sys.executable, ADOPT, arg, "--apply", "--yes"], capture_output=True, text=True, cwd=str(cwd),
                            env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}, stdin=subprocess.DEVNULL)
         assert r.returncode == 0 and "Traceback" not in r.stderr, (arg, r.stdout[-300:], r.stderr)
-        assert local_cfg(v, "core.hooksPath") == ".githooks" and local_cfg(v, "cogiforge.home") == str(ROOT)
+        assert local_cfg(v, "core.hooksPath") == ".githooks" and local_cfg(v, "cogiforge.home") == ROOT.as_posix()
         subprocess.run(["git", "-C", str(v), "config", "--local", "--remove-section", "cogiforge"], check=True)
         subprocess.run(["git", "-C", str(v), "config", "--local", "--unset", "core.hooksPath"], check=True)
         for f in ("areas.txt", ".githooks", ".cogiforge"):

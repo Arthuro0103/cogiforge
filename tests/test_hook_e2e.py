@@ -1,5 +1,6 @@
 """End to end: a temporary clone, `sh install.sh`, and real commits."""
 import os
+import sys
 import shutil
 import subprocess
 from pathlib import Path
@@ -140,7 +141,7 @@ def test_old_private_list_name_warns_in_the_hook_but_does_not_block(clone, tmp_p
     home = tmp_path / "home"
     (home / ".config" / "cogiforge").mkdir(parents=True)
     (home / ".config" / "cogiforge" / "negra.txt").write_text("zeta-quux\n", encoding="utf-8")
-    env = {"HOME": str(home), "LEAK_BLOCKLIST": ""}  # empty: falls back to the default location
+    env = {"HOME": str(home), "USERPROFILE": str(home), "LEAK_BLOCKLIST": ""}  # empty: falls back to the default location
     r = commit(clone, "docs/ok.txt", "plausible clean text\n", env=env)
     assert r.returncode == 0 and "WARNING" in r.stdout + r.stderr and "renamed" in r.stdout + r.stderr
     r = commit(clone, "docs/bad.txt", "talks about zeta-quux\n", env=env)
