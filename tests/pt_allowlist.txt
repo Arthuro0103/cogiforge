@@ -15,3 +15,4 @@ tests/test_ring.py: a note named with an accent, to prove NFD and NFC names are 
 .claude/skills/cf-open-session/SKILL.md: the description keeps one or two Portuguese trigger phrases
 .claude/skills/cf-task-observer/SKILL.md: the description keeps one or two Portuguese trigger phrases
 tests/pt_allowlist.txt: it names the exceptions, some of which mention the old name negra.txt
+tests/test_target.py: a note named with an accent (café.md), to prove the target report prints non-ASCII names
