@@ -41,7 +41,7 @@ The gate only checks what is **inside** `vault/`: a file outside fails with an e
 
 `cf-onboard` (onboarding) · `cf-open-session <project>` · `cf-ask <question>` (answers only from the notes, citations checked) · `cf-close-session` · `cf-task-observer` (only proposes) ·
 `cf-claude-corner` (when the user leaves; only proposes) · `cf-adapt-skill` (the user makes their own skill from
-a worksheet; you do not write the skill alone) · `cf-new-project` (creates a project with the user's own target sentence; `tools/new_project.py`). The worksheets live in `vault/skill-worksheets/`.
+a worksheet; you do not write the skill alone) · `cf-new-project` (creates a project with the user's own target sentence; `tools/new_project.py`) · `cf-brand <mode>` (voice, DNA, messaging, design, manual, only in the user's words; `docs/BRAND.md`). The worksheets live in `vault/skill-worksheets/`.
 
 ## Language
 

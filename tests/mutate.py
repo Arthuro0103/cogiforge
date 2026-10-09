@@ -286,6 +286,23 @@ PIECES = {
         ("sync guard does not block", '    fi\n    blocked=1\nfi\n\n[ "$blocked"', '    fi\nfi\n\n[ "$blocked"'),
         ("conflicts.py missing passes", 'core/people.py core/conflicts.py; do', 'core/people.py; do'),
     ]),
+    "voice_check": dict(file="tools/voice_check.py", suite=["tests/test_voice_check.py"], texts=[
+        ("avoid stops counting", 'KINDS = {"never say": "never", "avoid": "avoid"}', 'KINDS = {"never say": "never"}'),
+        ("absence becomes OK", 'print("NOT_VERIFIED: no effective rule', 'print("OK: no effective rule'),
+        ("no NFKC", 'unicodedata.normalize("NFKC", text).casefold()', 'text.casefold()'),
+        ("no word boundary", 'return re.search(r"(?<!\\w)" + re.escape(term) + r"(?!\\w)", line) is not None', 'return term in line'),
+        ("code blocks are scanned", 'if fence is None and line.strip():', 'if line.strip():'),
+        ("echoes the line", 'print(f"{args.text}:{n}: [{kind}] {term}")',
+         'print(f"{args.text}:{n}: [{kind}] {term} {text.splitlines()[n-1]}")'),
+    ]),
+    "brand_preview": dict(file="tools/brand_preview.py", suite=["tests/test_brand_preview.py"], texts=[
+        ("wrong luminance weights", '0.2126 * channel(r) + 0.7152 * channel(g)', '0.7152 * channel(r) + 0.2126 * channel(g)'),
+        ("AA threshold too low", 'AA, AAA = 4.5, 7.0', 'AA, AAA = 3.0, 7.0'),
+        ("AAA threshold equals AA", 'if ratio >= AAA:', 'if ratio >= AA:'),
+        ("invalid hex passes", 'if not isinstance(value, str) or not HEX_RE.match(value):', 'if not isinstance(value, str):'),
+        ("no colors becomes OK", '"NOT_VERIFIED: no colors declared', '"OK: no colors declared'),
+        ("values are not escaped", 'e = html.escape', 'e = str'),
+    ]),
 }
 
 
