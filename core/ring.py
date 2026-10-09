@@ -24,6 +24,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unicodedata
 from pathlib import Path
 from urllib.parse import unquote
@@ -43,19 +44,78 @@ def is_deposit(rel):
     return any(rel == d or rel.startswith(d + "/") for d in DEPOSITS) or bool(PEOPLE_INBOX.match(rel))
 
 
-def analyze(vault):
+RACY_NS = 2_000_000_000  # a file changed in the last 2 s is never cached: size and mtime could not tell two edits apart
+CACHE_VERSION = 1
+
+
+def link_targets(vault, rel):
+    """Raw link targets of one note: wikilinks and markdown links, outside code."""
+    text = mask(Path(vault, rel).read_bytes().decode("utf-8", errors="replace"))
+    return [a for a, _ in wikilinks(text)] + [unquote(m) for m in MDLINK.findall(text)]
+
+
+def cached_targets(vault, rel, cache, fresh):
+    """link_targets, re-read only when the file's size or mtime changed since the cache saw it."""
+    st = os.stat(os.path.join(vault, rel))
+    key = [st.st_size, st.st_mtime_ns]
+    hit = cache.get(rel)
+    if hit and hit[:2] == key:
+        fresh[rel] = hit
+        return hit[2]
+    targets = link_targets(vault, rel)
+    if st.st_mtime_ns < time.time_ns() - RACY_NS:
+        fresh[rel] = key + [targets]
+    return targets
+
+
+def load_cache(cache_file):
+    """{rel: [size, mtime_ns, targets]}. A missing, unreadable or old-version cache is an empty one: it only saves time."""
+    if not cache_file:
+        return {}
+    try:
+        data = json.loads(Path(cache_file).read_text(encoding="utf-8"))
+        notes = data["notes"]
+        if data["version"] != CACHE_VERSION or not isinstance(notes, dict):
+            return {}
+        return {k: v for k, v in notes.items() if isinstance(v, list) and len(v) == 3 and isinstance(v[2], list)}
+    except (OSError, ValueError, KeyError, TypeError):
+        return {}
+
+
+def save_cache(cache_file, fresh):
+    if not cache_file:
+        return
+    tmp = f"{cache_file}.{os.getpid()}.tmp"
+    try:
+        Path(tmp).write_text(json.dumps({"version": CACHE_VERSION, "notes": fresh}), encoding="utf-8")
+        os.replace(tmp, cache_file)
+    except OSError:
+        pass  # read-only .git: the next run just reads the files again
+
+
+def git_cache_file(vault):
+    """<git dir>/cogiforge-edges.json, or None when the vault is not in a repo. Never inside the vault, never committed."""
+    try:
+        r = subprocess.run(["git", "-C", str(vault), "rev-parse", "--absolute-git-dir"], capture_output=True, text=True)
+    except OSError:
+        return None
+    return os.path.join(r.stdout.strip(), "cogiforge-edges.json") if r.returncode == 0 and r.stdout.strip() else None
+
+
+def analyze(vault, cache_file=None):
     """([.md notes], degree of each). Degree = inbound + outbound edges."""
     idx = Index(vault, areas={})
     notes = sorted(r for r in idx.paths.values() if r.endswith(".md"))
     degree = collections.Counter()
+    cache, fresh = load_cache(cache_file), {}
     for rel in notes:
-        text = mask(Path(vault, rel).read_bytes().decode("utf-8", errors="replace"))
-        targets = [a for a, _ in wikilinks(text)] + [unquote(m) for m in MDLINK.findall(text)]
+        targets = cached_targets(vault, rel, cache, fresh)
         for a in targets:
             r = idx.find(a, rel)
             if r and r != rel and r.endswith(".md"):
                 degree[rel] += 1
                 degree[r] += 1
+    save_cache(cache_file, fresh)
     return notes, degree
 
 
@@ -102,6 +162,8 @@ def orphan_mode(vault):
         if not line:
             continue
         key, sep, value = line.partition(":")
+        if key.strip() == "target" and sep:
+            continue  # the `target:` line belongs to core/target.py
         if key.strip() != "orphan" or not sep:
             raise ValueError(f"vault/gate.txt line {n}: expected `orphan: block` or `orphan: warn`")
         mode = value.strip()
@@ -119,7 +181,7 @@ def gate(vault, stage_only=False):
     except ValueError as e:
         print(f"ERROR: {e}. The gate judged nothing, so the commit is blocked until it is fixed.")
         return 2
-    notes, degree = analyze(vault)
+    notes, degree = analyze(vault, git_cache_file(vault) if stage_only else None)
     orphans = chk_orphans(notes, degree)
     outside = []
     if stage_only:

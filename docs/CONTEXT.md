@@ -79,7 +79,18 @@ recovering something that was never written down, never for reopening something 
 
 ## A practical budget
 
-These are targets, not limits enforced by code. They exist so the always-loaded part stays small.
+The first two lines of the table are enforced by `python3 core/budget.py` (and by the pre-commit hook); the rest are
+targets. They exist so the always-loaded part stays small, because a context that is too big is cut in silence.
+
+| what | ceiling | enforced |
+|---|---|---|
+| every session: both `CLAUDE.md` files, the three memory files and every skill `description` | 32,000 bytes (about 8k tokens) | `core/budget.py`; the hook blocks a commit that makes one of these files bigger while the total is over |
+| opening a project: the above plus its root, the 3 newest diary entries and 5 open tasks, worst project | 48,000 bytes | the same |
+
+The empty skeleton already loads about 24.5 KB, 11.6 KB of it skill descriptions. When memory grows past the ceiling,
+`python3 tools/cool.py memory/<file>.md --keep 40` shows which older dated lines would move, word for word, to
+`vault/memory/archive/<file>.md` (it writes only with `--apply`, and with the user's yes). A project root never
+grows with the project: past 40 files, `tools/hub.py` keeps one link in the root and the full list in `_files.md`.
 
 | item | target | if it is over |
 |---|---|---|

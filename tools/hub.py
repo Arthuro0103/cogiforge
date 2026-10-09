@@ -13,6 +13,11 @@ Usage:
     python3 tools/hub.py --selftest
     python3 tools/hub.py --vault DIR  # another vault (tests)
 
+A project with more than INLINE_MAX files does not list them in its root: the root keeps one link to a
+generated `_files.md` in the same folder, which lists them all. Opening a project then reads a root of a
+few KB, however many files the project has; every file keeps an edge (root > `_files` > file), so none
+becomes an orphan. `_files.md` is deleted again when the project shrinks back under the cap.
+
 Admission rule: if vault/projects/_index.md exists, every project must appear in it.
 A project folder without instructions.md is reported, never invented.
 """
@@ -23,20 +28,36 @@ import tempfile
 from pathlib import Path
 
 OPEN, CLOSE = "<!-- hub:start -->", "<!-- hub:end -->"
+INLINE_MAX = 40            # more files than this go to the overflow list
+OVERFLOW = "_files.md"
+OVERFLOW_MARK = "<!-- hub:generated -->"
 VAULT = Path(__file__).resolve().parent.parent / "vault"
 
 
 def list_files(folder: Path) -> list[Path]:
-    return sorted(p for p in folder.rglob("*.md") if p != folder / "instructions.md")
+    return sorted(p for p in folder.rglob("*.md") if p != folder / "instructions.md" and p != folder / OVERFLOW)
 
 
 def generate(folder: Path, vault: Path) -> str:
     files = list_files(folder)
     lines = [OPEN]
-    lines += [_link(p, vault) for p in files]
+    if len(files) > INLINE_MAX:
+        rel = (folder / OVERFLOW).relative_to(vault).with_suffix("").as_posix()
+        lines.append(f"- [[{rel}|all {len(files)} files of this project]]")
+    else:
+        lines += [_link(p, vault) for p in files]
     if not files:
         lines.append("_(no other file yet)_")
     return "\n".join(lines + [CLOSE])
+
+
+def overflow_text(folder: Path, vault: Path) -> str | None:
+    """The full list for a project over the cap, or None when the root lists everything itself."""
+    files = list_files(folder)
+    if len(files) <= INLINE_MAX:
+        return None
+    return "\n".join([f"# Every file of {folder.name} in one list", "", OVERFLOW_MARK, ""]
+                      + [_link(p, vault) for p in files]) + "\n"
 
 
 def _link(p: Path, vault: Path) -> str:
@@ -51,19 +72,39 @@ def current_block(text: str) -> str | None:
     return text[i:j + len(CLOSE)] if 0 <= i < j else None
 
 
+def sync_overflow(folder: Path, vault: Path, check: bool) -> str | None:
+    """Brings `_files.md` in line with the project. None = nothing to do; "written"; "STALE" = --check found a difference."""
+    path, want = folder / OVERFLOW, overflow_text(folder, vault)
+    have = path.read_text(encoding="utf-8") if path.is_file() else None
+    if want == have:
+        return None
+    if have is not None and want is None and OVERFLOW_MARK not in have:
+        return None  # a file the user wrote with that name: never deleted
+    if check:
+        return "STALE"
+    if want is None:
+        path.unlink()
+    else:
+        path.write_text(want, encoding="utf-8")
+    return "written"
+
+
 def process(folder: Path, vault: Path, check: bool, dry: bool) -> str:
     root = folder / "instructions.md"
     if not root.is_file():
         return "NO ROOT"
     new, text = generate(folder, vault), root.read_text(encoding="utf-8")
     current = current_block(text)
+    side = None if dry else sync_overflow(folder, vault, check)
+    if side == "STALE":
+        return "STALE"
     if current is None and not list_files(folder):
-        return "OK"  # no block and no extra files: nothing to register, nothing to touch
+        return side or "OK"  # no block and no extra files: nothing to register, nothing to touch
     if dry:
         print(f"# {folder.name}\n{new}\n")
         return "dry"
     if current == new:
-        return "OK"
+        return side or "OK"
     if check:
         return "NO BLOCK" if current is None else "STALE"
     final = text.replace(current, new) if current else text.rstrip() + "\n\n" + new + "\n"

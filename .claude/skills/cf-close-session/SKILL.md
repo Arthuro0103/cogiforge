@@ -110,7 +110,19 @@ test -f core/ring.py && python3 core/ring.py --gate || echo "ring.py does not ex
 If one fails, show the output and fix **only what is yours** (the briefing you just wrote). Do not
 hide a failure: report it.
 
-### 7. Deliver and ask (you)
+### 7. Show what sits still (one command)
+
+```bash
+python3 tools/usage.py idle --project <name> --top 3
+```
+
+For each project touched today, up to 3 of its notes that no project file and no answer ever used. In the
+briefing, under *What is still standing*, one line each with the link and its age, and the question
+*"does any of these belong in what you did today?"*. If the user says one does, the connection is made
+in the target file (a link in the middle of the text), never in a block at the bottom. If the command prints
+`NOT_VERIFIED`, say so; if it finds nothing, omit the line.
+
+### 8. Deliver and ask (you)
 
 Chat, at most 8 lines: paths of the files created, how many pains collected, tasks opened,
 result of the verifiers (or "skipped: they do not exist"). Ask: *"do you want me to commit?"* Only with a yes,

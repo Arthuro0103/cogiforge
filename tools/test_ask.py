@@ -266,3 +266,73 @@ def test_a_link_written_with_the_md_suffix_still_resolves(tmp_path):
         "notes/b.md": "# Beta\n\n## Target\n\nunrelated words only\n",
     })
     assert ids(search(v, "unicorn", "--links")) == ["notes/a#Main", "notes/b#Target"]
+
+
+# ---- cite --log: the use of a note is recorded only when the answer was real -----------------
+
+LOGGED = {"notes/a.md": "# Alpha\n\n## Part one\n\ntext about alpha\n", "notes/b.md": "# Beta\n\nbeta text\n"}
+
+
+def cite_log(tmp_path, answer, *extra):
+    v = write(tmp_path / "v", LOGGED)
+    f = tmp_path / "answer.md"
+    f.write_text(answer, encoding="utf-8")
+    return v, run("cite", str(f), "--vault", str(v), *extra)
+
+
+def log_rows(vault):
+    f = Path(vault) / "memory" / "ask-log.jsonl"
+    return [json.loads(l) for l in f.read_text(encoding="utf-8").splitlines()] if f.is_file() else []
+
+
+def test_cite_log_records_one_line_with_the_cited_notes(tmp_path):
+    v, r = cite_log(tmp_path, "x [[notes/a#Part one]] and [[notes/b]] and [[notes/a]]\n", "--log", "what is alpha?", "--today", "2026-10-08")
+    assert r.returncode == 0 and "logged in memory/ask-log.jsonl" in r.stdout
+    assert log_rows(v) == [{"date": "2026-10-08", "question": "what is alpha?", "cited": ["notes/a", "notes/b"]}]
+
+
+def test_cite_log_appends_a_line_per_consultation(tmp_path):
+    v, _ = cite_log(tmp_path, "x [[notes/a]]\n", "--log", "one", "--today", "2026-10-01")
+    f = tmp_path / "answer.md"
+    run("cite", str(f), "--vault", str(v), "--log", "two", "--today", "2026-10-02")
+    assert [r["question"] for r in log_rows(v)] == ["one", "two"]
+
+
+def test_a_failed_citation_logs_nothing(tmp_path):
+    v, r = cite_log(tmp_path, "x [[notes/a]] and [[notes/missing]]\n", "--log", "q")
+    assert r.returncode == 1 and log_rows(v) == []
+
+
+def test_an_answer_with_no_citation_logs_nothing(tmp_path):
+    v, r = cite_log(tmp_path, "an answer with no citation\n", "--log", "q")
+    assert r.returncode == 1 and log_rows(v) == []
+
+
+def test_without_log_nothing_is_written(tmp_path):
+    v, r = cite_log(tmp_path, "x [[notes/a]]\n")
+    assert r.returncode == 0 and log_rows(v) == [] and not (v / "memory").exists()
+
+
+def test_search_never_writes_a_log(tmp_path):
+    v = write(tmp_path / "v", LOGGED)
+    assert run("search", "alpha", "--vault", str(v)).returncode == 0
+    assert not (v / "memory").exists()
+
+
+def test_the_question_is_flattened_and_cut_to_200_characters(tmp_path):
+    v, _ = cite_log(tmp_path, "x [[notes/a]]\n", "--log", "line one\n  line   two " + "z" * 300)
+    q = log_rows(v)[0]["question"]
+    assert "\n" not in q and "line one line two" in q and len(q) == 200
+
+
+def test_the_date_defaults_to_today(tmp_path):
+    import datetime
+    v, _ = cite_log(tmp_path, "x [[notes/a]]\n", "--log", "q")
+    assert log_rows(v)[0]["date"] == datetime.date.today().isoformat()
+
+
+def test_an_unreadable_vault_logs_nothing_and_is_not_verified(tmp_path):
+    f = tmp_path / "answer.md"
+    f.write_text("x [[notes/a]]\n", encoding="utf-8")
+    r = run("cite", str(f), "--vault", str(tmp_path / "empty"), "--log", "q")
+    assert r.returncode == 3 and not (tmp_path / "empty").exists()

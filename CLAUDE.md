@@ -31,6 +31,7 @@ The same rules, written for any agent and not only Claude, are in [AGENTS.md](AG
 | rewrite each project's file-list block | `python3 tools/hub.py` |
 | create a project (root, index row, checks) | `python3 tools/new_project.py <name> --target "<sentence>" [--dry-run]` |
 | find passages in the vault / check an answer's citations exist | `python3 tools/ask.py search "<question>"` · `python3 tools/ask.py cite <answer.md>` |
+| notes used or parked, by area / bytes a session loads | `python3 tools/usage.py` · `python3 core/budget.py` |
 | connection map (optional, needs graphify installed) | `/graphify vault` at the repo root |
 | run the tests (needs `pytest`; after `sh install.sh`) | `python3 -m pytest -q` |
 | break each check and require a red test | `python3 tests/mutate.py` |

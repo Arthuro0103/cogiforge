@@ -18,7 +18,7 @@ project lives in files; someone has to read the right ones, in the right order, 
    not read it, you do not claim it.
 3. **Disagreement becomes a question.** If the file's `status:` disagrees with the disk (for example,
    marked `paused` with a commit from yesterday), show both sides and ask. Status is the user's decision, not mine.
-4. **Short briefing.** Ceiling of 12 lines in the chat. Whoever needs the whole file opens it.
+4. **Short briefing.** Ceiling of 12 lines in the chat (the "Sitting still" line counts). Whoever needs the whole file opens it.
 5. **Read-only.** This skill writes nothing in `vault/`.
 6. **Stop at the generated block.** If the root has a block between the markers `<!-- hub:start` and
    `<!-- hub:end`, it is only a list of links: do not read below it.
@@ -66,7 +66,18 @@ done
 List at most 5, `in-progress` first, then `priority: high`, showing the `title:` of each. If there
 are more than 5, say how many were left out.
 
-### 5. Check against the disk (you)
+### 5. Bring back the notes that sit still (one command)
+
+```bash
+python3 tools/usage.py idle --project <name> --top 3
+```
+
+It lists up to 3 notes of this project that no project file and no answer ever used, oldest first. They are
+there so a note that was kept does not vanish: say them in one line each, with their link, and offer to use one
+of them in today's work. Do not judge them and do not delete them. If the command prints `NOT_VERIFIED`
+or fails, say so; if it prints `No idle note`, omit the line.
+
+### 6. Check against the disk (you)
 
 ```bash
 git log --oneline -5 -- vault/projects/<name> 2>/dev/null   # empty = no commits yet
@@ -75,12 +86,13 @@ git status --short vault/projects/<name>
 
 Compare with what the root claims (status, dates). Any disagreement goes into the briefing as a question.
 
-### 6. Deliver (you)
+### 7. Deliver (you)
 
 ```
 Project: <name>   status: <from the file>   target: <declared_target, one line>
 Where it stopped:  <1-2 lines from the latest diary entry, with the date>
 Still open:        <up to 5 tasks, title and status>
+Sitting still:     <up to 3 notes from step 5, each as a link and its age; omit if none>
 Attention:         <disagreement from step 5, as a question; omit if none>
 Possible next step: <one suggestion, marked as my suggestion>
 ```
