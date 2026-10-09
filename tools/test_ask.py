@@ -286,25 +286,25 @@ def log_rows(vault):
 
 
 def test_cite_log_records_one_line_with_the_cited_notes(tmp_path):
-    v, r = cite_log(tmp_path, "x [[notes/a#Part one]] and [[notes/b]] and [[notes/a]]\n", "--log", "what is alpha?", "--today", "2026-10-08")
+    v, r = cite_log(tmp_path, "x [[notes/a#Part one]] and [[notes/b]] and [[notes/a]]\n", "--log", "--today", "2026-10-08")
     assert r.returncode == 0 and "logged in memory/ask-log.jsonl" in r.stdout
-    assert log_rows(v) == [{"date": "2026-10-08", "question": "what is alpha?", "cited": ["notes/a", "notes/b"]}]
+    assert log_rows(v) == [{"date": "2026-10-08", "cited": ["notes/a", "notes/b"]}]
 
 
 def test_cite_log_appends_a_line_per_consultation(tmp_path):
-    v, _ = cite_log(tmp_path, "x [[notes/a]]\n", "--log", "one", "--today", "2026-10-01")
+    v, _ = cite_log(tmp_path, "x [[notes/a]]\n", "--log", "--today", "2026-10-01")
     f = tmp_path / "answer.md"
-    run("cite", str(f), "--vault", str(v), "--log", "two", "--today", "2026-10-02")
-    assert [r["question"] for r in log_rows(v)] == ["one", "two"]
+    run("cite", str(f), "--vault", str(v), "--log", "--today", "2026-10-02")
+    assert [r["date"] for r in log_rows(v)] == ["2026-10-01", "2026-10-02"]
 
 
 def test_a_failed_citation_logs_nothing(tmp_path):
-    v, r = cite_log(tmp_path, "x [[notes/a]] and [[notes/missing]]\n", "--log", "q")
+    v, r = cite_log(tmp_path, "x [[notes/a]] and [[notes/missing]]\n", "--log")
     assert r.returncode == 1 and log_rows(v) == []
 
 
 def test_an_answer_with_no_citation_logs_nothing(tmp_path):
-    v, r = cite_log(tmp_path, "an answer with no citation\n", "--log", "q")
+    v, r = cite_log(tmp_path, "an answer with no citation\n", "--log")
     assert r.returncode == 1 and log_rows(v) == []
 
 
@@ -319,20 +319,25 @@ def test_search_never_writes_a_log(tmp_path):
     assert not (v / "memory").exists()
 
 
-def test_the_question_is_flattened_and_cut_to_200_characters(tmp_path):
-    v, _ = cite_log(tmp_path, "x [[notes/a]]\n", "--log", "line one\n  line   two " + "z" * 300)
-    q = log_rows(v)[0]["question"]
-    assert "\n" not in q and "line one line two" in q and len(q) == 200
+def test_the_log_row_has_only_the_date_and_the_cited_notes(tmp_path):
+    # privacy: the question text can hold something private, so it is never persisted
+    v, _ = cite_log(tmp_path, "x [[notes/a]]\n", "--log")
+    assert set(log_rows(v)[0]) == {"date", "cited"}
+
+
+def test_log_does_not_take_the_question_text_anymore(tmp_path):
+    v, r = cite_log(tmp_path, "x [[notes/a]]\n", "--log", "my private question")
+    assert r.returncode == 2 and log_rows(v) == []
 
 
 def test_the_date_defaults_to_today(tmp_path):
     import datetime
-    v, _ = cite_log(tmp_path, "x [[notes/a]]\n", "--log", "q")
+    v, _ = cite_log(tmp_path, "x [[notes/a]]\n", "--log")
     assert log_rows(v)[0]["date"] == datetime.date.today().isoformat()
 
 
 def test_an_unreadable_vault_logs_nothing_and_is_not_verified(tmp_path):
     f = tmp_path / "answer.md"
     f.write_text("x [[notes/a]]\n", encoding="utf-8")
-    r = run("cite", str(f), "--vault", str(tmp_path / "empty"), "--log", "q")
+    r = run("cite", str(f), "--vault", str(tmp_path / "empty"), "--log")
     assert r.returncode == 3 and not (tmp_path / "empty").exists()

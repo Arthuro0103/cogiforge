@@ -15,5 +15,8 @@ graphify-out/
 vault/.obsidian/*
 !vault/.obsidian/app.json
 
+# the consultation log is local usage data: it stays on the person's machine
+vault/memory/ask-log.jsonl
+
 # team mode: what is intimate stays on the person's machine (git has no permission per folder)
 vault/people/*/private/

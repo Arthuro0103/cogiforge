@@ -7,7 +7,7 @@
 A note in `notes/` is USED when at least one of these is true (the definition is in WHY.md, mistake 11):
   output   a project file (anything under `projects/`) or a note whose `type:` is article, brief or
            routine links to it: it went into something that leaves the notes;
-  asked    a /cf-ask answer that passed `ask.py cite --log` cited it (vault/memory/ask-log.jsonl).
+  asked    a /cf-ask answer that passed `ask.py cite --log` (date and cited notes only, never the question) cited it (vault/memory/ask-log.jsonl).
 Anything else is UNUSED. An unused note is STALE when its `date:` is `--days` days old or more, and
 IDLE when it is younger. A note with no readable `date:` is UNDATED: it is counted, never guessed.
 

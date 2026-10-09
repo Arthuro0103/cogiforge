@@ -20,7 +20,7 @@ You are the intelligence here: `tools/ask.py` only retrieves and verifies. No AP
 4. **Run `cite` before delivering.** If it exits 1, remove or fix the failing citation and run it again.
    If it exits 3 (`NOT_VERIFIED`), say the citations could not be checked; do not call the answer verified.
 5. **No passage supports it, no answer.** Say "the vault does not cover this", and what you searched for.
-6. **Writes one line, and only that.** The one thing this skill writes in `vault/` is the log line that `cite --log` appends to `vault/memory/ask-log.jsonl`. The draft answer goes in a scratch file outside the repo.
+6. **Writes one line, and only that.** The one thing this skill writes in `vault/` is the log line that `cite --log` appends to `vault/memory/ask-log.jsonl`: the date and the cited notes, **never the question** (it can hold something private). The draft answer goes in a scratch file outside the repo.
 
 > Talk to the user in the language the user writes in. Never translate a quote.
 
@@ -74,10 +74,10 @@ both with their citations and do not pick one.
 ### 5. Check the citations (command)
 
 ```bash
-python3 tools/ask.py cite <answer-file> --log "<the user's question>"   # rc=0 all exist, rc=1 some do not, rc=3 NOT_VERIFIED
+python3 tools/ask.py cite <answer-file> --log   # rc=0 all exist, rc=1 some do not, rc=3 NOT_VERIFIED
 ```
 
-`--log` records the consultation (date, question, cited notes) in `vault/memory/ask-log.jsonl`, and only when every
+`--log` records the consultation (date and cited notes; the question is not stored) in `vault/memory/ask-log.jsonl`, and only when every
 citation exists. That is how a note that an answer used stops counting as one that sits still
 (`python3 tools/usage.py`). Without it the answer is still checked, but nobody can tell the note was used.
 
