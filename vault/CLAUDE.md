@@ -103,6 +103,7 @@ on its own; a note in `notes/` only shows up there through the link in the body.
 | `cf-adopt` | when the user already has an Obsidian vault and does not want to start from zero or copy anything: dry-runs `tools/adopt.py`, explains the plan and the debt measured today, and applies only after a clear yes |
 | `cf-know-my-product` | when the user wants Claude to understand their product and pains: one question at a time, fills `projects/<name>/product.md` in their words, proposes the pain ranking |
 | `cf-study` | when the user wants to learn something their way: one question at a time on what, why, deadline, how and time; three level questions; a plan; then explain, recall, log. `mastered` only after a retest on another day, never without proof |
+| `cf-brand` | when the user wants their voice rules (person, or a project that inherits them) or a project's DNA, messaging, design system or manual: one question at a time, only their words; `manual` assembles and marks what is empty; see `docs/BRAND.md` |
 
 How context loads and how to keep it small: `docs/CONTEXT.md`.
 

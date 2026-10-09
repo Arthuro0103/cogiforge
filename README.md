@@ -78,6 +78,7 @@ cogiforge came out of using Claude on a real vault. Three decisions shaped it:
 | `/cf-whats-real` | Keeps, per project, what **works (with proof)**, what is **simulated or a demo**, and what is **unknown**. An item moves to "works" only with proof run again. |
 | `/cf-know-my-product` | Interviews you about your product and collects your pains with your literal words and the date, then proposes a ranking. You approve before anything is saved. |
 | `/cf-import-knowledge` | Brings an existing base (another vault, a folder, documents, chat exports) into the inbox and walks you through the triage, target first. See *Bringing an existing knowledge base*. |
+| `/cf-brand <mode>` | Keeps your brand in your words, one question at a time: your voice rules (and a project's, which inherits yours), a project's DNA, messaging and design system (no default colors), and a manual that assembles them and marks what is empty. Checks texts with `tools/voice_check.py` and previews colors with `tools/brand_preview.py`, offline. See [docs/BRAND.md](docs/BRAND.md). |
 | `/cf-adapt-skill` | Helps you write **your own** skill from a worksheet in `vault/skill-worksheets/`. One question at a time; Claude never writes it for you, and "this is not for me" is a valid answer that gets recorded. |
 
 ![An Obsidian window on the vault: file tree, a note whose link sits inside the argument, the local graph, and Claude Code opening a project session below.](assets/workbench.svg)
@@ -129,6 +130,7 @@ specific and in your own words.
 
 - [docs/CONTEXT.md](docs/CONTEXT.md): what loads in every session, what loads only on demand, where each thing lives, signs of bad context, and tips for personal, team and school use.
 - [docs/PRODUCT-AND-PAINS.md](docs/PRODUCT-AND-PAINS.md): how the workbench learns your product and collects your pains, and how to ask "what do I build first?".
+- [docs/BRAND.md](docs/BRAND.md): your voice, a project's DNA, messaging, design system and manual, made with Claude's help from your own words, and what it will not do for you.
 - Worksheets in [`vault/worksheets/`](vault/worksheets/): [product-brief](vault/worksheets/product-brief.md), [pains](vault/worksheets/pains.md), [audience](vault/worksheets/audience.md), [project-brief](vault/worksheets/project-brief.md), [decisions-log](vault/worksheets/decisions-log.md), [weekly-review](vault/worksheets/weekly-review.md). `pains` and `decisions-log` also come as CSV in `vault/worksheets/csv/` for Sheets or Excel.
 - `/cf-know-my-product <project>`: interviews you one question at a time and fills the product brief with your words only.
 

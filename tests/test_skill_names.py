@@ -15,7 +15,7 @@ OLD_NAMES = [
     "import-knowledge", "know-my-product", "onboard", "open-session", "study", "task-observer", "whats-real",
 ]
 # Skills born after the prefix existed: they never had an old name, so they are not in OLD_NAMES.
-NEW_NAMES = ["new-project"]
+NEW_NAMES = ["new-project", "brand"]
 TEXT_SUFFIXES = {".md", ".py", ".sh", ".yml", ".yaml", ".svg"}
 
 # A slash-command is a "/" that starts a word: not after a word char, "/", "." or "-" (so paths such as
@@ -58,8 +58,8 @@ def tracked_files():
     return [f for f in out.split("\n") if f]
 
 
-def test_there_are_fifteen_skills():
-    assert len(skill_dirs()) == 15
+def test_there_are_sixteen_skills():
+    assert len(skill_dirs()) == 16
 
 
 @pytest.mark.parametrize("d", skill_dirs(), ids=lambda d: d.name)

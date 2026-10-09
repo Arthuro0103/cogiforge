@@ -19,8 +19,8 @@ Before anything else, read [[skill-worksheets/anatomy-of-a-skill|the anatomy of 
 | `product-idea` | finds real pain in what you already wrote and returns an idea, always with the quote of the pain | [[skill-worksheets/product-idea\|product-idea]] | yes, if you have written material to scan |
 | `consult-notes` | answers a practical question only with what your notes say, citing the note behind each claim | [[skill-worksheets/consult-notes\|consult-notes]] | yes, if you have notes on the subject |
 
-**Four skills that come with a template instead of a worksheet.** They are already in `.claude/skills/`;
-each one fills a model (`cf-study` fills two) that you copy into your project. Copy the model, never edit it here.
+**Five skills that come with a template instead of a worksheet.** They are already in `.claude/skills/`;
+each one fills a model (`cf-study` fills two, `cf-brand` four) that you copy into your project. Copy the model, never edit it here.
 
 | skill | what it does, in one line | model it fills |
 |---|---|---|
@@ -28,6 +28,7 @@ each one fills a model (`cf-study` fills two) that you copy into your project. C
 | `cf-brainstorm` | turns a loose idea into three different paths, a comparison you weigh, and a brief you approve before anything is built | [[skill-worksheets/brainstorm-brief-template\|brainstorm-brief-template]] |
 | `cf-whats-real` | keeps the list of what works (with proof), what is simulated and what is unknown, before and after a milestone | [[skill-worksheets/whats-real-template\|whats-real-template]] |
 | `cf-study` | interviews you about what and how you like to learn, plans small blocks, tests you by recall and marks an item mastered only after a retest on another day | [[skill-worksheets/study-plan-template\|study-plan-template]] and [[skill-worksheets/mastery-template\|mastery-template]] |
+| `cf-brand` | interviews you, one question at a time, and keeps your voice rules, a project's DNA, messaging and design system in your words; the manual only assembles them and marks what is empty | [[skill-worksheets/brand-voice\|brand-voice]], [[skill-worksheets/brand-dna\|brand-dna]], [[skill-worksheets/brand-messaging\|brand-messaging]] and [[skill-worksheets/brand-design\|brand-design]] |
 
 **Examples already written, for free.** The skills `cf-open-session`, `cf-close-session`, `cf-task-observer`,
 `cf-claude-corner`, `cf-adapt-skill` and `cf-onboard` are in `.claude/skills/`. Read the `description` of one and
