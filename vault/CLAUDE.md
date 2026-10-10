@@ -33,8 +33,8 @@ one note per task, in the **TaskNotes** plugin format (see *Tasks* below).
 ## The target comes first
 
 **An item is only processed when a file that already existed changed.** The note is the trace,
-not the product. Measured: a note born from a conversation reached a project file in 4 of 4; one
-born from a loose file, in 0 of 43. So:
+not the product. Measured in the **author's own vault** (not yours; see `WHY.md`): a note born from a conversation
+reached a project file in 4 of 4; one born from a loose file, in 0 of 43. So:
 
 1. Name the target **before** writing: `project::` · `article::` · `question::` · `task::` · `none`.
    `none` is a legitimate answer; the item stays in the inbox with a date, it is not deleted.
