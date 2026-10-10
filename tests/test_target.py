@@ -150,15 +150,21 @@ def test_real_path_finds_a_decomposed_name_when_the_lookup_is_exact(tmp_path):
     nfd = unicodedata.normalize("NFD", "café") + ".md"
     nfc = unicodedata.normalize("NFC", nfd)
     assert nfd != nfc
-    on_disk = {"notes", "notes/life", "notes/life/" + nfd}
+    on_disk = {".", "notes", "notes/life", "notes/life/" + nfd}
+
+    def rel(p):
+        try:
+            return Path(p).relative_to(tmp_path).as_posix()
+        except ValueError:
+            return None
 
     def exists(p):  # exact, as on Linux
-        return str(p).replace(str(tmp_path) + "/", "").replace(str(tmp_path), "") in on_disk or str(p) == str(tmp_path)
+        return rel(p) in on_disk
 
     def entries(d):
-        base = str(d).replace(str(tmp_path), "").lstrip("/")
-        pre = base + "/" if base else ""
-        return sorted({k[len(pre):].split("/")[0] for k in on_disk if k.startswith(pre) and k != base})
+        base = rel(d)
+        pre = "" if base == "." else base + "/"
+        return sorted({k[len(pre):].split("/")[0] for k in on_disk if k not in (".", base) and k.startswith(pre)})
 
     got = t.real_path(tmp_path, "notes/life/" + nfc, exists=exists, entries=entries)
     assert got == tmp_path / "notes" / "life" / nfd

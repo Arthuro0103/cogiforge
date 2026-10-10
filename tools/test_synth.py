@@ -1,5 +1,6 @@
 """Paired tests for synth.py: the same seed gives the same bytes, and the vault has the shape the scale measurements assume."""
 import hashlib
+import os
 import re
 import subprocess
 import sys
@@ -60,7 +61,7 @@ def test_the_vault_passes_its_own_checkers(vault):
         r = subprocess.run([sys.executable, str(CORE / script), "--vault", str(vault), *args], capture_output=True, text=True)
         assert r.returncode == 0, r.stdout[-500:]
     r = subprocess.run([sys.executable, str(CORE / "leak.py"), str(vault)], capture_output=True, text=True,
-                       env={"PATH": "/usr/bin:/bin", "LEAK_BLOCKLIST": str(vault / "absent.txt")})
+                       env={**os.environ, "LEAK_BLOCKLIST": str(vault / "absent.txt")})  # HOME stays: Windows needs it
     assert r.stdout.startswith("0 finding(s)")
 
 
