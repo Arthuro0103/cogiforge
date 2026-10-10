@@ -90,6 +90,16 @@ def test_opening_the_worst_project_is_measured_and_has_its_own_ceiling(root):
     assert r.returncode == 1 and "opening 'zeta-big'" in r.stdout and "every session loads" not in r.stdout
 
 
+def test_the_open_a_project_ceiling_is_inclusive_and_one_byte_more_fails(root):
+    always = measure(root)["always"]
+    put(root, "vault/projects/p/instructions.md", blob(budget.OPEN_MAX - always))
+    assert measure(root)["open"] == budget.OPEN_MAX
+    assert run(root).returncode == 0
+    put(root, "vault/projects/p/instructions.md", blob(budget.OPEN_MAX - always + 1))
+    r = run(root)
+    assert r.returncode == 1 and "opening 'p'" in r.stdout
+
+
 def test_a_project_folder_without_a_root_is_not_a_project(root):
     put(root, "vault/projects/loose/notes.md", blob(60000))
     assert measure(root)["projects"] == 0 and run(root).returncode == 0
@@ -104,6 +114,12 @@ def test_only_the_three_newest_diary_entries_load(root):
 
 def _task(root, name, status, project="p"):
     put(root, f"vault/tasks/{name}.md", f"---\ntags:\n  - task\nstatus: {status}\nprojects:\n  - \"[[projects/{project}/instructions|{project}]]\"\n---\n" + blob(100))
+
+
+def test_a_done_task_alone_costs_nothing_to_open_the_project(root):
+    put(root, "vault/projects/p/instructions.md", "x")
+    _task(root, "finished", "done")
+    assert measure(root)["worst"]["tasks"] == 0
 
 
 def test_only_open_tasks_of_this_project_count_and_at_most_five(root):

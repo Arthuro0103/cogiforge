@@ -128,6 +128,13 @@ def test_hook_blocks_a_duplicate_and_teaches(clone):
     assert r.returncode == 1 and "COMMIT BLOCKED" in out and "How to fix" in out and "x (1).md" in out
 
 
+def test_hook_tells_the_user_what_to_do_with_the_duplicate(clone):
+    commit(clone, "vault/notes/life/x.md", "---\narea: life\n---\n# X\n\nBack to [[home]].\n")
+    r = commit(clone, "vault/notes/life/x (1).md", "---\narea: life\n---\n# X\n\nBack to [[home]].\n")
+    out = r.stdout + r.stderr
+    assert r.returncode == 1 and "How to fix: compare the copy with the original" in out and "docs/SYNC.md" in out
+
+
 def test_hook_lets_a_normal_note_pass(clone):
     r = commit(clone, "vault/notes/life/Chapter 2.md", "---\narea: life\n---\n# C\n\nBack to [[home]].\n")
     assert r.returncode == 0, r.stdout + r.stderr

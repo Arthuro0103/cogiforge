@@ -53,6 +53,12 @@ def test_a_note_linked_only_from_another_plain_note_is_not_used(tmp_path):
     assert one(v)["used"] == 0
 
 
+def test_an_output_note_linking_to_itself_is_not_a_use_of_itself(tmp_path):
+    own = "---\ntype: article\narea: life\ndate: 2026-01-01\n---\n# Out\n\nsee [[notes/life/out]]\n"
+    v = write(tmp_path, {"notes/life/out.md": own})
+    assert one(v)["used"] == 0
+
+
 def test_a_note_linking_out_is_not_used_by_that(tmp_path):
     v = write(tmp_path, {"notes/life/n.md": note(body="[[projects/p/brief]]"), "projects/p/brief.md": "x\n"})
     assert one(v)["used"] == 0

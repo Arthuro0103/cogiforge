@@ -121,6 +121,22 @@ def test_outside_a_git_repo_is_not_verified_never_ok(tmp_path):
     assert r.returncode == 3 and "NOT_VERIFIED" in r.stdout
 
 
+def test_a_decomposed_file_name_from_git_is_reported_composed(repo):
+    import unicodedata
+    git(repo, "config", "core.precomposeunicode", "false")  # git keeps the name as the file system spelled it
+    rel = "notes/life/" + unicodedata.normalize("NFD", "caf\u00e9") + ".md"
+    assert rel != unicodedata.normalize("NFC", rel)
+    put(repo, rel, NO_TARGET)
+    out = target(repo).stdout
+    assert unicodedata.normalize("NFC", rel) in out and rel not in out
+
+
+def test_the_report_teaches_the_way_out(repo):
+    put(repo, "notes/life/n.md", NO_TARGET)
+    out = target(repo).stdout
+    assert "How to fix: add `target:` to the frontmatter" in out
+
+
 def test_an_accented_file_name_is_found(repo):
     put(repo, "notes/life/café.md", NO_TARGET)
     assert "café.md" in target(repo).stdout

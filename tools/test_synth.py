@@ -101,6 +101,20 @@ def test_the_project_roots_carry_the_generated_list(vault):
     assert all("<!-- hub:start -->" in r.read_text() for r in roots)
 
 
+def test_the_generated_list_of_each_project_root_is_filled_in_and_current(vault):
+    hub_py = str(Path(__file__).with_name("hub.py"))
+    with_files = 0
+    for root in (vault / "projects").glob("*/instructions.md"):
+        others = [f for f in root.parent.rglob("*.md") if f != root]
+        block = root.read_text().split("<!-- hub:start -->")[1].split("<!-- hub:end -->")[0]
+        if others:
+            with_files += 1
+            assert f"[[projects/{root.parent.name}/" in block, root
+    assert with_files
+    r = subprocess.run([sys.executable, hub_py, "--vault", str(vault), "--check"], capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout
+
+
 def test_memory_grows_with_the_note_count(tmp_path):
     make(tmp_path / "s", 200), make(tmp_path / "b", 2000)
     size = lambda r: sum((r / "vault/memory" / f"{n}.md").stat().st_size for n in ("profile", "patterns", "decisions"))

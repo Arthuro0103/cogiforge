@@ -141,6 +141,14 @@ def test_only_a_memory_file_can_be_cooled(tmp_path):
         assert cool(v, "--keep", "1", "--apply", file=bad).returncode == 2, bad
 
 
+def test_a_path_that_starts_in_memory_but_climbs_out_is_refused(tmp_path):
+    v = vault(tmp_path)
+    (v / "outside.md").write_text(MEMORY, encoding="utf-8")
+    r = cool(v, "--keep", "1", "--apply", file="memory/../outside.md")
+    assert r.returncode == 2
+    assert read(v, "outside.md") == MEMORY and not (v / "memory" / "archive").exists()
+
+
 def test_keep_below_one_is_rejected(tmp_path):
     assert cool(vault(tmp_path), "--keep", "0").returncode == 2
 

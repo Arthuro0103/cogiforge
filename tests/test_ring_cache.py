@@ -115,6 +115,17 @@ def test_a_corrupt_cache_is_ignored_and_rewritten(v, junk):
     assert sorted(json.loads((v.parent / "cache.json").read_text())["notes"]) == ["a.md", "b.md", "loose.md"]
 
 
+@pytest.mark.parametrize("shape", ["short", "targets_not_a_list"])
+def test_a_malformed_entry_with_a_matching_key_is_read_again(v, shape):
+    st = (v / "loose.md").stat()
+    key = [st.st_size, st.st_mtime_ns]
+    entry = key if shape == "short" else key + [5]
+    (v.parent / "cache.json").write_text(json.dumps({"version": ring.CACHE_VERSION, "notes": {"loose.md": entry}}),
+                                         encoding="utf-8")
+    notes, degree = run(v)
+    assert ring.chk_orphans(notes, degree) == ["loose.md"]
+
+
 def test_a_cache_from_another_version_is_not_trusted(v):
     (v.parent / "cache.json").write_text(json.dumps({"version": 0, "notes": {
         "loose.md": [(v / "loose.md").stat().st_size, (v / "loose.md").stat().st_mtime_ns, ["a"]]}}), encoding="utf-8")

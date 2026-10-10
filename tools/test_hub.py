@@ -149,6 +149,13 @@ def test_check_fails_when_the_overflow_list_is_missing_or_stale(tmp_path):
     assert "all 42 files" in (d / "instructions.md").read_text() and hub(tmp_path, "--check").returncode == 0
 
 
+def test_check_reports_a_missing_overflow_list_as_stale_even_when_the_root_has_no_block(tmp_path):
+    many(tmp_path, 41)
+    r = hub(tmp_path, "--check")
+    assert r.returncode == 1
+    assert r.stdout.split() == ["STALE", "p"]
+
+
 def test_check_does_not_write_the_overflow_list(tmp_path):
     d = many(tmp_path, 41)
     assert hub(tmp_path, "--check").returncode == 1
