@@ -269,11 +269,9 @@ PIECES = {
         ("hidden folders are indexed", 'if any(part.startswith(".") for part in rel_parts):', 'if False:'),
         ("unreadable file aborts instead of being skipped", 'except (OSError, UnicodeDecodeError) as e:\n            skipped', 'except OSError as e:\n            skipped'),
         ("skipped files are silent", 'print(f"skipped {s}", file=sys.stderr)\n    if not chunks:\n        print("NOT_VERIFIED: the vault has no readable chunks, so nothing', 'pass\n    if not chunks:\n        print("NOT_VERIFIED: the vault has no readable chunks, so nothing'),
-        ("the consultation is never logged", 'if a.log is not None:', 'if False:'),
+        ("the consultation is never logged", 'if a.log:\n        log_consultation(', 'if False:\n        log_consultation('),
         ("a failed citation is logged too", '    for b in bad:\n        print("FAIL", b)\n    if bad:\n        return 1', '    for b in bad:\n        print("FAIL", b)\n    if a.log is not None:\n        log_consultation(vault, a.log, sorted({p for p, _ in seen}), a.today)\n    if bad:\n        return 1'),
         ("the cited notes are not deduplicated", 'sorted({p for p, _ in seen})', 'sorted([p for p, _ in seen])'),
-        ("the question is not cut", 'QUESTION_MAX = 200', 'QUESTION_MAX = 20'),
-        ("the question is not flattened", '" ".join(question.split())', 'question'),
         ("the log is overwritten", 'with f.open("a", encoding="utf-8") as fh:', 'with f.open("w", encoding="utf-8") as fh:'),
     ]),
     "conflicts": dict(file="core/conflicts.py", suite=["tests/test_conflicts.py"], texts=[

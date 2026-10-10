@@ -16,6 +16,7 @@ rc: 0 ok or warned · 1 blocked (mode block) · 2 gate.txt unreadable or malform
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 import unicodedata
@@ -54,8 +55,28 @@ def added(vault: Path) -> list[str]:
     return sorted(c for c in names if c.endswith(".md") and c.startswith("notes/"))
 
 
+def real_path(vault: Path, rel: str, exists=os.path.exists, entries=lambda d: os.listdir(d)) -> Path:
+    """`rel` is NFC (that is how it is reported), but on Linux the file keeps the spelling git gave it, often NFD.
+    macOS looks names up without caring; Linux does not, so walk the path and match each part by its NFC form."""
+    p = vault / rel
+    if exists(p):
+        return p
+    cur = vault
+    for part in Path(rel).parts:
+        nxt = cur / part
+        if not exists(nxt):
+            try:
+                found = [e for e in entries(cur) if unicodedata.normalize("NFC", e) == part]
+            except OSError:
+                found = []
+            if found:
+                nxt = cur / found[0]
+        cur = nxt
+    return cur
+
+
 def declared(vault: Path, rel: str) -> bool:
-    text = (vault / rel).read_bytes().decode("utf-8", errors="replace")
+    text = real_path(vault, rel).read_bytes().decode("utf-8", errors="replace")
     block, _ = gate.split_frontmatter(text.split("\n"))
     value = gate.parse_fm(block)[0].get("target") if block is not None else None
     return bool(str(value).strip()) if value is not None else False

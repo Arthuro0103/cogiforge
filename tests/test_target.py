@@ -140,3 +140,25 @@ def test_the_report_teaches_the_way_out(repo):
 def test_an_accented_file_name_is_found(repo):
     put(repo, "notes/life/café.md", NO_TARGET)
     assert "café.md" in target(repo).stdout
+
+
+def test_real_path_finds_a_decomposed_name_when_the_lookup_is_exact(tmp_path):
+    # Linux looks names up byte for byte: the report says NFC, the file kept the NFD spelling git gave it.
+    import sys, unicodedata
+    sys.path.insert(0, str(SCRIPT.parent))
+    import target as t
+    nfd = unicodedata.normalize("NFD", "café") + ".md"
+    nfc = unicodedata.normalize("NFC", nfd)
+    assert nfd != nfc
+    on_disk = {"notes", "notes/life", "notes/life/" + nfd}
+
+    def exists(p):  # exact, as on Linux
+        return str(p).replace(str(tmp_path) + "/", "").replace(str(tmp_path), "") in on_disk or str(p) == str(tmp_path)
+
+    def entries(d):
+        base = str(d).replace(str(tmp_path), "").lstrip("/")
+        pre = base + "/" if base else ""
+        return sorted({k[len(pre):].split("/")[0] for k in on_disk if k.startswith(pre) and k != base})
+
+    got = t.real_path(tmp_path, "notes/life/" + nfc, exists=exists, entries=entries)
+    assert got == tmp_path / "notes" / "life" / nfd
