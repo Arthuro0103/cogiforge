@@ -10,6 +10,9 @@ import bench  # noqa: E402
 
 BENCH = str(Path(__file__).with_name("bench.py"))
 
+# bench.py measures peak memory through the POSIX `resource` module, which Windows does not have.
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="bench needs the POSIX resource module")
+
 
 def test_measure_returns_time_memory_and_the_exit_code(tmp_path):
     r = bench.median_run([sys.executable, "-c", "x = bytearray(30_000_000)"], tmp_path, 2)

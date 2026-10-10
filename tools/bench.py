@@ -30,7 +30,6 @@ import argparse
 import json
 import os
 import platform
-import resource
 import shutil
 import statistics
 import subprocess
@@ -174,6 +173,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out")
     ap.add_argument("--keep", help="build the vaults in this folder and keep them")
     a = ap.parse_args(argv)
+    if sys.platform == "win32":
+        # peak memory comes from the POSIX `resource` module: without it there is no honest number to print.
+        print("NOT_VERIFIED: bench.py measures peak memory with the POSIX `resource` module, which Windows does not have.")
+        return 3
     data = {}
     with tempfile.TemporaryDirectory(prefix="cogiforge-bench-") as td:
         work = Path(a.keep) if a.keep else Path(td)
