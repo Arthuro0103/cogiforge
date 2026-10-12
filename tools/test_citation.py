@@ -167,13 +167,18 @@ def test_the_selftest_passes_offline():
 # --- the document is untrusted input: what it can make this tool request, and what it can make it print ---
 
 @pytest.mark.parametrize("url", [
-    "http://127.0.0.1/x", "http://localhost/x", "http://169.254.169.254/latest/meta-data", "http://10.0.0.5/",
-    "http://192.168.1.1/", "http://[::1]/", "http://[::ffff:127.0.0.1]/", "http://0.0.0.0/",
+    "http://127.0.0.1/x", "http://169.254.169.254/latest/meta-data", "http://10.0.0.5/", "http://192.168.1.1/",
+    "http://[::1]/", "http://[::ffff:127.0.0.1]/", "http://[64:ff9b::7f00:1]/", "http://[::7f00:1]/",
+    "http://[2002:7f00:1::]/", "http://0.0.0.0/", "http://100.64.0.1/",
     "file:///etc/passwd", "ftp://example.com/x", "gopher://example.com/",
 ])
-def test_private_and_non_http_addresses_are_not_requested(url):
+def test_private_literals_and_non_http_schemes_are_not_requested(url):
     assert cit.allowed_url(url) is False
     assert cit.fetch_http(url) == (cit.REFUSED, "")
+
+
+def test_a_name_that_resolves_to_loopback_is_refused_at_connect():
+    assert cit.fetch_http("http://localhost/x") == (cit.REFUSED, "")
 
 
 def test_a_public_literal_address_is_allowed():
@@ -237,3 +242,78 @@ def test_control_and_bidi_characters_never_reach_the_output(tmp_path, capsys):
 
 def test_clean_replaces_control_format_and_bidi_characters():
     assert cit.clean("a\x1b[31mb‮c\x00d") == "a?[31mb?c?d"
+
+
+def test_the_address_checked_is_the_address_used(monkeypatch):
+    """One lookup, validated, then used: a second resolution is where DNS rebinding lives."""
+    import socket
+    calls = []
+
+    def rebinding(host, port, *a, **k):
+        calls.append(host)
+        ip = "93.184.216.34" if len(calls) == 1 else "127.0.0.1"   # public first, loopback after
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, port))]
+
+    connected = []
+
+    class FakeSock:
+        def __init__(self, *a): pass
+        def settimeout(self, t): pass
+        def connect(self, addr): connected.append(addr); raise OSError("stop here")
+        def close(self): pass
+
+    monkeypatch.setattr(socket, "getaddrinfo", rebinding)
+    monkeypatch.setattr(socket, "socket", FakeSock)
+    cit.fetch_http("http://rebind.example.test/x")
+    assert calls == ["rebind.example.test"]                      # resolved exactly once
+    assert connected and connected[0][0] == "93.184.216.34"      # and connected to that same address
+
+
+def test_one_non_public_answer_among_many_refuses_the_name(monkeypatch):
+    import socket
+    mixed = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 80)),
+             (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", 80))]
+    monkeypatch.setattr(socket, "getaddrinfo", lambda *a, **k: mixed)
+    with pytest.raises(cit.Refused):
+        cit.connect_pinned("mixed.example.test", 80, 1)
+
+
+@pytest.mark.parametrize("addr,ok", [
+    ("8.8.8.8", True), ("2606:4700::1111", True),
+    ("127.0.0.1", False), ("100.64.0.1", False), ("::ffff:10.0.0.1", False),
+    ("64:ff9b::7f00:1", False), ("::7f00:1", False), ("2002:7f00:1::", False), ("224.0.0.1", False),
+])
+def test_public_ip_sees_through_embedded_ipv4(addr, ok):
+    import ipaddress
+    assert cit.public_ip(ipaddress.ip_address(addr)) is ok
+
+
+def test_a_slow_fetch_is_cut_by_the_wall_clock(monkeypatch):
+    import time
+    monkeypatch.setattr(cit, "MAX_SECONDS", 0.2)
+    monkeypatch.setattr(cit, "TIMEOUT", 0.1)
+    monkeypatch.setattr(cit, "_fetch", lambda url: (time.sleep(3), (200, "late"))[1])
+    start = time.monotonic()
+    assert cit.fetch_http("https://example.test/slow") == (0, "")
+    assert time.monotonic() - start < 1.5
+
+
+def test_the_run_has_a_wall_clock_budget(monkeypatch):
+    monkeypatch.setattr(cit, "MAX_TOTAL_SECONDS", -1)
+    res = cit.check_text("it has 77.6% [s](https://example.test/page)", fake)
+    assert res[0]["state"] == cit.NOT_VERIFIED and "budget" in res[0]["note"]
+
+
+def test_hostile_html_is_parsed_in_linear_time():
+    import time
+    start = time.monotonic()
+    for hostile in ("<" * 400_000, "<a " * 130_000, "<script " * 50_000, "<!--" * 100_000, "<script>" * 50_000):
+        cit.visible_text(hostile)
+    assert time.monotonic() - start < 3
+
+
+def test_visible_text_keeps_prose_and_drops_markup_script_and_style():
+    page = "<p>wins <b>77.6%</b> of 20 trials</p><script>var x = 999;</script><style>.a{}</style><!-- 555 --> a < b"
+    got = cit.visible_text(page)
+    assert "77.6%" in got and "20" in got and "a < b" in got
+    assert "999" not in got and "555" not in got and "<" not in got.replace("a < b", "")

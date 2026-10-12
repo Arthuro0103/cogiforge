@@ -33,10 +33,12 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import http.client
 import ipaddress
 import socket
 import ssl
 import sys
+import threading
 import time
 import unicodedata
 import urllib.error
@@ -50,7 +52,8 @@ MAX_SECONDS = 15
 MAX_BYTES = 400_000
 MAX_REDIRECTS = 3
 MAX_FETCHES = 50      # citations opened in one run; the rest stay NOT_VERIFIED
-MAX_FILE_BYTES = 5_000_000
+MAX_TOTAL_SECONDS = 300  # wall clock of the whole run
+MAX_FILE_BYTES = 1_000_000
 REFUSED = -1          # fetch status: the address is not a public web host, so it was not requested
 UA = "cogiforge-citation/1.0 (reads a page to check a citation)"
 
@@ -70,34 +73,92 @@ RE_DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b")
 PERCENT_WORD = r"\s*(?:%|percent|per\s*cent|percentage\s+points?)"
 
 
-def public_host(host: str) -> bool:
-    """True only if every address the name resolves to is a public one. A document is untrusted input:
-    without this, a citation to 127.0.0.1 or 169.254.169.254 makes this tool probe the reader's own network."""
-    try:
-        infos = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
-    except (OSError, UnicodeError):
-        return False
-    if not infos:
-        return False
-    for info in infos:
-        try:
-            ip = ipaddress.ip_address(info[4][0].split("%")[0])
-        except ValueError:
+_NAT64 = ipaddress.ip_network("64:ff9b::/96")
+
+
+def public_ip(ip) -> bool:
+    """False for anything that is, or embeds, a non-public IPv4: the plain `is_global` lets NAT64 and
+    IPv4-compatible forms of 127.0.0.1 through."""
+    if ip.version == 6:
+        if ip.ipv4_mapped is not None:
+            return public_ip(ip.ipv4_mapped)
+        if ip.sixtofour is not None:
+            return public_ip(ip.sixtofour)
+        if ip.teredo is not None:
+            return all(public_ip(a) for a in ip.teredo)
+        if ip in _NAT64:
+            return public_ip(ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF))
+        if int(ip) >> 32 == 0:  # ::/96, the deprecated IPv4-compatible block
             return False
-        if ip.version == 6 and ip.ipv4_mapped is not None:  # 3.13 does this inside is_global; 3.10-3.12 do not
-            ip = ip.ipv4_mapped
-        if not ip.is_global or ip.is_multicast:
-            return False
-    return True
+    return ip.is_global and not ip.is_multicast
 
 
 def allowed_url(url: str) -> bool:
+    """Cheap pre-filter, no DNS: http(s) only, and an IP literal must be public. A NAME is checked where the
+    connection is made (`connect_pinned`), on the very address that is then used."""
     try:
         parts = urlsplit(url)
         host = parts.hostname
     except ValueError:
         return False
-    return parts.scheme in ("http", "https") and bool(host) and public_host(host)
+    if parts.scheme not in ("http", "https") or not host:
+        return False
+    try:
+        return public_ip(ipaddress.ip_address(host))
+    except ValueError:
+        return True  # a name
+
+
+class Refused(OSError):
+    """The address is not a public web host."""
+
+
+def connect_pinned(host: str, port: int, timeout: float) -> socket.socket:
+    """Resolve ONCE, refuse unless every address is public, and connect to one of those exact addresses.
+    Validating one lookup and connecting by name would resolve twice, and a hostile DNS can answer
+    differently the second time (rebinding)."""
+    infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    if not infos:
+        raise OSError("no address")
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0].split("%")[0])
+        except ValueError:
+            raise Refused("unreadable address") from None
+        if not public_ip(ip):
+            raise Refused(f"{host} resolves to a non-public address")
+    last: "OSError | None" = None
+    for family, kind, proto, _canon, addr in infos:
+        sock = socket.socket(family, kind, proto)
+        try:
+            sock.settimeout(timeout)
+            sock.connect(addr)
+            return sock
+        except OSError as e:
+            sock.close()
+            last = e
+    raise last or OSError("could not connect")
+
+
+class _PinnedHTTP(http.client.HTTPConnection):
+    def connect(self) -> None:
+        self.sock = connect_pinned(self.host, self.port, self.timeout)
+
+
+class _PinnedHTTPS(http.client.HTTPSConnection):
+    def connect(self) -> None:
+        raw = connect_pinned(self.host, self.port, self.timeout)
+        self.sock = self._context.wrap_socket(raw, server_hostname=self.host)
+
+
+class _HTTPHandler(urllib.request.HTTPHandler):
+    def http_open(self, req):
+        return self.do_open(_PinnedHTTP, req)
+
+
+class _HTTPSHandler(urllib.request.HTTPSHandler):
+    def https_open(self, req):
+        return self.do_open(_PinnedHTTPS, req, context=self._context)
 
 
 class _GuardedRedirect(urllib.request.HTTPRedirectHandler):
@@ -106,20 +167,25 @@ class _GuardedRedirect(urllib.request.HTTPRedirectHandler):
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         if not allowed_url(newurl):
-            raise urllib.error.URLError("redirect to an address that is not a public web host")
+            raise urllib.error.URLError(Refused("redirect to an address that is not a public web host"))
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-def fetch_http(url: str) -> "tuple[int, str]":
-    """(status, text). Status 0 means no answer at all (no network, DNS, TLS, timeout);
-    REFUSED means the address was not public and nothing was requested."""
-    if not allowed_url(url):
-        return REFUSED, ""
-    opener = urllib.request.build_opener(_GuardedRedirect, urllib.request.HTTPSHandler(context=ssl.create_default_context()))
+def _opener() -> urllib.request.OpenerDirector:
+    """No proxy handler: a pinned connection must go straight to the address it validated."""
+    o = urllib.request.OpenerDirector()
+    for h in (urllib.request.ProxyHandler({}), _HTTPHandler(), _HTTPSHandler(context=ssl.create_default_context()),
+              _GuardedRedirect(), urllib.request.HTTPDefaultErrorHandler(), urllib.request.HTTPErrorProcessor(),
+              urllib.request.UnknownHandler()):
+        o.add_handler(h)
+    return o
+
+
+def _fetch(url: str) -> "tuple[int, str]":
     req = urllib.request.Request(url, headers={"User-Agent": UA})
     deadline = time.monotonic() + MAX_SECONDS
     try:
-        with opener.open(req, timeout=TIMEOUT) as r:
+        with _opener().open(req, timeout=TIMEOUT) as r:
             chunks, got = [], 0
             while got < MAX_BYTES:
                 if time.monotonic() > deadline:
@@ -133,10 +199,24 @@ def fetch_http(url: str) -> "tuple[int, str]":
     except urllib.error.HTTPError as e:
         return e.code, ""
     except urllib.error.URLError as e:
-        # a refused redirect is a refusal, not a dead network
-        return (REFUSED, "") if "not a public web host" in str(e.reason) else (0, "")
+        return (REFUSED, "") if isinstance(e.reason, Refused) else (0, "")
+    except Refused:
+        return REFUSED, ""
     except Exception:  # noqa: BLE001 - any failure to get an answer is "no answer"
         return 0, ""
+
+
+def fetch_http(url: str) -> "tuple[int, str]":
+    """(status, text). Status 0 means no answer at all (no network, DNS, TLS, timeout);
+    REFUSED means the address was not public and nothing was requested. The whole fetch, DNS included,
+    has a wall-clock bound: TIMEOUT is per socket operation, so a slow drip alone would hold it."""
+    if not allowed_url(url):
+        return REFUSED, ""
+    box: list = []
+    worker = threading.Thread(target=lambda: box.append(_fetch(url)), daemon=True)
+    worker.start()
+    worker.join(MAX_SECONDS + TIMEOUT)
+    return box[0] if box else (0, "")
 
 
 def clean(text: str) -> str:
@@ -144,9 +224,46 @@ def clean(text: str) -> str:
     return "".join("?" if unicodedata.category(c) in ("Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp") else c for c in str(text))
 
 
-def visible_text(html: str) -> str:
-    html = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", html)
-    return " ".join(re.sub(r"(?s)<[^>]+>", " ", html).split())
+_TAG_NAME = re.compile(r"(/?)([A-Za-z][A-Za-z0-9]*)")
+_END_RAW = {"script": re.compile(r"</script", re.I), "style": re.compile(r"</style", re.I)}
+
+
+def visible_text(page: str) -> str:
+    """One pass, linear in the input. Neither the regex (`<[^>]+>` rescans to the end from every '<') nor
+    html.parser (quadratic on repeated `<a `, `<script `, `<!--`) is safe on a page this tool did not write.
+    An unclosed tag, comment or <script> swallows the rest: what it hides is not evidence of anything."""
+    parts: list[str] = []
+    i, n = 0, len(page)
+    while i < n:
+        j = page.find("<", i)
+        if j < 0:
+            parts.append(page[i:])
+            break
+        parts.append(page[i:j])
+        if page.startswith("<!--", j):
+            k = page.find("-->", j + 4)
+            if k < 0:
+                break
+            parts.append(" ")
+            i = k + 3
+            continue
+        m = _TAG_NAME.match(page, j + 1)
+        if not m:
+            parts.append("<")  # a literal '<' (a < b)
+            i = j + 1
+            continue
+        k = page.find(">", m.end())
+        if k < 0:
+            break
+        parts.append(" ")
+        i = k + 1
+        name = m.group(2).lower()
+        if not m.group(1) and name in _END_RAW:
+            close = _END_RAW[name].search(page, i)
+            if close is None:
+                break
+            i = close.start()
+    return " ".join("".join(parts).split())
 
 
 def extract(text: str) -> list[dict]:
@@ -277,7 +394,12 @@ def check_one(item: dict, fetch: "Fetch | None") -> dict:
     elif status >= 400:
         out["note"] = f"answered {status}: the server could not settle it, which is not proof it is gone"
     else:
-        out["state"], out["note"] = check_numbers(item["context"], visible_text(body))
+        try:
+            page = visible_text(body)
+        except Exception:  # noqa: BLE001 - a page the parser chokes on is "could not check", not a verdict
+            out["note"] = f"opened (status {status}), but the page could not be parsed"
+            return out
+        out["state"], out["note"] = check_numbers(item["context"], page)
         if out["state"] == NOT_VERIFIED:
             out["note"] = f"opened (status {status}), but the sentence claims no number to compare"
     return out
@@ -296,8 +418,12 @@ def exit_code(results: list[dict]) -> int:
 
 
 def check_text(text: str, fetch: "Fetch | None") -> list[dict]:
-    results, opened = [], 0
+    results, opened, start = [], 0, time.monotonic()
     for item in extract(text):
+        if fetch is not None and time.monotonic() - start > MAX_TOTAL_SECONDS:
+            results.append(dict(item, state=NOT_VERIFIED,
+                                note=f"the {MAX_TOTAL_SECONDS}-second budget of one run is used up: run again for the rest"))
+            continue
         if fetch is not None and opened >= MAX_FETCHES:
             results.append(dict(item, state=NOT_VERIFIED,
                                 note=f"over the {MAX_FETCHES}-fetch limit of one run: split the file and run again"))
