@@ -73,7 +73,6 @@ RE_DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b")
 PERCENT_WORD = r"\s*(?:%|percent|per\s*cent|percentage\s+points?)"
 
 
-_NAT64 = ipaddress.ip_network("64:ff9b::/96")
 _GLOBAL_UNICAST_V6 = ipaddress.ip_network("2000::/3")
 
 
@@ -87,10 +86,8 @@ def public_ip(ip) -> bool:
             return public_ip(ip.sixtofour)
         if ip.teredo is not None:
             return all(public_ip(a) for a in ip.teredo)
-        if ip in _NAT64:
-            return public_ip(ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF))
         # A denylist keeps missing forms (SIIT ::ffff:0:a.b.c.d, site-local fec0::/10, ::/96): allow only
-        # global unicast, after the embedded-IPv4 forms above were unwrapped.
+        # global unicast (2000::/3), after the embedded-IPv4 forms above were unwrapped. NAT64 64:ff9b::/96 is outside it, so it is refused.
         if ip not in _GLOBAL_UNICAST_V6:
             return False
     return ip.is_global and not ip.is_multicast
