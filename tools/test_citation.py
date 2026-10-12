@@ -162,3 +162,78 @@ def test_the_selftest_passes_offline():
     p = run("--selftest")
     assert p.returncode == 0, p.stdout + p.stderr
     assert "selftest OK" in p.stdout
+
+
+# --- the document is untrusted input: what it can make this tool request, and what it can make it print ---
+
+@pytest.mark.parametrize("url", [
+    "http://127.0.0.1/x", "http://localhost/x", "http://169.254.169.254/latest/meta-data", "http://10.0.0.5/",
+    "http://192.168.1.1/", "http://[::1]/", "http://[::ffff:127.0.0.1]/", "http://0.0.0.0/",
+    "file:///etc/passwd", "ftp://example.com/x", "gopher://example.com/",
+])
+def test_private_and_non_http_addresses_are_not_requested(url):
+    assert cit.allowed_url(url) is False
+    assert cit.fetch_http(url) == (cit.REFUSED, "")
+
+
+def test_a_public_literal_address_is_allowed():
+    assert cit.allowed_url("https://8.8.8.8/") is True  # a literal needs no DNS
+
+
+def test_a_refused_address_is_not_verified_and_says_why():
+    item = {"kind": "url", "target": "http://169.254.169.254/", "line": 1, "context": "it has 5 items"}
+    out = cit.check_one(item, cit.fetch_http)
+    assert out["state"] == cit.NOT_VERIFIED
+    assert "not requested" in out["note"]
+
+
+def test_a_redirect_to_an_internal_address_is_refused():
+    import urllib.error
+    import urllib.request
+    h = cit._GuardedRedirect()
+    req = urllib.request.Request("https://example.com/a")
+    with pytest.raises(urllib.error.URLError):
+        h.redirect_request(req, None, 302, "Found", {}, "http://127.0.0.1:8080/admin")
+
+
+def test_fetches_per_run_are_capped(monkeypatch):
+    monkeypatch.setattr(cit, "MAX_FETCHES", 2)
+    calls = []
+
+    def counting(url):
+        calls.append(url)
+        return 200, PAGE
+
+    text = "\n".join(f"it has 77.6% [s](https://example.test/p{i})" for i in range(5))
+    res = cit.check_text(text, counting)
+    assert len(calls) == 2
+    assert [r["state"] for r in res].count(cit.NOT_VERIFIED) == 3
+    assert "limit" in res[-1]["note"]
+
+
+def test_a_huge_file_is_not_read(tmp_path, monkeypatch):
+    monkeypatch.setattr(cit, "MAX_FILE_BYTES", 10)
+    f = tmp_path / "big.md"
+    f.write_text("x" * 100)
+    with pytest.raises(OSError):
+        cit.read_text(f)
+
+
+def test_a_dotdot_doi_is_not_requested():
+    called = []
+    item = {"kind": "doi", "target": "10.1000/../../x", "line": 1, "context": "x"}
+    out = cit.check_one(item, lambda u: called.append(u) or (200, ""))
+    assert out["state"] == cit.NOT_VERIFIED and not called
+
+
+def test_control_and_bidi_characters_never_reach_the_output(tmp_path, capsys):
+    f = tmp_path / "a.md"
+    f.write_text("see https://example.com/\x1b[2J‮evil here 5\n", encoding="utf-8")
+    for extra in ([], ["--json"]):
+        cit.main([str(f), "--no-network", *extra])
+        out = capsys.readouterr().out
+        assert "\x1b" not in out and "‮" not in out
+
+
+def test_clean_replaces_control_format_and_bidi_characters():
+    assert cit.clean("a\x1b[31mb‮c\x00d") == "a?[31mb?c?d"

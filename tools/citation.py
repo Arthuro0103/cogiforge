@@ -33,15 +33,25 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import ipaddress
+import socket
 import ssl
 import sys
+import time
+import unicodedata
 import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Callable
+from urllib.parse import quote, urlsplit
 
-TIMEOUT = 12
+TIMEOUT = 10          # per socket operation: a slow drip beats it, so MAX_SECONDS bounds the whole fetch
+MAX_SECONDS = 15
 MAX_BYTES = 400_000
+MAX_REDIRECTS = 3
+MAX_FETCHES = 50      # citations opened in one run; the rest stay NOT_VERIFIED
+MAX_FILE_BYTES = 5_000_000
+REFUSED = -1          # fetch status: the address is not a public web host, so it was not requested
 UA = "cogiforge-citation/1.0 (reads a page to check a citation)"
 
 VERIFIED, PARTIAL, NOT_VERIFIED, BROKEN = "VERIFIED", "PARTIAL", "NOT_VERIFIED", "BROKEN"
@@ -60,16 +70,78 @@ RE_DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b")
 PERCENT_WORD = r"\s*(?:%|percent|per\s*cent|percentage\s+points?)"
 
 
-def fetch_http(url: str) -> "tuple[int, str]":
-    """(status, text). Status 0 means no answer at all (no network, DNS, TLS, timeout)."""
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
+def public_host(host: str) -> bool:
+    """True only if every address the name resolves to is a public one. A document is untrusted input:
+    without this, a citation to 127.0.0.1 or 169.254.169.254 makes this tool probe the reader's own network."""
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT, context=ssl.create_default_context()) as r:
-            return r.status, r.read(MAX_BYTES).decode("utf-8", errors="replace")
+        infos = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+    except (OSError, UnicodeError):
+        return False
+    if not infos:
+        return False
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0].split("%")[0])
+        except ValueError:
+            return False
+        if ip.version == 6 and ip.ipv4_mapped is not None:  # 3.13 does this inside is_global; 3.10-3.12 do not
+            ip = ip.ipv4_mapped
+        if not ip.is_global or ip.is_multicast:
+            return False
+    return True
+
+
+def allowed_url(url: str) -> bool:
+    try:
+        parts = urlsplit(url)
+        host = parts.hostname
+    except ValueError:
+        return False
+    return parts.scheme in ("http", "https") and bool(host) and public_host(host)
+
+
+class _GuardedRedirect(urllib.request.HTTPRedirectHandler):
+    """Every hop is checked, not only the first URL: a public page can redirect to an internal address."""
+    max_redirections = MAX_REDIRECTS
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not allowed_url(newurl):
+            raise urllib.error.URLError("redirect to an address that is not a public web host")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def fetch_http(url: str) -> "tuple[int, str]":
+    """(status, text). Status 0 means no answer at all (no network, DNS, TLS, timeout);
+    REFUSED means the address was not public and nothing was requested."""
+    if not allowed_url(url):
+        return REFUSED, ""
+    opener = urllib.request.build_opener(_GuardedRedirect, urllib.request.HTTPSHandler(context=ssl.create_default_context()))
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    deadline = time.monotonic() + MAX_SECONDS
+    try:
+        with opener.open(req, timeout=TIMEOUT) as r:
+            chunks, got = [], 0
+            while got < MAX_BYTES:
+                if time.monotonic() > deadline:
+                    return 0, ""
+                block = r.read(min(16_384, MAX_BYTES - got))
+                if not block:
+                    break
+                chunks.append(block)
+                got += len(block)
+            return r.status, b"".join(chunks).decode("utf-8", errors="replace")
     except urllib.error.HTTPError as e:
         return e.code, ""
+    except urllib.error.URLError as e:
+        # a refused redirect is a refusal, not a dead network
+        return (REFUSED, "") if "not a public web host" in str(e.reason) else (0, "")
     except Exception:  # noqa: BLE001 - any failure to get an answer is "no answer"
         return 0, ""
+
+
+def clean(text: str) -> str:
+    """Remote and document text reaches a terminal and an agent: control, format and bidi characters become '?'."""
+    return "".join("?" if unicodedata.category(c) in ("Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp") else c for c in str(text))
 
 
 def visible_text(html: str) -> str:
@@ -179,7 +251,10 @@ def check_one(item: dict, fetch: "Fetch | None") -> dict:
         return out
 
     if item["kind"] == "doi":
-        status, body = fetch(f"https://doi.org/api/handles/{item['target']}")
+        if ".." in item["target"]:
+            out["note"] = "the DOI has a '..' segment: not a handle, not requested"
+            return out
+        status, body = fetch(f"https://doi.org/api/handles/{quote(item['target'], safe='/')}")
         if status == 200 and '"responseCode":1' in body.replace(" ", ""):
             out.update(state=PARTIAL, note="the DOI resolves; what the sentence claims was not checked")
         elif status in (404, 410):
@@ -189,7 +264,9 @@ def check_one(item: dict, fetch: "Fetch | None") -> dict:
         return out
 
     status, body = fetch(item["target"])
-    if status == 0:
+    if status == REFUSED:
+        out["note"] = "not requested: the address is not a public web host (local, private, link-local or not http/https)"
+    elif status == 0:
         out["note"] = "no answer (network down or host gone): cannot say the page is broken"
     elif status in (401, 403, 405):
         # A POST-only or authenticated endpoint answers like this to a GET. That is the wrong verb,
@@ -219,12 +296,23 @@ def exit_code(results: list[dict]) -> int:
 
 
 def check_text(text: str, fetch: "Fetch | None") -> list[dict]:
-    return [check_one(i, fetch) for i in extract(text)]
+    results, opened = [], 0
+    for item in extract(text):
+        if fetch is not None and opened >= MAX_FETCHES:
+            results.append(dict(item, state=NOT_VERIFIED,
+                                note=f"over the {MAX_FETCHES}-fetch limit of one run: split the file and run again"))
+            continue
+        if fetch is not None:
+            opened += 1
+        results.append(check_one(item, fetch))
+    return results
 
 
 def read_text(path: Path) -> str:
     """Read UTF-8 and compare with the size on disk: a short read is an error, never a clean file."""
     expected = path.stat().st_size
+    if expected > MAX_FILE_BYTES:
+        raise OSError(f"{path} has {expected} bytes, over the {MAX_FILE_BYTES} limit")
     raw = path.read_bytes()
     if expected > 0 and len(raw) != expected:
         raise OSError(f"short read of {path}: {len(raw)} of {expected} bytes")
@@ -347,10 +435,11 @@ def main(argv: "list[str] | None" = None) -> int:
         print(f"NOT_VERIFIED: could not read {path} ({e})")
         return 3
     results = check_text(text, None if args.no_network else fetch_http)
+    shown = [{k: (clean(v) if isinstance(v, str) else v) for k, v in r.items()} for r in results]
     if args.json:
-        print(json.dumps({"file": str(path), "citations": results}, ensure_ascii=False, indent=2))
+        print(json.dumps({"file": clean(str(path)), "citations": shown}, ensure_ascii=False, indent=2))
     else:
-        print(render(str(path), results))
+        print(render(clean(str(path)), shown))
     return exit_code(results)
 
 
