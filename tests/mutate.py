@@ -436,7 +436,7 @@ PIECES = {
         ("a loopback address counts as public", 'return ip.is_global and not ip.is_multicast', 'return True'),
         ("a name is connected to without checking its address", 'if not public_ip(ip):\n            raise Refused', 'if False:\n            raise Refused'),
         ("NAT64 is not unwrapped", 'if ip in _NAT64:', 'if False:'),
-        ("the IPv4-compatible block passes", 'if int(ip) >> 32 == 0:', 'if False:'),
+        ("IPv6 outside global unicast passes", 'if ip not in _GLOBAL_UNICAST_V6:', 'if False:'),
         ("the run has no wall-clock budget", 'if fetch is not None and time.monotonic() - start > MAX_TOTAL_SECONDS:', 'if False:'),
         ("the fetch has no wall-clock bound", 'worker.join(MAX_SECONDS + TIMEOUT)', 'worker.join()'),
         ("the fetch limit is not applied", 'if fetch is not None and opened >= MAX_FETCHES:', 'if False:'),

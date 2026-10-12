@@ -74,6 +74,7 @@ PERCENT_WORD = r"\s*(?:%|percent|per\s*cent|percentage\s+points?)"
 
 
 _NAT64 = ipaddress.ip_network("64:ff9b::/96")
+_GLOBAL_UNICAST_V6 = ipaddress.ip_network("2000::/3")
 
 
 def public_ip(ip) -> bool:
@@ -88,7 +89,9 @@ def public_ip(ip) -> bool:
             return all(public_ip(a) for a in ip.teredo)
         if ip in _NAT64:
             return public_ip(ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF))
-        if int(ip) >> 32 == 0:  # ::/96, the deprecated IPv4-compatible block
+        # A denylist keeps missing forms (SIIT ::ffff:0:a.b.c.d, site-local fec0::/10, ::/96): allow only
+        # global unicast, after the embedded-IPv4 forms above were unwrapped.
+        if ip not in _GLOBAL_UNICAST_V6:
             return False
     return ip.is_global and not ip.is_multicast
 

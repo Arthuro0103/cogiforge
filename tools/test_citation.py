@@ -282,6 +282,7 @@ def test_one_non_public_answer_among_many_refuses_the_name(monkeypatch):
     ("8.8.8.8", True), ("2606:4700::1111", True),
     ("127.0.0.1", False), ("100.64.0.1", False), ("::ffff:10.0.0.1", False),
     ("64:ff9b::7f00:1", False), ("::7f00:1", False), ("2002:7f00:1::", False), ("224.0.0.1", False),
+    ("::ffff:0:7f00:1", False), ("::ffff:0:0:7f00:1", False), ("fec0::1", False), ("fd00::1", False),
 ])
 def test_public_ip_sees_through_embedded_ipv4(addr, ok):
     import ipaddress
