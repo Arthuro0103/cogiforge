@@ -82,6 +82,7 @@ the commands above. Where a skill says "ask the user one question at a time", do
 | `cf-adapt-skill` | the user wants their own skill from a worksheet in `vault/skill-worksheets/`: you do not write it alone |
 | `cf-new-project` | the user wants a new project: ask the name, then their own one-sentence target (copied unchanged), `--dry-run`, their "yes", then `tools/new_project.py` |
 | `cf-brand` | the user wants their voice rules or a project's DNA, messaging, design system or manual: one question at a time, only their words, a "yes" before saving, no default colors; `manual` only assembles and marks what is empty. Checks with `tools/voice_check.py` and `tools/brand_preview.py` |
+| `cf-new-rule` | the user hit a real, dated mistake and wants it to become a rule: the mistake first, then a pair of inputs, a test seen red, the rule, a mutation, a `WHY.md` entry; nothing outside `vault/` is written without their "yes" |
 
 Features that exist only in Claude Code (running a skill by `/name`, automatic loading by description)
 are conveniences. The rules in this file do not depend on them. More in
