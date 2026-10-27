@@ -18,7 +18,7 @@ older clone, see [docs/TRANSLATING.md](docs/TRANSLATING.md).
 
 A rule with no mistake to justify it, or with no test that fails without it, does not get in. When you
 find a mistake of your own, record it here with the date, write the test that fails, and only then write
-the rule. (A skill that automates this does not exist yet.)
+the rule. (The `cf-new-rule` skill walks you through this order; it has not been used on a real mistake yet.)
 
 ## The mistakes
 
