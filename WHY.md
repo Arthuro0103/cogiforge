@@ -248,6 +248,28 @@ the note changes nothing yet.
 **The tests.** `tests/test_target.py` (a note that is only edited, and `inbox/`, `tasks/`, `projects/`, are never asked; the
 two modes; a bad mode is rc 2) and the end-to-end cases in `tests/test_hook_e2e.py`. 13 mutants (`target`).
 
+### 16. The hook folder that a pull could fill (Oct 27)
+
+**What broke.** `tools/adopt.py` wrote its hook to `.githooks/pre-commit` in the user's vault and set
+`core.hooksPath .githooks`. That folder is part of the versioned tree, so git ran as a hook **any** file that later
+arrived there. Reproduced in throwaway folders: an innocent-looking commit upstream that added `.githooks/post-merge`
+ran on the next `git pull` of the adopted vault. A second, smaller defect: a FIFO at the hook path hung adopt in
+`read_text()`.
+
+**The rule.** The hook lives where git never versions anything: `.git/hooks/pre-commit`. Adopt sets no
+`core.hooksPath`; a vault adopted by the older version is migrated (hook written to `.git/hooks`, key unset last), and
+only when `.githooks` holds nothing but the generated hook. An existing different hook is never overwritten nor chained,
+and is read only if it is a regular file. A global `core.hooksPath` blocks, because git would then skip `.git/hooks`.
+
+**Who catches it.** `tools/adopt.py` (`guard`, `peek_regular`).
+**The tests.** `tests/test_adopt.py::test_a_hook_that_arrives_by_pull_never_runs_after_adopt` (the attack, plus the
+regression: the cogiforge hook still blocks an orphan), `::test_control_the_old_wiring_does_run_a_pulled_hook` (the
+risk is real), `::test_an_old_install_is_migrated_out_of_githooks`, `::test_a_fifo_hook_is_refused_without_being_opened`,
+`::test_a_global_hookspath_blocks_because_git_would_skip_the_hook`. 8 mutants (`adopt`).
+
+This does not change the cogiforge clone itself: `install.sh` still sets `core.hooksPath .githooks` there, because that
+folder is this repository's own code, which you already run.
+
 ## What is not covered yet
 
 ### A regex that cut the extension and fabricated 18 "dead" paths (Sep 6)

@@ -17,8 +17,8 @@ and the old ones are not touched.**
 1. **No vault path, no run.** Ask which folder is the vault. Never guess a path and never search the disk for one.
 2. **Dry run first, always.** `python3 tools/adopt.py <vault>` writes nothing. Do not run `--apply` before the user has seen the plan.
 3. **Read the plan before saying anything.** Every statement points to a line of the output. If you did not read it, you do not claim it.
-4. **Say what is pending first.** Not a git repository (the tool never runs `git init`; tell the user to run it themselves and try again), a CONFLICT (an existing file is kept as it is), skipped notes (iCloud placeholders not downloaded, unreadable, symlinks: they were NOT measured, which is not the same as fine), or "nothing to adopt". A DIFFERENT `.githooks/pre-commit` already in the vault is code from someone else that would run on every commit: the tool refuses to activate it and applies nothing. Show the user the lines the plan prints, tell them to read that hook and decide; never delete, replace or activate it for them.
-   A BLOCKING item about `.git/config`, a symlink, extra files in `.githooks` or a `.git` file means the vault may not be trusted: report the listed keys as they are, do not edit that file yourself, and let the user decide.
+4. **Say what is pending first.** Not a git repository (the tool never runs `git init`; tell the user to run it themselves and try again), a CONFLICT (an existing file is kept as it is), skipped notes (iCloud placeholders not downloaded, unreadable, symlinks: they were NOT measured, which is not the same as fine), or "nothing to adopt". A DIFFERENT `.git/hooks/pre-commit` (or any other hook in `.git/hooks`) is code that already runs on git operations: the tool never overwrites nor chains it and applies nothing. Show the user the lines the plan prints, tell them to read that hook and decide; never delete, replace or activate it for them.
+   A BLOCKING item about `.git/config`, a symlink, extra files in `.githooks` while `core.hooksPath = .githooks` is active (an older install), a global `core.hooksPath`, or a `.git` file means the vault may not be trusted or the hook would not run: report the listed keys as they are, do not edit that file yourself, and let the user decide.
    Also read the full hook text the plan prints and tell the user it will run on every commit.
 5. **Ask, then apply.** Only after a clear "yes" to "do you want to apply this?" run `python3 tools/adopt.py <vault> --apply --yes`. A "maybe" or silence is a no.
 6. **The tool writes, you do not.** Do not edit the user's notes, `areas.txt`, hooks or baseline by hand. Never touch an existing note.
@@ -59,10 +59,11 @@ Suggest a test: add a note with no link and run `git commit`; the hook should bl
 
 1. Defends: a vault received from a third party (zip, copy, sync) with a hostile `.git/config`, symlinks, extra hooks or malicious note names.
 2. `.git/config` is listed by git itself (on a private copy, in a clean environment, running nothing), and only what `git init`/`clone` write (core basics, remote url/fetch, branch remote/merge, user name/email) plus adopt's own two keys passes; anything else blocks with the entry cited, and no git runs inside the vault.
-3. `.git` must be a plain repository (default-deny layout: `commondir`, `config.worktree`, `info/attributes`, alternates, modules, worktrees, shallow, rebase state and hooks of the user all block). Symlinks in any component of a path it would write, a `.git` that is a file or symlink, a `.githooks` with any other file, and a different `pre-commit` all block, and nothing is written.
+3. `.git` must be a plain repository (default-deny layout: `commondir`, `config.worktree`, `info/attributes`, alternates, modules, worktrees, shallow, rebase state and hooks of the user all block). Symlinks in any component of a path it would write, a `.git` that is a file or symlink, and a different `.git/hooks/pre-commit` (never opened unless it is a regular file) all block, and nothing is written.
 4. The hook only runs a cogiforge checkout given as a canonical absolute path with the three scripts inside.
 5. Does NOT defend: the user pointing `cogiforge.home` at a clone they chose (adopt checks the scripts exist, not who wrote them), or a hook they read and approved. Say so in one sentence when you explain the plan.
 6. If the allowlist blocks something the user considers fine, they edit `.git/config` themselves; you never edit it for them and adopt never loosens it.
+7. Defends: a file that LATER arrives in the versioned tree (a pull, merge or sync bringing `.githooks/post-merge`) never runs as a hook. The hook lives in `.git/hooks`, which git never versions, and adopt sets no `core.hooksPath` (an older install that set it is migrated: the key is unset).
 
 ## What adopt does NOT guarantee
 
@@ -73,7 +74,7 @@ Suggest a test: add a note with no link and run `git commit`; the hook should bl
 5. That `core/*.py` print safely when you run them by hand: only adopt and the generated hook filter their output.
 6. That the debt numbers are complete: skipped, unreadable and non-UTF-8 notes are listed, not measured, and links are resolved by the gate's rules, not Obsidian's.
 7. That a blocked vault is dangerous, or an accepted one is safe: the allowlist is deliberately narrow, so real configs (`pull.rebase`, `autocrlf`, `lfs`, credentials) block until you edit them.
-8. Anything after the apply: later edits to the vault, to `.githooks` or to `.git/config` are judged only if you run adopt again.
+8. Anything after the apply: later edits to `.git/hooks` or to `.git/config` (by you or by another tool) are judged only if you run adopt again.
 
 ## Never
 

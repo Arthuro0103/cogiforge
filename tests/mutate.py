@@ -313,6 +313,16 @@ PIECES = {
         ("sync guard does not block", '    fi\n    blocked=1\nfi\n\n# 5. the target', '    fi\nfi\n\n# 5. the target'),
         ("conflicts.py missing passes", 'core/people.py core/conflicts.py core/target.py', 'core/people.py core/target.py'),
     ]),
+    "adopt": dict(file="tools/adopt.py", suite=["tests/test_adopt.py"], texts=[
+        ("hook back in the versioned tree", 'HOOK = ".git/hooks/pre-commit"', 'HOOK = ".githooks/pre-commit"'),
+        ("old install not unset", '            write_local_config(vault, "core.hooksPath", None)', '            pass'),
+        ("FIFO hook is opened", 'if not stat.S_ISREG(st.st_mode):\n        return "other"', 'if False:\n        return "other"'),
+        ("global hooksPath ignored", 'outer = outer_hooks_path()', 'outer = ""'),
+        ("old .githooks with extra files migrated", 'if legacy_dir.is_symlink() or legacy_state != "ours" or others:', 'if False:'),
+        ("foreign pre-commit does not block", 'blocking.append(f"{HOOK} exists and is NOT', '(f"{HOOK} exists and is NOT'),
+        ("other hook in .git/hooks passes", '            if not n.endswith(".sample") or kind(g / "hooks" / n, False):', '            if False:'),
+        ("plain hook text not identical", 'if data == HOOK_TEXT.encode("utf-8"):', 'if False:'),
+    ]),
     "hub": dict(file="tools/hub.py", suite=["tools/test_hub.py"], texts=[
         ("the cap is exclusive", 'if len(files) > INLINE_MAX:', 'if len(files) >= INLINE_MAX:'),
         ("the cap is huge", 'INLINE_MAX = 40 ', 'INLINE_MAX = 4000 '),

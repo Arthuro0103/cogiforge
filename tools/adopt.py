@@ -9,22 +9,27 @@ RUN: it prints the plan and writes nothing. The plan has four parts:
   1. areas        the top-level folders that hold notes, as a proposed `areas.txt` (`folder: area` lines).
                   Hidden folders, `.obsidian`, `.git`, `.trash`, attachment folders and deposits (`inbox`,
                   `tasks`, templates) are not areas.
-  2. install      what `--apply` would create: `.githooks/pre-commit` (calls the cogiforge gate, ring and
+  2. install      what `--apply` would create: `.git/hooks/pre-commit` (calls the cogiforge gate, ring and
                   leak scanner from this checkout; the full hook text is printed), `areas.txt`,
-                  `.cogiforge/baseline.json`, and two entries of the LOCAL git config: `cogiforge.home` (where
+                  `.cogiforge/baseline.json`, and one entry of the LOCAL git config: `cogiforge.home` (where
                   this checkout lives; the hook reads it from `.git/config`, never from a file in the working tree, so a
-                  vault received from outside cannot redirect it) and `core.hooksPath .githooks`. A file that already
-                  exists is NEVER overwritten: it becomes a CONFLICT item in the report.
+                  vault received from outside cannot redirect it). The hook lives in `.git/hooks`, OUTSIDE the
+                  versioned tree, and adopt never sets `core.hooksPath`: no file that a pull, merge or sync brings
+                  can become a hook. A file that already exists is NEVER overwritten: it becomes a CONFLICT item.
   3. debt         measured today: orphan notes, dead wikilinks, notes in an area folder without `area:`
                   (and notes whose frontmatter the gate cannot parse). It is saved as the baseline.
   4. the warning  the hook only judges the notes IN THE COMMIT, so the old debt blocks nobody.
 
-`core.hooksPath` is only activated when `.githooks/pre-commit` does not exist or is byte for byte the generated one;
-a different hook (someone else's code) is a BLOCKING conflict: the plan shows its first lines, `--apply` writes
-nothing, and you have to read that hook and decide. The hook refuses to run (blocks the commit) if `cogiforge.home`
-is not an absolute path to a folder holding core/ring.py, core/gate.py and core/leak.py.
+The hook is only written when `.git/hooks/pre-commit` does not exist (or is byte for byte the generated one); a
+different hook (yours or someone else's) is a BLOCKING conflict: adopt never overwrites nor chains it, the plan shows
+its first lines (only if it is a regular file: a FIFO, device or symlink is never opened), `--apply` writes nothing,
+and you have to read that hook and decide. A vault adopted by an older version (`core.hooksPath = .githooks` with only
+the generated `.githooks/pre-commit`) is migrated: the hook is written to `.git/hooks` and the key is unset; a
+`core.hooksPath` in your global or system config would make git skip `.git/hooks`, so it blocks. The hook refuses to
+run (blocks the commit) if `cogiforge.home` is not an absolute path to a folder holding core/ring.py, core/gate.py and
+core/leak.py.
 
-THREAT MODEL (6 lines)
+THREAT MODEL (7 lines)
   1. DEFENDS: a vault received from a third party (zip, copy, sync) whose `.git`, `.githooks` or notes are hostile.
   2. `.git/config` is not parsed by adopt: git itself lists a private copy (`git config --file COPY --list -z --no-includes`,
      clean environment, which runs nothing), and an ALLOWLIST judges the pairs git returned (core.repositoryformatversion,
@@ -33,9 +38,9 @@ THREAT MODEL (6 lines)
      entry cited, nothing written, no git run inside the vault). Size, NUL and UTF-8 are only extra belt checks.
   3. `.git` is judged as a whole, default-deny: only the names of a plain repository (HEAD, config, description, index, packed-refs,
      hooks of `*.sample`, info/exclude, objects, refs, logs, ...). `commondir`, `config.worktree`, `info/attributes`, alternates,
-     modules, worktrees, shallow, rebase/sequencer state, a hook of yours or any symlink block: git reads them too.
-     It also refuses symlinks in any component of a path it would write, `.git` that is a symlink or a file, a `.githooks` that
-     holds anything but the generated `pre-commit`, a different `pre-commit`, and a `cogiforge.home` that is not this checkout.
+     modules, worktrees, shallow, rebase/sequencer state, a hook already in `.git/hooks` or any symlink block: git reads
+     them too. It also refuses symlinks in any component of a path it would write, `.git` that is a symlink or a file, a
+     different `.git/hooks/pre-commit`, and a `cogiforge.home` that is not this checkout.
   4. The generated hook accepts `cogiforge.home` only as a canonical absolute path (no `.`/`..`, no symlink) with the three
      scripts inside, and passes note names after `--`. Text from the vault never reaches the terminal raw: every output goes through one
      function that shows control, format (bidi, zero-width), separator and surrogate characters as `\\xNN`/`\\uNNNN`, and the
@@ -43,6 +48,8 @@ THREAT MODEL (6 lines)
   5. DOES NOT DEFEND: you pointing `cogiforge.home` at a clone you chose yourself (it checks the three scripts exist, not who
      wrote them), nor a hook you read and approved, nor a hostile global git config or `PATH` of your own account.
   6. When the allowlist blocks something you consider fine, the fix is to edit `.git/config` yourself; adopt never loosens it.
+  7. DEFENDS: a file that LATER reaches the versioned tree (a pull, merge or sync bringing `.githooks/post-merge`) never runs
+     as a hook: the hook is written to `.git/hooks`, which git never versions, and adopt sets no `core.hooksPath`.
 
 `--apply` runs only after the plan was printed, and needs `--yes` or an interactive "yes". It writes only what the
 plan listed and never touches an existing note. It never runs `git init`: a vault that is not a git repository
@@ -80,7 +87,8 @@ import ring  # noqa: E402
 
 NOT_AREAS = {"inbox", "tasks", "templates", "template", "_templates", "attachments", "_attachments", "assets",
              "attach", "files", "images", "img", "media", "resources", "_resources", "excalidraw"}
-HOOK = ".githooks/pre-commit"
+HOOK = ".git/hooks/pre-commit"  # outside the versioned tree: nothing a pull brings lands here
+LEGACY_HOOK = ".githooks/pre-commit"  # where versions before the fix wrote it, activated by core.hooksPath
 BASELINE = ".cogiforge/baseline.json"
 AREAS = "areas.txt"
 LIST_CAP = 50
@@ -174,7 +182,8 @@ _NAME = r"(?:(?!\.\.)[A-Za-z0-9_./-])+"
 ALLOWED_KEYS = [
     (r"core\.repositoryformatversion", r"0"), (r"core\.filemode", BOOLV), (r"core\.bare", r"false"),
     (r"core\.logallrefupdates", r"true"), (r"core\.ignorecase", BOOLV), (r"core\.precomposeunicode", BOOLV),
-    (r"core\.symlinks", BOOLV), (r"core\.hookspath", r"\.githooks"),
+    (r"core\.symlinks", BOOLV),
+    (r"core\.hookspath", r"\.githooks"),  # only so a vault adopted by an older version is recognized and migrated (unset)
     (r"remote\." + _NAME + r"\.url", r"(?:(?:https?|ssh|git)://(?:[A-Za-z0-9_][A-Za-z0-9_.~%+-]*@)?[A-Za-z0-9][A-Za-z0-9_.-]*"
                                       r"(?::[0-9]{1,5})?(?:/[A-Za-z0-9_.~%+@:/-]*)?"
                                       r"|(?:[A-Za-z0-9_][A-Za-z0-9_.-]*@)?[A-Za-z0-9][A-Za-z0-9_.-]*:(?!//)[A-Za-z0-9_.~/+-]*"
@@ -277,12 +286,46 @@ def read_repo_config(vault):
         return [], [(".git/config", None, f"unreadable ({type(e).__name__})")]
 
 
-def write_local_config(vault, key, value):
-    """Writes one key to the vault's own .git/config through git, with no repo discovery in the vault and no env."""
+def write_local_config(vault, key, value=None):
+    """Writes one key (or, with value None, unsets it) in the vault's own .git/config through git, with no repo
+    discovery in the vault and no env."""
+    args = [key, value] if value is not None else ["--unset", key]
     with tempfile.TemporaryDirectory(prefix="adopt-w-") as td:
         subprocess.run(["git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "config", "--file",
-                        str(Path(os.path.abspath(vault)) / ".git" / "config"), key, value],
+                        str(Path(os.path.abspath(vault)) / ".git" / "config"), *args],
                        capture_output=True, cwd=td, env=clean_git_env(td), check=True)
+
+
+def outer_hooks_path():
+    """core.hooksPath from YOUR global/system git config (or ''). Read outside any repository, running nothing: when it is
+    set, git skips .git/hooks in every repo, so the hook adopt writes there would never fire."""
+    if not shutil.which("git"):
+        return ""
+    env = {k: v for k, v in os.environ.items() if k not in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR")}
+    with tempfile.TemporaryDirectory(prefix="adopt-g-") as td:
+        r = subprocess.run(["git", "config", "--get", "core.hooksPath"], capture_output=True, cwd=td,
+                           env={**env, "GIT_CEILING_DIRECTORIES": td})
+    return r.stdout.decode("utf-8", "replace").strip() if r.returncode == 0 else ""
+
+
+def peek_regular(path):
+    """('missing'|'ours'|'other', first lines or None). Opens the file ONLY if it is a regular file (not a symlink, FIFO,
+    socket or device): reading a FIFO would hang adopt."""
+    try:
+        st = os.lstat(path)
+    except FileNotFoundError:
+        return "missing", None
+    except OSError as e:
+        return "other", [f"(could not read it: {type(e).__name__})"]
+    if not stat.S_ISREG(st.st_mode):
+        return "other", ["(not a regular file: a symlink, FIFO, socket or device; adopt never opens it)"]
+    try:
+        data = Path(path).read_bytes()
+    except OSError as e:
+        return "other", [f"(could not read it: {type(e).__name__})"]
+    if data == HOOK_TEXT.encode("utf-8"):
+        return "ours", None
+    return "other", [safe(l)[:200] for l in data.decode("utf-8", "replace").splitlines()[:HOOK_PEEK]]
 
 
 def lookup(entries, key):
@@ -358,8 +401,11 @@ def git_dir_violations(vault):
             bad.append(("HEAD", "unreadable"))
     if "hooks" in top and not kind(g / "hooks", True):
         for n in sorted(os.listdir(g / "hooks")):
+            if n == "pre-commit":
+                continue  # judged by guard(): ours is kept, a different one is a conflict with its first lines shown
             if not n.endswith(".sample") or kind(g / "hooks" / n, False):
-                bad.append((f"hooks/{n}", "a hook of yours: core.hooksPath would silently stop it; move it out and adopt again"))
+                bad.append((f"hooks/{n}", "a hook already installed: git runs it, and adopt neither judges nor touches a hook "
+                                          "it did not write; read it, move it out, adopt, then put it back if you trust it"))
     if "info" in top and not kind(g / "info", True):
         for n in sorted(os.listdir(g / "info")):
             if n not in GIT_INFO_OK or kind(g / "info" / n, False):
@@ -406,7 +452,7 @@ def unsafe_path(vault, rel):
 
 def guard(vault):
     """Everything that must hold before ANY write, judged from disk and from text (no git is run against the vault).
-    -> {state, detail, entries, blocking, existing_hook, hook_state}. Called by the plan and again by apply."""
+    -> {state, detail, entries, blocking, existing_hook, hook_state, migrate}. Called by the plan and again by apply."""
     vault = Path(os.path.abspath(vault))
     state, detail = git_state(vault)
     blocking, entries, existing_hook, hook_state = [], [], None, "create"
@@ -418,6 +464,7 @@ def guard(vault):
         blocking.append("git is not installed")
     elif state == "unsafe":
         blocking.append(f"unsafe repository layout: {detail}")
+    cfg_ok = False  # the config entries are trusted only when the layout and the allowlist both passed
     if state == "ok":
         layout = git_dir_violations(vault)
         if layout:
@@ -429,32 +476,48 @@ def guard(vault):
             blocking.append("the repo's .git/config has content outside the allowlist of what `git init` writes, so adopt "
                             "will not run git against this vault. Read .git/config, remove what is not yours, then adopt again: "
                             + "; ".join(f"entry `{safe(k)}{'' if v is None else ' = ' + safe(v)[:80]}` ({why})" for k, v, why in violations[:8]))
+        cfg_ok = not layout and not violations
     if not ROOT_SAFE.match(ROOT.as_posix()):
         blocking.append("the path of this cogiforge checkout has characters adopt cannot verify safely: move the checkout")
     for rel in (AREAS, HOOK, BASELINE):
         why = unsafe_path(vault, rel)
         if why:
             blocking.append(why)
-    hooks_dir = vault / ".githooks"
-    hp = vault / HOOK
-    if hooks_dir.is_dir() and not hooks_dir.is_symlink():
-        others = sorted(x.name for x in hooks_dir.iterdir() if x.name != "pre-commit")
-        if others:
-            blocking.append(f".githooks holds other files ({', '.join(shown_text(o) for o in others[:6])}): core.hooksPath would run "
-                            "every hook in that folder on git operations. Read them and decide; adopt activates nothing.")
-    if hp.exists() or hp.is_symlink():
-        if hp.is_file() and not hp.is_symlink() and hp.read_bytes() == HOOK_TEXT.encode("utf-8"):
-            hook_state = "identical"
-        else:
-            hook_state = "foreign"
-            try:
-                existing_hook = [safe(l)[:200] for l in hp.read_text(encoding="utf-8", errors="replace").splitlines()[:HOOK_PEEK]]
-            except OSError:
-                existing_hook = ["(could not read it)"]
-            blocking.append(f"{HOOK} exists and is NOT the generated hook: it would run on every commit. Read it, "
-                            f"then decide (delete or move it, or keep it and wire the cogiforge by hand). Nothing was activated.")
+    migrate = False
+    if cfg_ok:
+        hooks_path = lookup(entries, "core.hookspath")
+        if hooks_path:  # the allowlist only lets `.githooks` through: a vault adopted by an older version
+            legacy_dir = vault / ".githooks"
+            legacy_state, legacy_lines = peek_regular(vault / LEGACY_HOOK)
+            others = (sorted(x.name for x in legacy_dir.iterdir() if x.name != "pre-commit")
+                      if legacy_dir.is_dir() and not legacy_dir.is_symlink() else [])
+            if legacy_dir.is_symlink() or legacy_state != "ours" or others:
+                what = (f"other files ({', '.join(shown_text(o) for o in others[:6])})" if others
+                        else "a symlink" if legacy_dir.is_symlink() else f"a {LEGACY_HOOK} that is not the generated one")
+                blocking.append(f"core.hooksPath = .githooks is active and .githooks holds {what}: git ALREADY runs every file "
+                                "there as a hook, including files a pull brings. Read them; adopt will not unset the key "
+                                "(that would silently stop them) nor install anything until .githooks holds only its own hook.")
+                if legacy_lines and legacy_state != "ours":
+                    existing_hook = legacy_lines
+            else:
+                migrate = True
+        outer = outer_hooks_path()
+        if outer:
+            blocking.append(f"your global or system git config sets core.hooksPath = {safe(outer)[:120]}: git then skips "
+                            ".git/hooks in every repository, so the cogiforge hook would never run. Unset it there "
+                            "(`git config --global --unset core.hooksPath`) or wire the hook by hand; adopt writes nothing.")
+    hstate, lines = peek_regular(vault / HOOK) if state == "ok" and not unsafe_path(vault, HOOK) else ("missing", None)
+    if hstate == "ours":
+        hook_state = "identical"
+    elif hstate == "other":
+        hook_state = "foreign"
+        existing_hook = lines
+        blocking.append(f"{HOOK} exists and is NOT the generated hook: it already runs on every commit. adopt never "
+                        "overwrites nor chains it. Read it, then decide (move it out and adopt again, or keep it and call "
+                        "the cogiforge from it by hand). Nothing was written.")
     return {"state": state, "detail": detail, "entries": entries, "blocking": blocking,
-            "existing_hook": existing_hook, "hook_state": hook_state}
+            "existing_hook": existing_hook, "hook_state": hook_state, "migrate": migrate}
+
 
 
 def slug(name):
@@ -560,14 +623,12 @@ def build_plan(vault):
         items.append({"path": HOOK, "what": "pre-commit hook: ring, gate and leak scan on the notes of the commit",
                       "status": "create"})
     item(BASELINE, "debt measured today, saved as the baseline")
-    hooks_path, home_cfg = lookup(entries, "core.hookspath"), lookup(entries, "cogiforge.home")
+    home_cfg = lookup(entries, "cogiforge.home")
     items.append({"path": "git config cogiforge.home", "what": f"where the cogiforge checkout lives: {ROOT.as_posix()}",
                   "status": "already set" if home_cfg else "set"})
-    if blocking:
-        items.append({"path": "git config core.hooksPath", "what": "activate the hook", "status": "NOT set (see pending)"})
-    else:
-        items.append({"path": "git config core.hooksPath", "what": "activate the hook (value: .githooks)",
-                      "status": "already set" if hooks_path == ".githooks" else "set"})
+    if g["migrate"]:
+        items.append({"path": "git config core.hooksPath", "what": "set by an older adopt (.githooks): it made git run every "
+                      "file a pull brings into .githooks; unset LAST, after the hook is in .git/hooks", "status": "unset"})
     pending = []
     if not s["notes"]:
         pending.append("nothing to adopt: the vault has no readable note")
@@ -578,7 +639,7 @@ def build_plan(vault):
         pending.append(f"{len(s['skipped'])} note(s) skipped and NOT measured (see the list)")
     return {"vault": str(vault), "git": state, "notes": len(s["notes"]), "skipped": s["skipped"], "areas": areas,
             "items": items, "debt": debt, "pending": pending, "conflicts": conflicts, "blocking": blocking,
-            "existing_hook": g["existing_hook"], "hook_text": HOOK_TEXT}
+            "existing_hook": g["existing_hook"], "hook_text": HOOK_TEXT, "migrate": g["migrate"]}
 
 
 def render(plan):
@@ -610,8 +671,11 @@ def render(plan):
     out += ["", "4. the hook only judges the notes IN THE COMMIT: the old debt above blocks nobody; it only stops",
             "   new orphans, dead links and personal data from entering. Clean the old debt when you want to.",
             "   (The area check of the gate applies under notes/; elsewhere the area numbers are information.)"]
+    if plan["migrate"]:
+        out += ["", f"older install found: after the apply, {LEGACY_HOOK} is no longer read by git (it stays in your tree;",
+                f"   remove it with `git rm {LEGACY_HOOK}` when you want)."]
     if plan["existing_hook"] is not None:
-        out += ["", f"the EXISTING {HOOK} is not the generated one. Its first lines (read all of it before deciding):"]
+        out += ["", "an EXISTING hook is not the generated one. Its first lines (read all of it before deciding):"]
         out += [f"       | {l}" for l in plan["existing_hook"]]
     if plan["git"] == "ok" and plan["existing_hook"] is None:
         out += ["", f"the FULL text of {HOOK} that would be installed (read it: it runs on every commit):", ""]
@@ -657,15 +721,15 @@ def apply(plan, vault):
         with open(p, "x", encoding="utf-8", newline="\n") as fh:  # "x": refuses to overwrite even if it appeared meanwhile
             fh.write(contents[rel])
         if rel == HOOK:
-            p.chmod(0o755)
+            p.chmod(0o755)  # in .git/hooks: git never versions it, so a pull cannot add or replace it
         written.append(rel)
     for i in plan["items"]:
         if i["path"] == HOOK and i["status"] == "identical (kept)":
             (vault / HOOK).chmod(0o755)  # same bytes as ours; only makes sure git can run it
     for i in plan["items"]:
-        if i["path"] == "git config core.hooksPath" and i["status"] == "set":
-            write_local_config(vault, "core.hooksPath", ".githooks")
-            written.append("git config core.hooksPath")
+        if i["path"] == "git config core.hooksPath" and i["status"] == "unset":  # migration, LAST: the new hook is in place
+            write_local_config(vault, "core.hooksPath", None)
+            written.append("git config --unset core.hooksPath (the old .githooks is no longer read)")
     return written
 
 
@@ -754,6 +818,8 @@ def selftest():
         check("--apply without --yes (no tty): rc 2, writes nothing", call(str(v), "--apply") == 2 and snap(v) == before)
         check("--apply --yes: rc 0", call(str(v), "--apply", "--yes") == 0)
         check("hook and baseline exist", (v / HOOK).is_file() and (v / BASELINE).is_file() and not (v / '.cogiforge' / 'home').exists())
+        check("hook is outside the versioned tree, no core.hooksPath",
+              not (v / LEGACY_HOOK).exists() and "hookspath" not in (v / ".git" / "config").read_text().lower())
         check("existing notes are byte for byte the same",
               all(snap(v)[k] == b for k, b in before.items() if k.endswith(".md")))
         (v / AREAS).write_text("mine: mine\n")
