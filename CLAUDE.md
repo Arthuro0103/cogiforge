@@ -32,6 +32,7 @@ The same rules, written for any agent and not only Claude, are in [AGENTS.md](AG
 | create a project (root, index row, checks) | `python3 tools/new_project.py <name> --target "<sentence>" [--dry-run]` |
 | find passages in the vault / check an answer's citations exist | `python3 tools/ask.py search "<question>"` · `python3 tools/ask.py cite <answer.md>` |
 | notes used or parked, by area / bytes a session loads | `python3 tools/usage.py` · `python3 core/budget.py` |
+| background subagents that stopped without finishing (STOPPED is the alarm) | `python3 tools/agents_watch.py [--session <id>] [--min 10]` |
 | connection map (optional, needs graphify installed) | `/graphify vault` at the repo root |
 | run the tests (needs `pytest`; after `sh install.sh`) | `python3 -m pytest -q` |
 | break each check and require a red test | `python3 tests/mutate.py` |

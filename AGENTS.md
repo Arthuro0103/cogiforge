@@ -56,6 +56,7 @@ Body with the argument. The link goes here, in the middle:
 | which notes were used and which sit still, by area (`idle --project <name>` lists up to 3 for a project) | `python3 tools/usage.py` · `python3 tools/usage.py idle --project <name>` |
 | record that an answer used notes (after the citations exist) | `python3 tools/ask.py cite <answer.md> --log "<question>"` |
 | bytes a session loads, against its ceiling | `python3 core/budget.py` |
+| background subagents that stopped without finishing (STOPPED is the alarm) | `python3 tools/agents_watch.py [--session <id>] [--min 10]` |
 | move the older dated lines of a memory file to an archive (plan first, `--apply` with the user's yes) | `python3 tools/cool.py memory/<file>.md --keep 40` |
 | a synthetic vault of N notes, and time and memory of every tool on it | `python3 tools/synth.py <dir> --notes 5000` · `python3 tools/bench.py --sizes 1000 5000 10000` |
 | turn a chat export into notes in `vault/inbox/chats/` | `python3 tools/import_chats.py <conversations.json or export.zip>` |
