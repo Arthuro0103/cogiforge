@@ -35,6 +35,7 @@ The same rules, written for any agent and not only Claude, are in [AGENTS.md](AG
 | does each citation exist and say what the text claims | `python3 tools/citation.py <file.md>` (`--no-network`, `--selftest`) |
 | background subagents that stopped without finishing (STOPPED is the alarm) | `python3 tools/agents_watch.py [--session <id>] [--min 10]` |
 | check that the command tables cite only flags the scripts have | `python3 tools/flags.py --tables` |
+| was a correction already in the memory (repeats, lexical match) | `python3 tools/repeat.py` |
 | connection map (optional, needs graphify installed) | `/graphify vault` at the repo root |
 | run the tests (needs `pytest`; after `sh install.sh`) | `python3 -m pytest -q` |
 | break each check and require a red test | `python3 tests/mutate.py` |
