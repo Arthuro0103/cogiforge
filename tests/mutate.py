@@ -306,6 +306,14 @@ PIECES = {
         ("skill lets the target be edited", 'Copy it into `--target` unchanged: no fixing, no\n   shortening, no translating.', 'Copy it into `--target`, tidied up.'),
         ("skill asks everything at once", '1. **One question per message.**', '1. **Ask everything at once.**'),
     ]),
+    "new-rule-skill": dict(file=".claude/skills/cf-new-rule/SKILL.md", suite=["tests/test_new_rule_skill.py"], texts=[
+        ("skill writes a rule with no dated mistake", '2. **No mistake, no rule.**', '2. **A rule is always welcome.**'),
+        ("skill writes the rule before the test", '4. **The test comes before the rule.**', '4. **The rule comes before the test.**'),
+        ("skill accepts a single input", '5. **A pair, always.**', '5. **One input is enough.**'),
+        ("skill writes outside vault without a yes", '6. **Never write outside `vault/` on your own.**', '6. **Write outside `vault/` freely.**'),
+        ("skill lets CLAUDE.md grow without saying", '7. **`CLAUDE.md` stays under 5 KB.**', '7. **`CLAUDE.md` may grow.**'),
+        ("skill asks everything at once", '1. **One question per message.**', '1. **Ask everything at once.**'),
+    ]),
     "hook-sync": dict(file=".githooks/pre-commit", suite=["tests/test_conflicts.py"], texts=[
         ("sync guard does not run", 'python3 core/conflicts.py --staged', 'true'),
         ("sync guard passes on any rc", 'if [ "$rc" -ne 0 ]; then', 'if false; then'),

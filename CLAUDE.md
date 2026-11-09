@@ -2,7 +2,7 @@
 
 You are at the **repo root**. The workbench (the user's notes, projects and memory) lives in `vault/`.
 **Before acting, read `vault/CLAUDE.md`**: it says how the workbench operates. This file only carries the
-rules and the commands. Each rule has the mistake that originated it in [POR-QUE.md](POR-QUE.md).
+rules and the commands. Each rule has the mistake that originated it in [WHY.md](WHY.md).
 
 The same rules, written for any agent and not only Claude, are in [AGENTS.md](AGENTS.md).
 
