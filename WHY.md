@@ -270,6 +270,42 @@ risk is real), `::test_an_old_install_is_migrated_out_of_githooks`, `::test_a_fi
 This does not change the cogiforge clone itself: `install.sh` still sets `core.hooksPath .githooks` there, because that
 folder is this repository's own code, which you already run.
 
+### 17. A citation that looks like a citation and does not exist (Oct 2)
+
+**What broke.** A research agent invented an arXiv id: the right shape, a plausible title, plausible authors, and a
+paper that does not exist. An invented citation does not look wrong, it looks like a citation, so the reader cannot
+know which of the hundred to open. The first version of the checker then had a second hole, found on Oct 2 with
+eight lines of test: the number `86` was "found" inside `1986`, and one matching number out of four was enough, so
+2 of 4 swapped numbers passed as verified.
+
+**The rule.** `tools/citation.py` opens each URL, arXiv id and DOI and answers with one of four states: `VERIFIED`,
+`PARTIAL` (it opened, but the claim was not found: only a human eye can tell a paraphrase from an invention),
+`NOT_VERIFIED` (could not be checked: this is "I do not know", never OK) and `BROKEN` (the source does not exist).
+A number counts only as a **whole** number, every number in the sentence has to be on the page, and no answer from the
+network is `NOT_VERIFIED`, never `BROKEN`: a network that is down must not look like a dead source. The rc is typed:
+1 broken, 3 not verified (also when the file has no citation at all), 4 partial, 0 only when everything is verified.
+
+**What it does not do.** It does not prove the number supports the sentence (it returns the text around each number
+for the eye), and a DOI that resolves is only `PARTIAL`: it proves the paper exists, not what it says.
+
+**Who catches it.** The tool itself, offline: `python3 tools/citation.py --selftest` scripts the network.
+**The tests.** `tools/test_citation.py` (an invented arXiv is broken; `86` does not match `1986` or `860`; one wrong
+number among right ones is partial; a down network is never broken; `--no-network` never approves). 21 mutants
+(`citation`).
+
+### 18. "Nothing to measure" and "did not run" were the same silence (Sep 14)
+
+**What broke.** `NOT_VERIFIED` alone joins two different facts: "it ran and there was nothing to measure" (the folder is
+empty, and that is a fact) and "it did not run" (it touched nothing, and that is a hole). An automation could not
+decide whether to insist or to move on.
+
+**The rule.** `core/proof.py`: a null verdict carries one of five typed reasons (`single`, `multiple`,
+`nothing_to_measure`, `wrong_type`, `failed`), and a null without a reason raises `ReasonMissing`. The evidence of what a
+check touched is written by a `Record`, outside the check, and a check that touched nothing is `NOT_VERIFIED` whatever
+it returned.
+
+**Who catches it.** `python3 core/proof.py --selftest` and `tests/test_proof.py`. 20 mutants (`proof`).
+
 ## What is not covered yet
 
 ### A regex that cut the extension and fabricated 18 "dead" paths (Sep 6)
