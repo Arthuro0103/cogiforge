@@ -33,6 +33,7 @@ The same rules, written for any agent and not only Claude, are in [AGENTS.md](AG
 | find passages in the vault / check an answer's citations exist | `python3 tools/ask.py search "<question>"` · `python3 tools/ask.py cite <answer.md>` |
 | notes used or parked, by area / bytes a session loads | `python3 tools/usage.py` · `python3 core/budget.py` |
 | does each citation exist and say what the text claims | `python3 tools/citation.py <file.md>` (`--no-network`, `--selftest`) |
+| background subagents that stopped without finishing (STOPPED is the alarm) | `python3 tools/agents_watch.py [--session <id>] [--min 10]` |
 | connection map (optional, needs graphify installed) | `/graphify vault` at the repo root |
 | run the tests (needs `pytest`; after `sh install.sh`) | `python3 -m pytest -q` |
 | break each check and require a red test | `python3 tests/mutate.py` |
