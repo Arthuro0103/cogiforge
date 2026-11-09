@@ -62,6 +62,7 @@ Body with the argument. The link goes here, in the middle:
 | move the older dated lines of a memory file to an archive (plan first, `--apply` with the user's yes) | `python3 tools/cool.py memory/<file>.md --keep 40` |
 | a synthetic vault of N notes, and time and memory of every tool on it | `python3 tools/synth.py <dir> --notes 5000` · `python3 tools/bench.py --sizes 1000 5000 10000` |
 | turn a chat export into notes in `vault/inbox/chats/` | `python3 tools/import_chats.py <conversations.json or export.zip>` |
+| check that the command tables above cite only flags the scripts really have (reads the scripts without running them) | `python3 tools/flags.py --tables` · `python3 tools/flags.py <script.py>` |
 | run the tests (needs `pytest`) | `python3 -m pytest -q` |
 
 Every script prints a non-zero exit code when it fails. Read the output, not only the exit code.
