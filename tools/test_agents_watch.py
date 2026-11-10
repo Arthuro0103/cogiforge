@@ -94,3 +94,31 @@ def test_the_selftest_passes():
 def test_a_subagent_stop_event_alone_means_finished(tmp_path):
     mk(tmp_path, "s", [WAIT, {"attachment": {"hookEvent": "SubagentStop"}}], 90)
     assert states(tmp_path)["s"]["state"] == w.FINISHED
+
+
+def test_a_legacy_console_encoding_does_not_crash_the_report(tmp_path):
+    import os
+    mk(tmp_path, "stopped", [{"type": "assistant", "message": {"content": [{"type": "text", "text": "waiting → for the render"}]}}], 40)
+    env = {**os.environ, "PYTHONIOENCODING": "cp1252"}
+    r = subprocess.run([sys.executable, TOOL, "--session", str(tmp_path)], capture_output=True, env=env)
+    assert b"UnicodeEncodeError" not in r.stderr, r.stderr.decode("cp1252", "replace")
+    assert r.returncode in (0, 1, 3)
+
+
+def test_current_session_slug_matches_real_claude_code_folders(tmp_path):
+    # Shapes taken from real ~/.claude/projects folders (the cwd recorded in each transcript vs the folder name,
+    # 407 of 407 matched on 10/11/2026), with the user and project names replaced: space, '~', '.', '_' and a
+    # leading '.claude' all become '-'. find_session only reads the cwd it is given, so the path need not exist.
+    real = {
+        "/mnt/u/Library/Mobile Documents/iCloud~md~obsidian/Documents/Vault":
+            "-mnt-u-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Vault",
+        "/mnt/u/.claude/mods": "-mnt-u--claude-mods",
+        "/mnt/u/www/app/.claude/worktrees/feature-x": "-mnt-u-www-app--claude-worktrees-feature-x",
+        "/mnt/u/Library/Application Support/App/cwd": "-mnt-u-Library-Application-Support-App-cwd",
+        "/private/var/folders/ab/xyz_r0000gn/T/tool_cli_0f6g1_r5": "-private-var-folders-ab-xyz-r0000gn-T-tool-cli-0f6g1-r5",
+    }
+    for n, (cwd, slug) in enumerate(real.items()):
+        root = tmp_path / str(n)
+        (root / slug).mkdir(parents=True)
+        (root / slug / "abc.jsonl").write_text("", encoding="utf-8")
+        assert w.find_session("current", root, Path(cwd)) == root / slug / "abc"

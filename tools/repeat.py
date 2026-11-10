@@ -176,7 +176,17 @@ def selftest() -> int:
     return 0 if ok else 1
 
 
+def _safe_stdio() -> None:
+    """A Windows console or pipe may use cp1252/cp437: an unencodable character must print as '?', not crash."""
+    for s in (sys.stdout, sys.stderr):
+        try:
+            s.reconfigure(errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
+
 def main(argv: list[str] | None = None) -> int:
+    _safe_stdio()
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--vault", default=str(Path(__file__).resolve().parent.parent / "vault"))
     ap.add_argument("--corrections", default=None, help="file with the corrections (default: <vault>/memory/observations.md)")
