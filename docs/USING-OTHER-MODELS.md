@@ -3,7 +3,7 @@
 cogiforge is plain Markdown plus a few Python scripts. Any coding agent can work in it if it reads the
 rules. The rules are in [AGENTS.md](../AGENTS.md), written without any Claude-only feature.
 
-> Checked on **2026-11-10** against each tool's own documentation. Tools change quickly: trust the
+> Claude Code, Codex, Cursor and Gemini CLI were checked on **2026-11-10** against each tool's own documentation; the "Others" row was last checked on 2026-10-07. Tools change quickly: trust the
 > tool's docs over this table. What I could not confirm is marked `[VERIFY: ...]`.
 
 ## Which file does each agent read
