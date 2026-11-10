@@ -1,6 +1,9 @@
 # AGENTS.md: how to operate this repository
 
 This file is for any coding agent (Codex, Cursor, Gemini CLI, GitHub Copilot, Claude Code and others).
+Gemini CLI no longer serves free, Google AI Pro or Ultra individual users since 2026-06-18 (they moved to
+Antigravity CLI); it remains for Standard and Enterprise and for paid API keys. It reads `GEMINI.md`, and
+this file only if `context.fileName` lists it (see `docs/USING-OTHER-MODELS.md`).
 It states the same rules as `CLAUDE.md` and `vault/CLAUDE.md` without relying on any one model's
 features. If this file and those two ever disagree, the two `CLAUDE.md` files win and this one is a bug:
 please fix it.
@@ -71,8 +74,12 @@ Every script prints a non-zero exit code when it fails. Read the output, not onl
 ## The skills are plain text: any agent can follow them
 
 The folder `.claude/skills/<name>/SKILL.md` is the Claude Code format: a Markdown file with a short
-frontmatter (`name`, `description`) and steps in the body. Only Claude Code loads these files on its
-own. But each one is just text, so if you are another agent, **open the file and follow its steps as
+frontmatter (`name`, `description`) and steps in the body. Who loads these files on their own: Claude Code
+reads `.claude/skills`; Cursor loads `.claude/skills` for compatibility (and `.agents/skills`); Codex scans
+`.agents/skills`, **not** `.claude/skills`. For Codex, from the repo root run
+`mkdir -p .agents && ln -s ../.claude/skills .agents/skills` (`install.sh` does not do it on purpose:
+symlinks break on Windows and in zips, and Cursor may then see the skills twice, untested), or use Codex's
+`/import`. Otherwise each one is just text, so if you are another agent, **open the file and follow its steps as
 instructions**, the same way you would follow a README. Everything they ask for is done with files and
 the commands above. Where a skill says "ask the user one question at a time", do exactly that.
 

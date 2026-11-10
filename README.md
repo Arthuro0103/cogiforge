@@ -26,7 +26,7 @@ sh install.sh      # turns the pre-commit hook on and proves it works
 claude              # run Claude Code at the repo root
 ```
 
-Then, inside Claude Code, type `/cf-onboard`. Open `vault/` as a vault in Obsidian. When you have a
+Then, inside Claude Code, type `/cf-onboard`. Start Claude Code at the repo root, not inside `vault/`: with the Bash sandbox on, nested `.claude/skills` below the starting folder are not loaded since Claude Code 2.1.319 (see [docs/USING-OTHER-MODELS.md](docs/USING-OTHER-MODELS.md)). Open `vault/` as a vault in Obsidian. When you have a
 project, `/cf-open-session <name>` to start and `/cf-close-session` to end the day. The example project
 `vault/projects/example-my-first-project/` shows the shape. Tasks need the public TaskNotes plugin
 (install it from Obsidian's community plugins), and the optional connection map needs graphify: both are
@@ -115,7 +115,7 @@ nothing changes: solo mode is identical.
 
 ## Guides
 
-- [AGENTS.md](AGENTS.md): the operating rules in a form any coding agent reads (Codex, Cursor, Gemini CLI, Copilot, Claude Code).
+- [AGENTS.md](AGENTS.md): the operating rules in a form any coding agent reads (Codex, Cursor, Gemini CLI, Copilot, Claude Code; Gemini CLI no longer serves free or Google AI Pro/Ultra individual users since 2026-06-18, see [docs/USING-OTHER-MODELS.md](docs/USING-OTHER-MODELS.md)).
 - [docs/EXPORTING-CHATS.md](docs/EXPORTING-CHATS.md): export your chat history from claude.ai, ChatGPT or Gemini and bring it into the vault with `tools/import_chats.py`.
 - [docs/RESEARCH.md](docs/RESEARCH.md): research with the vault: your notes first, the internet second, every outside claim marked until checked.
 - [docs/PRIVATE.md](docs/PRIVATE.md): tell Claude Code not to read some folders (`vault/private.txt`), and the limit of that: it is not a boundary against Bash, other agents or whoever clones the repo.
