@@ -554,6 +554,22 @@ PIECES = {
         ("no colors becomes OK", '"NOT_VERIFIED: no colors declared', '"OK: no colors declared'),
         ("values are not escaped", 'e = html.escape', 'e = str'),
     ]),
+    "skill_spec": dict(file="tests/test_skill_spec.py", suite=["tests/test_skill_spec.py"], texts=[
+        ("missing SKILL.md passes", 'return [f"{skill_dir.name}: SKILL.md does not exist"]', 'return []'),
+        ("no frontmatter passes", 'return [f"{skill_dir.name}: no frontmatter"]', 'return []'),
+        ("missing name passes", 'errors.append("no name")', 'pass'),
+        ("name length ignored", 'if not 1 <= len(name) <= MAX_NAME:', 'if False:'),
+        ("name charset ignored", 'if not re.fullmatch(r"[a-z0-9-]+", name):', 'if False:'),
+        ("edge hyphen allowed", 'if name.startswith("-") or name.endswith("-"):', 'if False:'),
+        ("double hyphen allowed", 'if "--" in name:', 'if False:'),
+        ("name may differ from the folder", 'if name != skill_dir.name:', 'if False:'),
+        ("missing description passes", 'errors.append("no description")', 'pass'),
+        ("description cap off by one", 'elif not 1 <= len(desc) <= MAX_DESC:', 'elif not 1 <= len(desc) <= MAX_DESC + 1:'),
+        ("quotes counted in the length", 'v = v[1:-1]', 'pass'),
+        ("line cap off by one", 'if lines >= MAX_LINES:', 'if lines > MAX_LINES:'),
+        ("line cap off by one (lenient)", 'if lines >= MAX_LINES:', 'if lines >= MAX_LINES + 1:'),
+        ("empty glob passes", 'assert found, f"no skill found', 'assert True, f"no skill found'),
+    ]),
 }
 
 
