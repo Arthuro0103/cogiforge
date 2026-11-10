@@ -312,7 +312,17 @@ def selftest() -> int:
     return 0 if good else 1
 
 
+def _safe_stdio() -> None:
+    """A Windows console or pipe may use cp1252/cp437: an unencodable character must print as '?', not crash."""
+    for s in (sys.stdout, sys.stderr):
+        try:
+            s.reconfigure(errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
+
 def main(argv: list[str] | None = None) -> int:
+    _safe_stdio()
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("script", nargs="?", help="a Python script to list the flags of")
     ap.add_argument("--tables", nargs="*", metavar="FILE.md", help="check the command tables of these files (default: CLAUDE.md and AGENTS.md)")

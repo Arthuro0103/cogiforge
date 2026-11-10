@@ -361,7 +361,17 @@ def selftest() -> int:
     return 1 if fails else 0
 
 
+def _safe_stdio() -> None:
+    """A Windows console or pipe may use cp1252/cp437: an unencodable character must print as '?', not crash."""
+    for s in (sys.stdout, sys.stderr):
+        try:
+            s.reconfigure(errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
+
 def main(argv: list[str] | None = None) -> int:
+    _safe_stdio()
     ap = argparse.ArgumentParser(description="Find background subagents that stopped without finishing.")
     ap.add_argument("--session", default="current", help="id prefix, folder, or 'current' (newest session of this directory)")
     ap.add_argument("--min", type=int, default=10, help="minutes without growth to count as stopped")
