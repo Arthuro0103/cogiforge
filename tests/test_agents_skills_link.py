@@ -5,9 +5,16 @@ that is already there. A step that "fixes" someone else's folder is the failure 
 """
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
+
+# install.sh is the macOS/Linux installer. On Windows `ln -s` under Git Bash copies instead of linking, and
+# install.ps1 does not do this step yet (docs/USING-OTHER-MODELS.md marks it [VERIFY]).
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="the .agents/skills link is created by install.sh, which is the macOS/Linux installer")
 
 
 def _clone(tmp_path):
