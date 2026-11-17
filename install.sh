@@ -58,6 +58,34 @@ if [ -n "$TEAM" ]; then
     echo "Add members as lines in vault/roles.txt. Intimate material goes in vault/people/$TEAM/private/ (gitignored)."
 fi
 
+# Other agents look for skills in `.agents/skills` (Codex, Gemini CLI; see docs/USING-OTHER-MODELS.md).
+# Link it to `.claude/skills` so they find the same files. This step runs last, never replaces or deletes
+# what is already there, never writes through a `.agents` that is itself a link, and a failure here does
+# not undo the hook: it only prints a note.
+same_dir() { [ -d "$1" ] && [ -d "$2" ] && [ "$(cd -P "$1" 2>/dev/null && pwd -P)" = "$(cd -P "$2" 2>/dev/null && pwd -P)" ]; }
+AGENTS_LINK=""
+if same_dir .agents/skills .claude/skills; then
+    AGENTS_LINK="ok"
+elif [ -L .agents ] || [ -L .agents/skills ] || [ -e .agents/skills ]; then
+    AGENTS_LINK="kept"
+elif mkdir -p .agents 2>/dev/null && ln -s ../.claude/skills .agents/skills 2>/dev/null && same_dir .agents/skills .claude/skills; then
+    AGENTS_LINK="ok"
+    # the link is local to this clone: hide it from git here, not in .gitignore, so a `.agents/skills`
+    # that the user makes on their own is never hidden
+    excl=$(git rev-parse --git-path info/exclude 2>/dev/null)
+    if [ -n "$excl" ]; then
+        mkdir -p "$(dirname "$excl")" 2>/dev/null
+        grep -qxF '/.agents/skills' "$excl" 2>/dev/null || printf '/.agents/skills\n' >> "$excl" 2>/dev/null
+    fi
+else
+    AGENTS_LINK="failed"
+fi
+
 echo "OK — hook active (core.hooksPath=.githooks) and the ring selftest passed."
 [ -f vault/private.txt ] && echo "Claude Code read-deny rules from vault/private.txt are in .claude/settings.json."
+case "$AGENTS_LINK" in
+    ok)     echo "Skills for other agents: .agents/skills is linked to .claude/skills (Codex and Gemini CLI look there)." ;;
+    kept)   echo "NOTE: .agents or .agents/skills already exists and is not this repo's link, so it was left alone. Codex and Gemini CLI will not find these skills there." ;;
+    failed) echo "NOTE: the skills link for other agents was not created. Codex and Gemini CLI will not find the skills on their own; see docs/USING-OTHER-MODELS.md." ;;
+esac
 echo "Test it yourself: create a note without a link in vault/notes/ and run git commit."

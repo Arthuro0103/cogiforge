@@ -15,7 +15,7 @@ cd cogiforge
 powershell -ExecutionPolicy Bypass -File install.ps1
 ```
 
-`install.ps1` does what `install.sh` does: checks git and Python 3.10+, sets `core.hooksPath` to `.githooks`,
+`install.ps1` does what `install.sh` does, except the `.agents/skills` link for other agents (see [USING-OTHER-MODELS.md](USING-OTHER-MODELS.md)): it checks git and Python 3.10+, sets `core.hooksPath` to `.githooks`,
 runs the ring selftest, writes the Claude Code read rules from `vault/private.txt` (see
 [PRIVATE.md](PRIVATE.md)), and exits with a non-zero code on any failure. `-Team <handle>` turns team mode on.
 

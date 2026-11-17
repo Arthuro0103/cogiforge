@@ -29,10 +29,34 @@ steps (AGENTS.md lists them). What you lose is the machinery around the text:
 
 | Claude Code gives you | Without it |
 |---|---|
-| Skills load by themselves when your request matches their description, and run as `/name` | You name the skill yourself and ask the agent to read and follow it |
+| Skills load by themselves when your request matches their description, and run as `/name` | Some agents find the skills on their own (see "Who finds the skills on their own" below); in the others you name the skill yourself and ask the agent to read and follow it |
 | Skills can start helper agents in parallel | Run one step at a time; slower, same result |
 | The skills were written and tested against Claude's behavior | A weaker or different model may skip a step, or answer from memory instead of from the notes. Read what it did |
 | Claude Code's own memory and hooks | The vault's hook (`sh install.sh`) is plain git: it works with any agent that commits |
+
+## Who finds the skills on their own
+
+The skills live once, in `.claude/skills/`. `sh install.sh` also creates the link `.agents/skills` ->
+`.claude/skills`, because some agents only look in that second folder. The installer never replaces a
+`.agents/skills` that already exists; it prints a note instead. The link is hidden from git in this
+clone only (`.git/info/exclude`), so a `.agents/skills` folder of your own still shows up in `git status`.
+
+| Agent | Folder it reads in a project | Source (read 2026-11-16) |
+|---|---|---|
+| Claude Code | `.claude/skills` | [code.claude.com/docs/en/skills](https://code.claude.com/docs/en/skills) |
+| Cursor | `.agents/skills`, `.cursor/skills`, and `.claude/skills` for compatibility | [cursor.com/docs/context/skills](https://cursor.com/docs/context/skills) |
+| GitHub Copilot | `.github/skills`, `.claude/skills` or `.agents/skills` | [docs.github.com, About agent skills](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills) |
+| OpenCode | `.claude/skills` and `.agents/skills` | measured with `opencode debug skill`, version 1.2.10 |
+| Codex | `.agents/skills` | [learn.chatgpt.com/docs/build-skills](https://learn.chatgpt.com/docs/build-skills) |
+| Gemini CLI | `.gemini/skills` or `.agents/skills` | [geminicli.com/docs/cli/skills](https://geminicli.com/docs/cli/skills) |
+
+Only the OpenCode line was measured here: with both folders present it listed each skill once, not
+twice. The other lines are what each tool's documentation said on that date, and these tools change
+fast.
+
+`[VERIFY: whether Cursor and Copilot, which read both folders, show each skill twice when the link exists; not measured, checked 2026-11-16]`
+
+`[VERIFY: on Windows the link is not created (install.ps1 does not do this step yet), so Codex and Gemini CLI do not find the skills there, checked 2026-11-16]`
 
 What does **not** depend on the model, and so is the same everywhere: `core/gate.py`, `core/ring.py`,
 `core/leak.py`, the pre-commit hook, `tools/ask.py` and `tools/import_chats.py`. They are scripts.

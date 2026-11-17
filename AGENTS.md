@@ -71,9 +71,11 @@ Every script prints a non-zero exit code when it fails. Read the output, not onl
 ## The skills are plain text: any agent can follow them
 
 The folder `.claude/skills/<name>/SKILL.md` is the Claude Code format: a Markdown file with a short
-frontmatter (`name`, `description`) and steps in the body. Only Claude Code loads these files on its
-own. But each one is just text, so if you are another agent, **open the file and follow its steps as
-instructions**, the same way you would follow a README. Everything they ask for is done with files and
+frontmatter (`name`, `description`) and steps in the body. Several agents find skills on their own, in
+two folders: Claude Code, Cursor, GitHub Copilot and OpenCode read `.claude/skills`; Codex and Gemini CLI
+read `.agents/skills`, which `sh install.sh` links to the same folder (who reads what, with the source
+of each line: docs/USING-OTHER-MODELS.md). If your agent does not list them, each one is still just
+text: **open the file and follow its steps as instructions**, the same way you would follow a README. Everything they ask for is done with files and
 the commands above. Where a skill says "ask the user one question at a time", do exactly that.
 
 | Skill (folder in `.claude/skills/`) | Use it when |
@@ -89,8 +91,8 @@ the commands above. Where a skill says "ask the user one question at a time", do
 | `cf-brand` | the user wants their voice rules or a project's DNA, messaging, design system or manual: one question at a time, only their words, a "yes" before saving, no default colors; `manual` only assembles and marks what is empty. Checks with `tools/voice_check.py` and `tools/brand_preview.py` |
 | `cf-new-rule` | the user hit a real, dated mistake and wants it to become a rule: the mistake first, then a pair of inputs, a test seen red, the rule, a mutation, a `WHY.md` entry; nothing outside `vault/` is written without their "yes" |
 
-Features that exist only in Claude Code (running a skill by `/name`, automatic loading by description)
-are conveniences. The rules in this file do not depend on them. More in
+Features that depend on the agent (running a skill by `/name`, loading it by its description) are
+conveniences. The rules in this file do not depend on them. More in
 [docs/USING-OTHER-MODELS.md](docs/USING-OTHER-MODELS.md).
 
 ## Guides
