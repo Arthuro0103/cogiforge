@@ -17,14 +17,16 @@ part was not checked, and that never becomes "OK". `--require-list` turns this i
 The output carries file:line:type and NEVER the data found (the CI log is public).
 Files named `blocklist.txt` or `negra.txt` are always ignored. `.leakignore` (one path per line,
 relative to where it runs) exempts fixtures planted on purpose; `--no-ignore` turns it off.
-A `.claude/settings.local.json` that git tracks (or that is staged) is always a finding
-(`settings-local-tracked`), even if `.leakignore` lists it: it holds commands approved with "don't ask again".
+A `.claude/settings.local.json` in the git index, in any folder of the repo and in both modes, is always
+a finding (`settings-local-tracked`), even if `.leakignore` lists it: it holds commands approved with
+"don't ask again". Ignore it with `**/.claude/settings.local.json` (without `**/` only the root is covered).
 
 rc: 0 clean · 1 found a leak · 2 usage/error or unreadable file · 3 private list required and missing
 """
 import argparse
 import os
 import re
+import shlex
 import subprocess
 import sys
 import unicodedata
@@ -39,6 +41,8 @@ BLOCKLIST_NAMES = (BLOCKLIST_NAME, LEGACY_BLOCKLIST_NAME)
 IGNORE_FILE = ".leakignore"
 # Claude Code's "don't ask again" writes approved commands (sometimes with a password inside) here
 SETTINGS_LOCAL = ".claude/settings.local.json"
+# with `**/` the line also covers subfolders; `.claude/settings.local.json` alone only covers the root
+SETTINGS_LOCAL_IGNORE = "**/" + SETTINGS_LOCAL
 SKIP_DIRS = {".git", "__pycache__", ".pytest_cache"}  # only what is never content: venv/node_modules ARE scanned
 
 PATH_RE = re.compile(r"(?:/|\\)Users(?:/|\\)[A-Za-z0-9._-]+", re.IGNORECASE)  # includes the Windows style
@@ -149,8 +153,11 @@ def decode(data):
 
 
 def tracked():
-    """Files versioned in git here (empty if not a git repo)."""
-    r = subprocess.run(["git", "ls-files", "-z"], capture_output=True)
+    """Files versioned in git here (empty if not a git repo, or if git is not installed)."""
+    try:
+        r = subprocess.run(["git", "ls-files", "-z"], capture_output=True)
+    except FileNotFoundError:
+        return set()
     if r.returncode != 0:
         return set()
     return {os.path.normpath(c) for c in r.stdout.decode("utf-8", "replace").split("\0") if c}
@@ -170,8 +177,29 @@ def staged_text(path):
 
 
 def is_settings_local(name):
-    n = str(name).replace(os.sep, "/")
+    # case-insensitive: macOS and Windows write `.Claude/Settings.Local.json` to the same file
+    n = unicodedata.normalize("NFC", str(name).replace(os.sep, "/")).lower()
     return n == SETTINGS_LOCAL or n.endswith("/" + SETTINGS_LOCAL)
+
+
+def tracked_settings_local():
+    """Every settings.local.json in the git INDEX, as paths from the repo top.
+
+    Read from git itself, not from the disk walk: a file deleted from disk but still in the
+    index is still committed, a committed file that did not change is not in the staged diff,
+    and the disk (NFD on macOS) and git (NFC) spell accented folders differently.
+    Empty outside a git repo or without git."""
+    try:
+        top = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True)
+        if top.returncode != 0:
+            return []
+        r = subprocess.run(["git", "-C", top.stdout.decode("utf-8", "replace").rstrip("\n"),
+                            "ls-files", "-z"], capture_output=True)
+    except FileNotFoundError:
+        return []
+    if r.returncode != 0:
+        return []
+    return [c for c in r.stdout.decode("utf-8", "replace").split("\0") if c and is_settings_local(c)]
 
 
 def shown(name):
@@ -221,19 +249,21 @@ def main(argv=None):
         return 2
 
     total, with_findings, exempted = 0, 0, []
+    # repo-wide and read from the git index, in both modes: .leakignore never exempts it
+    for name in tracked_settings_local():
+        # a public repo with this file leaks whatever the user approved with "don't ask again"
+        print(f"{name}:0: settings-local-tracked")
+        print("  Claude Code stores approved commands (sometimes with secrets) in this file; it must stay "
+              f"local. Fix: git rm --cached {shlex.quote(':/' + name)} and add "
+              f"`{SETTINGS_LOCAL_IGNORE}` to .gitignore.")
+        total += 1
+        with_findings += 1
+
     versioned = set() if args.staged else tracked()
     for name, text in sources:
         if Path(name).name in BLOCKLIST_NAMES and (args.staged or os.path.normpath(name) in versioned):
             # the private list can never be in a commit; only the local copy, outside git, is ignored
             print(f"{shown(name)}:0: {'blocklist-staged' if args.staged else 'blocklist-in-repo'}")
-            total += 1
-            with_findings += 1
-            continue
-        if is_settings_local(name) and (args.staged or os.path.normpath(name) in versioned):
-            # a public repo with this file leaks whatever the user approved with "don't ask again"
-            print(f"{shown(name)}:0: settings-local-tracked")
-            print("  Claude Code stores approved commands (sometimes with secrets) in this file; it must stay "
-                  f"local. Fix: git rm --cached {shown(name)} and add `{SETTINGS_LOCAL}` to .gitignore.")
             total += 1
             with_findings += 1
             continue

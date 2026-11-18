@@ -282,6 +282,64 @@ def test_ignored_settings_local_json_passes(tmp_path):
     assert r.returncode == 0 and "settings-local-tracked" not in r.stdout
 
 
+def _commit_settings_local(tmp_path, rel):
+    """Repo with `rel` committed (git identity set locally, no global config needed)."""
+    def git(*a):
+        return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a],
+                              cwd=tmp_path, capture_output=True, text=True)
+    git("init", "-q")
+    target = tmp_path / rel
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("{}\n", encoding="utf-8")
+    assert git("add", "-f", rel).returncode == 0
+    assert git("commit", "-qm", "x").returncode == 0
+    return git
+
+
+def test_settings_local_json_in_a_subfolder_fails(tmp_path):
+    # "any folder of the repo": a root-only match would let this one through
+    _commit_settings_local(tmp_path, "sub dir/ção/.claude/settings.local.json")
+    r = run([], tmp_path)
+    assert r.returncode == 1 and "settings-local-tracked" in r.stdout
+    assert "'" in r.stdout.split("git rm --cached", 1)[1].split("\n", 1)[0]  # path with a space is quoted
+
+
+def test_settings_local_json_deleted_from_disk_but_in_the_index_fails(tmp_path):
+    _commit_settings_local(tmp_path, ".claude/settings.local.json")
+    (tmp_path / ".claude" / "settings.local.json").unlink()  # still committed by the next `git commit`
+    assert run([], tmp_path).returncode == 1
+    assert run(["--staged"], tmp_path).returncode == 1
+
+
+def test_staged_mode_flags_a_settings_local_json_committed_before(tmp_path):
+    # the pre-commit hook runs --staged: an old commit must not hide it just because it did not change
+    git = _commit_settings_local(tmp_path, ".claude/settings.local.json")
+    (tmp_path / "a.txt").write_text("hi\n", encoding="utf-8")
+    assert git("add", "a.txt").returncode == 0
+    r = run(["--staged"], tmp_path)
+    assert r.returncode == 1 and "settings-local-tracked" in r.stdout
+
+
+def test_settings_local_json_found_when_run_from_inside_a_subfolder(tmp_path):
+    _commit_settings_local(tmp_path, ".claude/settings.local.json")
+    assert run([], tmp_path / ".claude").returncode == 1
+
+
+def test_settings_local_json_with_other_case_fails(tmp_path):
+    _commit_settings_local(tmp_path, ".Claude/Settings.Local.json")
+    assert run([], tmp_path).returncode == 1
+
+
+def test_the_suggested_gitignore_line_covers_subfolders(tmp_path):
+    git = _commit_settings_local(tmp_path, "keep.txt")
+    (tmp_path / ".gitignore").write_text(v.SETTINGS_LOCAL_IGNORE + "\n", encoding="utf-8")
+    sub = tmp_path / "sub" / ".claude"
+    sub.mkdir(parents=True)
+    (sub / "settings.local.json").write_text("{}\n", encoding="utf-8")
+    r = git("-c", "core.excludesFile=/dev/null", "check-ignore", "-q", "sub/.claude/settings.local.json")
+    assert r.returncode == 0
+
+
 # ---- allowlists and fail-open (2nd security review) --------------------------
 
 def test_example_exemption_does_not_cover_a_real_domain_that_starts_with_example():

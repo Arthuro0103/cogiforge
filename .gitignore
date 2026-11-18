@@ -22,4 +22,4 @@ vault/memory/ask-log.jsonl
 vault/people/*/private/
 
 # Claude Code: "don't ask again" writes approved commands (sometimes with a secret) here
-.claude/settings.local.json
+**/.claude/settings.local.json
