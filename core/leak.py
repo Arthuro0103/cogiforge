@@ -17,6 +17,8 @@ part was not checked, and that never becomes "OK". `--require-list` turns this i
 The output carries file:line:type and NEVER the data found (the CI log is public).
 Files named `blocklist.txt` or `negra.txt` are always ignored. `.leakignore` (one path per line,
 relative to where it runs) exempts fixtures planted on purpose; `--no-ignore` turns it off.
+A `.claude/settings.local.json` that git tracks (or that is staged) is always a finding
+(`settings-local-tracked`), even if `.leakignore` lists it: it holds commands approved with "don't ask again".
 
 rc: 0 clean · 1 found a leak · 2 usage/error or unreadable file · 3 private list required and missing
 """
@@ -35,6 +37,8 @@ BLOCKLIST_NAME = "blocklist.txt"
 LEGACY_BLOCKLIST_NAME = "negra.txt"
 BLOCKLIST_NAMES = (BLOCKLIST_NAME, LEGACY_BLOCKLIST_NAME)
 IGNORE_FILE = ".leakignore"
+# Claude Code's "don't ask again" writes approved commands (sometimes with a password inside) here
+SETTINGS_LOCAL = ".claude/settings.local.json"
 SKIP_DIRS = {".git", "__pycache__", ".pytest_cache"}  # only what is never content: venv/node_modules ARE scanned
 
 PATH_RE = re.compile(r"(?:/|\\)Users(?:/|\\)[A-Za-z0-9._-]+", re.IGNORECASE)  # includes the Windows style
@@ -165,6 +169,11 @@ def staged_text(path):
     return decode(r.stdout)
 
 
+def is_settings_local(name):
+    n = str(name).replace(os.sep, "/")
+    return n == SETTINGS_LOCAL or n.endswith("/" + SETTINGS_LOCAL)
+
+
 def shown(name):
     """Path as printed: always with `/`, so the report reads the same on every OS."""
     return str(name).replace(os.sep, "/")
@@ -217,6 +226,14 @@ def main(argv=None):
         if Path(name).name in BLOCKLIST_NAMES and (args.staged or os.path.normpath(name) in versioned):
             # the private list can never be in a commit; only the local copy, outside git, is ignored
             print(f"{shown(name)}:0: {'blocklist-staged' if args.staged else 'blocklist-in-repo'}")
+            total += 1
+            with_findings += 1
+            continue
+        if is_settings_local(name) and (args.staged or os.path.normpath(name) in versioned):
+            # a public repo with this file leaks whatever the user approved with "don't ask again"
+            print(f"{shown(name)}:0: settings-local-tracked")
+            print("  Claude Code stores approved commands (sometimes with secrets) in this file; it must stay "
+                  f"local. Fix: git rm --cached {shown(name)} and add `{SETTINGS_LOCAL}` to .gitignore.")
             total += 1
             with_findings += 1
             continue

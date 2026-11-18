@@ -243,6 +243,45 @@ def test_private_list_in_the_stage_blocks_the_commit(tmp_path, name):
     assert r.returncode == 1 and "blocklist-staged" in r.stdout
 
 
+def _git_repo(tmp_path, tracked_file):
+    def git(*a):
+        return subprocess.run(["git", *a], cwd=tmp_path, capture_output=True, text=True)
+    git("init", "-q")
+    target = tmp_path / ".claude" / "settings.local.json"
+    target.parent.mkdir()
+    target.write_text('{"permissions": {"allow": ["Bash(echo hi)"]}}\n', encoding="utf-8")
+    if tracked_file:
+        assert git("add", "-f", ".claude/settings.local.json").returncode == 0
+    else:
+        (tmp_path / ".gitignore").write_text(".claude/settings.local.json\n", encoding="utf-8")
+        assert git("add", ".gitignore").returncode == 0
+    return git
+
+
+def test_tracked_settings_local_json_fails(tmp_path):
+    _git_repo(tmp_path, tracked_file=True)
+    r = run([], tmp_path)
+    assert r.returncode == 1 and "settings-local-tracked" in r.stdout and "git rm --cached" in r.stdout
+
+
+def test_staged_settings_local_json_fails(tmp_path):
+    _git_repo(tmp_path, tracked_file=True)
+    r = run(["--staged"], tmp_path)
+    assert r.returncode == 1 and "settings-local-tracked" in r.stdout
+
+
+def test_tracked_settings_local_json_not_exempted_by_leakignore(tmp_path):
+    _git_repo(tmp_path, tracked_file=True)
+    (tmp_path / ".leakignore").write_text(".claude/settings.local.json\n", encoding="utf-8")
+    assert run([], tmp_path).returncode == 1
+
+
+def test_ignored_settings_local_json_passes(tmp_path):
+    _git_repo(tmp_path, tracked_file=False)
+    r = run([], tmp_path)
+    assert r.returncode == 0 and "settings-local-tracked" not in r.stdout
+
+
 # ---- allowlists and fail-open (2nd security review) --------------------------
 
 def test_example_exemption_does_not_cover_a_real_domain_that_starts_with_example():
