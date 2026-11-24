@@ -34,3 +34,12 @@ def found(quote, text):
         return None
     hay = " " + norm(text) + " "
     return all(" " + p + " " in hay for p in ps)
+
+
+def found_whole(quote, text):
+    """The WHOLE phrase, normalized, as whole words: no brackets and no ellipsis exception (for memory lines).
+    None if the phrase has fewer than 3 words, so nothing can be measured."""
+    n = norm(quote)
+    if len(n.split()) < MIN_WORDS:
+        return None
+    return " " + n + " " in " " + norm(text) + " "

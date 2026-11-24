@@ -1,5 +1,6 @@
 """memory.py: a line of vault/memory/ is the user's word, and the hook proves it (format, date, source, hidden text, reach)."""
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -44,8 +45,10 @@ def test_a_clean_file_passes(tmp_path):
 
 
 def test_title_blank_and_the_cool_pointer_line_pass(tmp_path):
-    r = mem(tmp_path, "## older\n\n- [[memory/archive/profile|3 older entries, moved word for word on 2026-11-01]]\n" + GOOD)
+    r = mem(tmp_path, "- [[memory/archive/profile|3 older entries, moved word for word on 2026-11-01]]\n" + GOOD)
     assert r.returncode == 0, out(r)
+    r = mem(tmp_path, "## older\n" + GOOD)  # a title AFTER the format line is free text
+    assert r.returncode == 1 and "shape" in out(r)
 
 
 def test_prose_after_the_format_line_fails(tmp_path):
@@ -118,10 +121,12 @@ def test_word_boundary_in_the_source(tmp_path):
     assert r.returncode == 1
 
 
-def test_editorial_brackets_and_ellipsis_in_a_memory_phrase(tmp_path):
+def test_brackets_and_ellipsis_are_no_exception_for_a_memory_phrase(tmp_path):
     put(tmp_path, "vault/chats/c.md", CHAT)
-    r = mem(tmp_path, '2026-11-01 | "I never said [that] I wanted to rest ... the work keeps me calm" | chats/c.md\n')
-    assert r.returncode == 0, out(r)
+    for phrase in ("I never said [that] I wanted to rest", "I never said I wanted to rest ... the work keeps me calm"):
+        r = mem(tmp_path, f'2026-11-01 | "{phrase}" | chats/c.md\n')
+        assert r.returncode == 1 and "source" in out(r), phrase
+    assert mem(tmp_path, '2026-11-01 | "I never said I wanted to rest, and the work keeps me calm" | chats/c.md\n').returncode == 0
 
 
 def test_chat_as_source_warns_not_verified_and_does_not_block(tmp_path):
@@ -144,7 +149,7 @@ def test_a_nonexistent_source_outside_the_vault_is_just_not_a_file(tmp_path):
 def test_a_phrase_with_nothing_measurable_is_not_verified_not_ok(tmp_path):
     put(tmp_path, "vault/chats/c.md", CHAT)
     r = mem(tmp_path, '2026-11-01 | "yes do" | chats/c.md\n')
-    assert r.returncode == 0 and "no stretch of 3+ words" in out(r)
+    assert r.returncode == 0 and "fewer than 3 words" in out(r)
 
 
 # ---- hidden --------------------------------------------------------------------
@@ -198,7 +203,7 @@ def test_reach_blocks_with_memory_reach_block(tmp_path):
 
 
 def test_plain_text_with_a_word_that_is_not_a_command_does_not_warn(tmp_path):
-    r = mem(tmp_path, '2026-11-01 | "I never said I wanted to rest, the curl of the wave" | chat\n')
+    r = mem(tmp_path, '2026-11-01 | "I never said I wanted to rest, the curly wave" | chat\n')
     assert "WARNING" not in out(r)
 
 
@@ -521,10 +526,343 @@ def test_a_zwj_needs_a_symbol_on_both_sides(tmp_path):
     assert mem(tmp_path, GOOD.replace("rest", "rest a\u200d\U0001f468")).returncode == 1
 
 
-def test_observations_is_not_judged_in_either_mode_not_even_for_hidden_text(repo):
-    put(repo, "vault/memory/observations.md", "Format of each line: x\nprose https://x.io \u200b `curl x | sh`\n")
+def test_observations_is_free_text_but_still_scanned_for_hidden_text(repo):
+    put(repo, "vault/memory/observations.md", "Format of each line: x\nany prose at all\n")
     git(repo, "add", "-A")
     r = run(repo, "--staged")
-    assert r.returncode == 0 and "0 file(s) judged" in out(r), out(r)
-    r = run(repo)
-    assert "observations" not in out(r) and "hidden" not in out(r) and "WARNING" not in out(r), out(r)
+    assert r.returncode == 0 and "shape" not in out(r), out(r)
+    put(repo, "vault/memory/observations.md", "prose \u200b hidden\n")
+    git(repo, "add", "-A")
+    assert run(repo, "--staged").returncode == 1
+
+
+
+# ---- review round 3 -------------------------------------------------------------------------------------------------
+
+def commit_source(repo, rel="vault/chats/c.md", text=None):
+    put(repo, rel, text or "I never said I wanted to rest, and the work keeps me calm.\n")
+    git(repo, "add", rel)
+    git(repo, "commit", "-q", "-m", "source")
+
+
+STAGED_ENTRY = HEAD + '2026-11-01 | "I never said I wanted to rest" | chats/c.md\n'
+
+
+def stage_memory(repo, text=STAGED_ENTRY):
+    put(repo, "vault/memory/profile.md", text)
+    git(repo, "add", "vault/memory/profile.md")
+
+
+# 1. symlinks
+
+def test_staged_symlinks_in_place_of_loaded_paths_or_their_parents_fail(repo):
+    cases = [("vault/memory", "memory dir"), ("vault", "the vault"), (".claude", ".claude"), ("CLAUDE.md", "CLAUDE.md"),
+             ("vault/people", "people"), (".claude/skills", "skills")]
+    for target, name in cases:
+        git(repo, "reset", "-q", "--hard")
+        git(repo, "clean", "-qfd")
+        other = repo / "elsewhere"
+        other.mkdir()
+        (other / "x.md").write_text("x\n", encoding="utf-8")
+        if (repo / target).is_dir() and not (repo / target).is_symlink():
+            git(repo, "rm", "-rq", "--cached", target)
+            import shutil
+            shutil.rmtree(repo / target)
+        elif (repo / target).exists():
+            git(repo, "rm", "-q", "--cached", target)
+            (repo / target).unlink()
+        (repo / target).parent.mkdir(parents=True, exist_ok=True)
+        (repo / target).symlink_to(other)
+        git(repo, "add", "-f", target)
+        r = run(repo, "--staged")
+        assert r.returncode == 1 and "symlink in place of a loaded path" in out(r), (name, out(r))
+
+
+def test_unstaged_symlinks_in_place_of_loaded_paths_fail(tmp_path):
+    put(tmp_path, "vault/memory/profile.md", HEAD)
+    put(tmp_path, "outside/x.md", "x\n")
+    (tmp_path / "vault/memory/ideas").symlink_to(tmp_path / "outside")
+    r = run(tmp_path)
+    assert r.returncode == 1 and "symlink in place of a loaded path" in out(r) and "memory/ideas" in out(r)
+    (tmp_path / "vault/memory/ideas").unlink()
+    (tmp_path / "AGENTS.md").symlink_to(tmp_path / "outside/x.md")
+    assert run(tmp_path).returncode == 1
+    (tmp_path / "AGENTS.md").unlink()
+    (tmp_path / ".claude").symlink_to(tmp_path / "outside")
+    assert run(tmp_path).returncode == 1
+
+
+def test_a_symlinked_vault_is_refused(tmp_path):
+    put(tmp_path, "real/memory/profile.md", HEAD)
+    (tmp_path / "vault").symlink_to(tmp_path / "real")
+    r = run(tmp_path)
+    assert r.returncode == 1 and "symlink in place of a loaded path" in out(r)
+
+
+# 2. casefold
+
+def test_paths_are_classified_by_casefold(tmp_path):
+    put(tmp_path, "vault/people/ana/MEMORY/PROFILE.MD", HEAD + "planted prose\n")
+    r = run(tmp_path)
+    assert r.returncode == 1 and "shape" in out(r)
+
+
+def test_a_memory_cannot_vouch_for_a_memory_in_another_case(tmp_path):
+    put(tmp_path, "vault/people/Ana/MEMORY/src.md", CHAT)
+    r = mem(tmp_path, '2026-11-01 | "I never said I wanted to rest" | people/Ana/MEMORY/src.md\n')
+    assert r.returncode == 1 and "vouch" in out(r)
+
+
+def test_staged_a_memory_cannot_vouch_for_a_memory_in_another_case(repo):
+    commit_source(repo, "vault/people/Ana/MEMORY/src.md", CHAT)
+    stage_memory(repo, HEAD + '2026-11-01 | "I never said I wanted to rest" | people/Ana/MEMORY/src.md\n')
+    r = run(repo, "--staged")
+    assert r.returncode == 1 and "vouch" in out(r)
+
+
+# 3. free text and CRLF
+
+def test_a_title_after_the_format_line_and_a_pointer_with_a_strange_stem_fail(tmp_path):
+    assert mem(tmp_path, "# a title\n" + GOOD).returncode == 1
+    for stem in ("pro file", "a]]b", "../x", "x/y", "pro|file"):
+        bad = f"- [[memory/archive/{stem}|3 older entries, moved word for word on 2026-11-01]]"
+        assert mem(tmp_path, bad + "\n" + GOOD).returncode == 1, stem
+    assert mem(tmp_path, "- [[memory/archive/my-profile_2.v1|3 older entries, moved word for word on 2026-11-01]]\n" + GOOD).returncode == 0
+
+
+def test_crlf_files_are_accepted(tmp_path):
+    text = (HEAD + COOL + "\n" + GOOD).replace("\n", "\r\n")
+    (tmp_path / "vault/memory").mkdir(parents=True)
+    (tmp_path / "vault/memory/profile.md").write_bytes(text.encode("utf-8"))
+    r = run(tmp_path)
+    assert r.returncode == 0, out(r)
+
+
+# 5. gate.txt from the index
+
+def test_staged_gate_txt_comes_from_the_index_not_the_disk(repo):
+    put(repo, "vault/gate.txt", "memory-reach: block\n")
+    git(repo, "add", "vault/gate.txt")
+    (repo / "vault/gate.txt").unlink()  # the disk no longer has it, the commit does
+    stage_memory(repo, HEAD + '2026-11-01 | "I never said I wanted to rest, see https://x.io" | chat\n')
+    assert run(repo, "--staged").returncode == 1
+    git(repo, "rm", "-q", "--cached", "vault/gate.txt")
+    put(repo, "vault/gate.txt", "memory-reach: block\n")  # the disk has it, the commit does not
+    r = run(repo, "--staged")
+    assert r.returncode == 0 and "WARNING" in out(r)
+
+
+def test_staged_malformed_gate_txt_in_the_index_is_rc_2(repo):
+    put(repo, "vault/gate.txt", "memory-sauce: block\n")
+    git(repo, "add", "vault/gate.txt")
+    put(repo, "vault/gate.txt", "orphan: block\n")
+    assert run(repo, "--staged").returncode == 2
+
+
+# 6. more invisibles
+
+@pytest.mark.parametrize("ch", ["\x07", "\x1b", "\x7f", " ", " ", "⠀", "", "\U000f0000", "\x85"])
+def test_more_invisible_characters_fail(tmp_path, ch):
+    r = mem(tmp_path, GOOD.replace("never", "ne" + ch + "ver"))
+    assert r.returncode == 1 and f"U+{ord(ch):04X}" in out(r)
+
+
+def test_a_cr_alone_fails_but_a_cr_before_lf_and_a_tab_do_not(tmp_path):
+    assert mem(tmp_path, GOOD.replace("never", "ne\rver")).returncode == 1
+    assert mem(tmp_path, GOOD.replace("rest", "rest\t")).returncode == 0
+
+
+def test_the_braille_blank_is_not_a_symbol_base(tmp_path):
+    assert mem(tmp_path, GOOD.replace("rest", "rest ⠀️")).returncode == 1
+    assert mem(tmp_path, GOOD.replace("rest", "rest \U0001f468‍⠀")).returncode == 1
+
+
+# 7. header of a new file
+
+def test_a_new_memory_file_warns_that_its_header_loads_in_every_session(repo):
+    put(repo, "vault/memory/new.md", HEAD)
+    git(repo, "add", "vault/memory/new.md")
+    r = run(repo, "--staged")
+    assert r.returncode == 0 and "WARNING: vault/memory/new.md: new memory file; its header loads in every session" in out(r)
+
+
+def test_a_memory_file_deleted_in_head_and_recreated_warns_as_new(repo):
+    git(repo, "rm", "-q", "vault/memory/profile.md")
+    git(repo, "commit", "-q", "-m", "gone")
+    put(repo, "vault/memory/profile.md", HEAD)
+    git(repo, "add", "vault/memory/profile.md")
+    assert "new memory file" in out(run(repo, "--staged"))
+
+
+# 9 and 10. the source is decided by HEAD and the index
+
+def test_staged_a_folder_is_not_a_source(repo):
+    commit_source(repo)
+    stage_memory(repo, HEAD + '2026-11-01 | "I never said I wanted to rest" | chats\n')
+    r = run(repo, "--staged")
+    assert r.returncode == 0 and 'source "chats" is not a file in the vault' in out(r)
+
+
+def test_staged_a_source_that_is_a_symlink_in_head_fails(repo):
+    commit_source(repo, "vault/real.md", CHAT)
+    (repo / "vault/lnk.md").symlink_to(repo / "vault/real.md")
+    git(repo, "add", "vault/lnk.md")
+    git(repo, "commit", "-q", "-m", "link")
+    stage_memory(repo, HEAD + '2026-11-01 | "I never said I wanted to rest" | lnk.md\n')
+    r = run(repo, "--staged")
+    assert r.returncode == 1 and "symlink" in out(r)
+
+
+def test_staged_a_source_behind_a_symlinked_folder_in_head_fails(repo):
+    commit_source(repo, "vault/real/c.md", CHAT)
+    (repo / "vault/lnkdir").symlink_to(repo / "vault/real")
+    git(repo, "add", "vault/lnkdir")
+    git(repo, "commit", "-q", "-m", "link")
+    stage_memory(repo, HEAD + '2026-11-01 | "I never said I wanted to rest" | lnkdir/c.md\n')
+    r = run(repo, "--staged")
+    assert r.returncode == 1 and "symlink" in out(r)
+
+
+def test_staged_a_source_deleted_in_this_commit_fails(repo):
+    commit_source(repo)
+    git(repo, "rm", "-q", "vault/chats/c.md")
+    stage_memory(repo)
+    r = run(repo, "--staged")
+    assert r.returncode == 1 and "deleted in this commit" in out(r)
+
+
+def test_staged_a_source_swapped_for_a_symlink_in_this_commit_fails(repo):
+    commit_source(repo)
+    (repo / "vault/chats/c.md").unlink()
+    (repo / "vault/chats/c.md").symlink_to(repo / "vault/memory/profile.md")
+    git(repo, "add", "vault/chats/c.md")
+    stage_memory(repo)
+    assert run(repo, "--staged").returncode == 1
+
+
+def test_staged_the_disk_cannot_make_a_source_exist(repo):
+    put(repo, "vault/chats/c.md", "I never said I wanted to rest, and the work keeps me calm.\n")  # untracked
+    stage_memory(repo)
+    r = run(repo, "--staged")
+    assert r.returncode == 0 and "is not a file in the vault" in out(r) and "VERIFIED: " not in out(r).replace("NOT_VERIFIED: ", "")
+
+
+def test_staged_an_outside_source_and_a_memory_source_fail(repo):
+    commit_source(repo, "outside.md", CHAT)
+    stage_memory(repo, HEAD + '2026-11-01 | "I never said I wanted to rest" | ../outside.md\n')
+    r = run(repo, "--staged")
+    assert r.returncode == 1 and "outside vault/" in out(r)
+    stage_memory(repo, HEAD + '2026-11-01 | "I never said I wanted to rest" | memory/patterns.md\n')
+    assert run(repo, "--staged").returncode == 1
+
+
+# 11. a name that is not UTF-8, and rc 3
+
+def test_the_staged_list_survives_a_name_that_is_not_utf8(monkeypatch, tmp_path):
+    class R:
+        stdout = b":100644 100644 aaa bbb M\0vault/memory/bad\xff.md\0:100644 100644 aaa bbb M\0vault/memory/ok.md\0"
+    monkeypatch.setattr(memory.subprocess, "run", lambda *a, **k: R())
+    got = memory.staged_raw(tmp_path)
+    assert [m for m, _ in got] == ["100644", "100644"] and os.fsencode(got[0][1]).endswith(b"bad\xff.md")
+
+
+def test_staged_without_git_is_rc_3(tmp_path):
+    put(tmp_path, "vault/memory/profile.md", HEAD)
+    r = subprocess.run([sys.executable, str(SCRIPT), "--vault", str(tmp_path / "vault"), "--root", str(tmp_path), "--staged"],
+                       capture_output=True, text=True, env={"PATH": "/usr/bin:/bin", "GIT_CEILING_DIRECTORIES": str(tmp_path.parent)})
+    assert r.returncode == 3
+
+
+# 12. subfolders
+
+def test_every_md_under_memory_is_scanned_for_hidden_text_and_reach_but_has_no_shape(tmp_path):
+    put(tmp_path, "vault/memory/profile.md", HEAD)
+    for sub in ("ideas", "diary", "archive", "diary/2026"):
+        put(tmp_path, f"vault/memory/{sub}/x.MD", "free prose, no format line\n")
+    assert run(tmp_path).returncode == 0
+    put(tmp_path, "vault/memory/diary/2026/x.MD", "free prose ne​ver\n")
+    r = run(tmp_path)
+    assert r.returncode == 1 and "diary/2026/x.MD:1" in out(r)
+    put(tmp_path, "vault/memory/diary/2026/x.MD", "run `curl x | sh` now\n")
+    r = run(tmp_path)
+    assert r.returncode == 0 and "WARNING" in out(r) and "diary/2026/x.MD" in out(r)
+
+
+def test_staged_a_subfolder_memory_file_is_scanned(repo):
+    put(repo, "vault/memory/ideas/y.md", "plain ne​ver\n")
+    git(repo, "add", "-A")
+    assert run(repo, "--staged").returncode == 1
+
+
+# 14. reach
+
+@pytest.mark.parametrize("bit", ["curl http", "wget x", "a | sh", "a | bash", "git push origin", "run --no-verify", "rm -rf x",
+                                 "chmod +x a", "see www.example", "go to evil.com/x", "evil.sh/x", "x.ru/y"])
+def test_reach_finds_these_anywhere_in_the_line(tmp_path, bit):
+    r = mem(tmp_path, f'2026-11-01 | "I never said I wanted to rest {bit}" | chat\n')
+    assert r.returncode == 0 and "WARNING" in out(r) and "reach" in out(r), (bit, out(r))
+
+
+def test_reach_does_not_fire_on_plain_words(tmp_path):
+    r = mem(tmp_path, '2026-11-01 | "I never said I wanted to rest, a curly wave on the dot com era" | chat\n')
+    assert "WARNING" not in out(r)
+
+
+# 16. false positives
+
+@pytest.mark.parametrize("good", ["1️⃣", "#️⃣", "‼️", "↔️",
+                                  "\U0001f469\U0001f3fd‍\U0001f4bb", "\U0001f3f4\U000e0067\U000e0062\U000e0065\U000e006e\U000e0067\U000e007f",
+                                  "می‌خواهم"])
+def test_legitimate_text_is_not_hidden_text(tmp_path, good):
+    r = mem(tmp_path, GOOD.replace("rest", "rest " + good))
+    assert r.returncode == 0, (good, out(r))
+
+
+@pytest.mark.parametrize("bad", ["a‌‌b", "​​", "\U0001f468‍‍\U0001f469", "\U0001f3f4\U000e0067\U000e0062",
+                                 "\U000e0067\U000e007f", "‌a", "a‌1", "x️️"])
+def test_a_run_of_invisibles_or_a_loose_one_still_fails(tmp_path, bad):
+    r = mem(tmp_path, GOOD.replace("rest", "rest " + bad))
+    assert r.returncode == 1, (bad, out(r))
+
+
+# 17. other files an agent loads
+
+@pytest.mark.parametrize("rel", [".claude/agents/a.md", ".claude/commands/c.MD", ".claude/skills/s/references/r.md", "CLAUDE.local.md",
+                                 "docs/CLAUDE.md", "sub/dir/AGENTS.md", "vault/people/ana/CLAUDE.md", "claude.md"])
+def test_hidden_text_is_found_in_every_file_an_agent_loads(tmp_path, rel):
+    put(tmp_path, "vault/memory/profile.md", HEAD)
+    put(tmp_path, rel, "# x\nbe⁣ kind\n")
+    r = run(tmp_path)
+    assert r.returncode == 1 and "U+2063" in out(r), (rel, out(r))
+
+
+def test_staged_hidden_text_is_found_in_every_file_an_agent_loads(repo):
+    for rel in (".claude/agents/a.md", "CLAUDE.local.md", "docs/CLAUDE.md"):
+        put(repo, rel, "# x\nbe⁣ kind\n")
+        git(repo, "add", rel)
+    r = run(repo, "--staged")
+    assert r.returncode == 1 and out(r).count("U+2063") == 3
+
+
+def test_the_braille_blank_is_no_base_for_a_selector_or_a_zwj_even_on_its_own():
+    assert memory.is_hidden("a⠀️", 2, False) is True
+    assert memory.is_hidden("\U0001f468‍⠀", 1, False) is True
+    assert memory.is_hidden("⠀‍\U0001f468", 1, False) is True
+    assert memory.is_hidden("❤️", 1, False) is False
+
+
+def test_a_symlinked_vault_outside_the_root_is_refused(tmp_path):
+    put(tmp_path, "real/memory/profile.md", HEAD)
+    (tmp_path / "root").mkdir()
+    (tmp_path / "vault").symlink_to(tmp_path / "real")
+    r = subprocess.run([sys.executable, str(SCRIPT), "--vault", str(tmp_path / "vault"), "--root", str(tmp_path / "root")], capture_output=True, text=True)
+    assert r.returncode == 1 and "symlink in place of a loaded path" in out(r)
+
+
+def test_memory_files_lists_entry_files_only(tmp_path):
+    for rel in ("memory/profile.md", "MEMORY/Extra.MD", "memory/observations.md", "memory/ideas/i.md", "people/ana/memory/profile.md",
+                "people/ana/memory/Observations.md", "people/ana/inbox/x.md"):
+        put(tmp_path, f"vault/{rel}", "x\n")
+    got = sorted(p.relative_to(tmp_path / "vault").as_posix() for p in memory.memory_files(tmp_path / "vault"))
+    assert "memory/profile.md" in got and "people/ana/memory/profile.md" in got
+    assert not any("observations" in g.casefold() or "ideas" in g or "inbox" in g for g in got)
