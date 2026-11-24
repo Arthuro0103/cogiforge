@@ -344,7 +344,7 @@ PIECES = {
     "hub": dict(file="tools/hub.py", suite=["tools/test_hub.py"], texts=[
         ("the cap is exclusive", 'if len(files) > INLINE_MAX:', 'if len(files) >= INLINE_MAX:'),
         ("the cap is huge", 'INLINE_MAX = 40 ', 'INLINE_MAX = 4000 '),
-        ("the overflow list lists itself", ' and p != folder / OVERFLOW)', ')'),
+        ("the overflow list lists itself", ' and p != folder / OVERFLOW\n', '\n'),
         ("a file the user wrote is deleted", 'if have is not None and want is None and OVERFLOW_MARK not in have:', 'if False:'),
         ("--check does not see a stale overflow list", 'if check:\n        return "STALE"\n    if want is None:', 'if False:\n        return "STALE"\n    if want is None:'),
         ("the generated list is never removed", 'path.unlink()', 'pass'),
