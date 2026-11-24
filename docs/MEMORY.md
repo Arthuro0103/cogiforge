@@ -75,3 +75,42 @@ file it cannot read is `NOT_VERIFIED` (exit 3), never a pass. Without git the `a
 and the other four still run. `cf-close-session` runs it and shows the findings; nothing in the memory is changed
 without the user's "yes". A `superseded_by:` entry leaves the loaded file first when you run
 `python3 tools/cool.py memory/<file>.md`, whatever its date and `--keep`.
+
+## The memory gate
+
+`core/memory.py` runs in the commit hook (and by hand: `python3 core/memory.py [--staged]`). The memory is the one
+thing every later session obeys, so a line planted there becomes an instruction of every session after it. The gate
+checks that a line is what the user said, and refuses invisible text.
+
+**What it blocks**
+
+- *shape*: after the `Format of each line:` line only entries, the pointer line `tools/cool.py` leaves behind and
+  blank lines may appear (a `#` title there is a failure; the format line must exist).
+- *date*: the entry date (and the dates of `stale_after:` and `superseded_by:`) is a real date, not after tomorrow.
+- *source*: when the third field is a file of the vault, it must hold the whole phrase (normalized, whole words; no
+  `[...]` or `...` exception). A source that resolves outside `vault/`, or inside a memory folder, blocks: a memory
+  cannot vouch for a memory. With `--staged` the source is decided by HEAD and the index, never by the disk.
+- *hidden*: an invisible character (categories Cf, Co, Cc, U+2028/2029, U+2800 and the fillers) in any file a
+  session loads: `CLAUDE.md`/`AGENTS.md` anywhere, every `.md` under `.claude/` and `memory/`, team memory. A BOM at
+  the start, a variation selector after a symbol, a keycap, a ZWJ between two emoji and a ZWNJ between two letters
+  are fine. This check always blocks.
+- *unreadable* and *symlink*: a loaded file that does not open, is not UTF-8, or is replaced by a symlink blocks.
+
+**What it only warns about (and `NOT_VERIFIED`)**
+
+- A source that is not a file of the vault (for example `chat`) is reported `NOT_VERIFIED`, never OK. A source born
+  in the same commit is also `NOT_VERIFIED` ("commit the source first").
+- *reach*: a URL, a domain with a slash, or a shell-looking command (`curl`, `| sh`, `git push`, `--no-verify`,
+  `rm -rf`...) on any line of a `.md` under `memory/`. *header*: the text above the format line changed.
+
+**The keys of `vault/gate.txt`** (both default to `warn`):
+
+| key | value | effect |
+|---|---|---|
+| `memory-source:` | `warn` / `block` | a source that is not a file of the vault only warns, or blocks the commit |
+| `memory-reach:` | `warn` / `block` | *reach* and *header* only warn, or block the commit |
+
+**Threat model (the owner's decision).** The gate catches text that an agent copies into the memory from outside (a
+web page, a file, a tool output) and careless entries. It is not a jail: an agent with a shell can run
+`git commit --no-verify` or edit the hook; rule 6 forbids it and the hook cannot stop it. A known limit: a source
+file committed in an earlier commit of the same session counts as earlier, because the hook cannot know who wrote it.
