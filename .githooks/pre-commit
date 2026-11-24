@@ -63,7 +63,7 @@ fi
 grep '^WARNING' "$out" | sed 's/^/  /' || true
 
 # 7. the memory. What every later session obeys has to be what the user said: rc 1 = a rule failed; rc 2 = gate.txt unreadable
-#    or malformed; rc 3 = it could not read (a warning, not a block). Runs right after the leak, as the second content guard.
+#    or malformed; rc 3 = git did not say what is staged: that BLOCKS too (the gate never passes blind). Runs right after the leak, as the second content guard.
 python3 core/memory.py --vault vault --root . --staged >"$out" 2>&1
 rc=$?
 if [ "$rc" -eq 1 ] || [ "$rc" -eq 2 ]; then
@@ -75,6 +75,12 @@ if [ "$rc" -eq 1 ] || [ "$rc" -eq 2 ]; then
     fi
     echo ""
     sed 's/^/     /' "$out" | head -24
+    blocked=1
+elif [ "$rc" -eq 3 ]; then
+    echo ""
+    echo "  ⛔ COMMIT BLOCKED — memory gate: could not tell what is staged; commit blocked (the memory gate never passes blind)"
+    echo ""
+    sed 's/^/     /' "$out" | head -12
     blocked=1
 else
     grep -E '^(NOT_VERIFIED|WARNING)' "$out" | head -12 | sed 's/^/  /' || true
