@@ -9,7 +9,7 @@ The same rules, written for any agent and not only Claude, are in [AGENTS.md](AG
 ## The rules
 
 1. **Read and write only inside `vault/`.** `core/`, `tools/`, `tests/` and `.githooks/` change only if the user asks.
-2. **Do not write about the user what they did not say.** You propose in `vault/memory/observations.md`; a line only enters `vault/memory/profile.md` with the user's "yes", with a date and the verbatim phrase.
+2. **Do not write about the user what they did not say.** You propose in `vault/memory/observations.md`; a line only enters `vault/memory/profile.md` with the user's "yes", with a date and the verbatim phrase. The hook checks it (`core/memory.py`: format, date, the literal phrase in the source when the source is a file, invisible text).
 3. **The target comes first.** An item is only processed when a file that already existed changed. Name the target before writing: `project::`, `article::`, `question::`, `task::` or `none`.
 4. **Link by full path from `vault/`**, in the middle of the text, only where the connection is real. No `## Connections` block at the bottom.
 5. **A note title is a statement of up to 10 words**, not a category.
@@ -32,8 +32,9 @@ The same rules, written for any agent and not only Claude, are in [AGENTS.md](AG
 | create a project (root, index row, checks) | `python3 tools/new_project.py <name> --target "<sentence>" [--dry-run]` |
 | find passages in the vault / check an answer's citations exist | `python3 tools/ask.py search "<question>"` · `python3 tools/ask.py cite <answer.md>` |
 | notes used or parked, by area / bytes a session loads | `python3 tools/usage.py` · `python3 core/budget.py` |
-| does each citation exist and say what the text claims | `python3 tools/citation.py <file.md>` (`--no-network`, `--selftest`) |
+| does each citation exist and say what the text claims (`--quotes`: a quote against the vault file linked on its line) | `python3 tools/citation.py <file.md>` (`--no-network`, `--selftest`) · `--quotes NOTE.md` |
 | background subagents that stopped without finishing (STOPPED is the alarm) | `python3 tools/agents_watch.py [--session <id>] [--min 10]` |
+| check the memory: line format, date, the phrase in its source, invisible text | `python3 core/memory.py [--staged]` |
 | check that the command tables cite only flags the scripts have | `python3 tools/flags.py --tables` |
 | was a correction already in the memory (repeats, lexical match) | `python3 tools/repeat.py` |
 | connection map (optional, needs graphify installed) | `/graphify vault` at the repo root |

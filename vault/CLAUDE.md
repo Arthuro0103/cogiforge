@@ -47,7 +47,7 @@ reached a project file in 4 of 4; one born from a loose file, in 0 of 43. So:
 - Link by full path from `vault/`: `[[projects/example-my-first-project/instructions|example]]`. It only exists when the connection is real.
 - **No `## Connections` block at the bottom.** The link goes in the body, in the middle of the argument.
 - A new file that talks about a project carries a wikilink to its root.
-- Nothing claims something about the user that they did not say. You **propose** in `memory/observations.md`; it only enters `memory/` with the user's "yes", with a date and a verbatim quote.
+- Nothing claims something about the user that they did not say. You **propose** in `memory/observations.md`; it only enters `memory/` with the user's "yes", with a date and a verbatim quote. The third field of a memory line says where it was said: if it is a file of the vault (for example a chat imported by `tools/import_chats.py`), the hook checks the phrase is in that file; `chat` is only `NOT_VERIFIED`.
 
 ## Tasks
 
