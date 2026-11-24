@@ -159,3 +159,14 @@ def test_one_repeat_alone_is_not_a_candidate(tmp_path):
     obs = "- 2026-02-10: you invented a link to a shop page again, open it before you link it\n"
     d = data(vault(tmp_path, obs=obs))
     assert len(d["repeats"]) == 1 and d["candidates"] == []
+
+
+def test_a_legacy_console_encoding_does_not_crash_the_report(tmp_path):
+    # Windows consoles/pipes default to cp1252/cp437: a character outside it ("→") must not raise UnicodeEncodeError.
+    mem = MEMORY + '- 2026-04-01 | "never use → in a title" | chat\n'
+    obs = OBS + "- 2026-04-02: you used → in a title again, never use → in a title\n"
+    v = vault(tmp_path, memory=mem, obs=obs)
+    env = {**__import__("os").environ, "PYTHONIOENCODING": "cp1252"}
+    r = subprocess.run([sys.executable, "-B", REPEAT, "--vault", str(v), "--json"], capture_output=True, env=env)
+    assert r.returncode == 0, r.stderr.decode("cp1252", "replace")
+    assert b"UnicodeEncodeError" not in r.stderr

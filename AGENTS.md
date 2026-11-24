@@ -1,6 +1,9 @@
 # AGENTS.md: how to operate this repository
 
 This file is for any coding agent (Codex, Cursor, Gemini CLI, GitHub Copilot, Claude Code and others).
+Gemini CLI no longer serves free, Google AI Pro or Ultra individual users since 2026-06-18 (they moved to
+Antigravity CLI); it remains for Standard and Enterprise and for paid API keys. It reads `GEMINI.md`, and
+this file only if `context.fileName` lists it (see `docs/USING-OTHER-MODELS.md`).
 It states the same rules as `CLAUDE.md` and `vault/CLAUDE.md` without relying on any one model's
 features. If this file and those two ever disagree, the two `CLAUDE.md` files win and this one is a bug:
 please fix it.

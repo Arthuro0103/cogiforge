@@ -3,18 +3,18 @@
 cogiforge is plain Markdown plus a few Python scripts. Any coding agent can work in it if it reads the
 rules. The rules are in [AGENTS.md](../AGENTS.md), written without any Claude-only feature.
 
-> Checked on **2026-10-07** against each tool's own documentation. Tools change quickly: trust the
+> Claude Code, Codex, Cursor and Gemini CLI were checked on **2026-11-10** against each tool's own documentation; the "Others" row was last checked on 2026-10-07. Tools change quickly: trust the
 > tool's docs over this table. What I could not confirm is marked `[VERIFY: ...]`.
 
 ## Which file does each agent read
 
 | Agent | Reads `AGENTS.md`? | Source |
 |---|---|---|
-| OpenAI Codex | Yes: from the git root down to the working directory; closer files override; 32 KiB combined by default | [OpenAI Codex docs](https://learn.chatgpt.com/docs/agent-configuration/agents-md) |
+| OpenAI Codex | Yes: from the git root down to the working directory; closer files override; 32 KiB combined by default (`project_doc_max_bytes`). In each directory it tries `AGENTS.override.md`, then `AGENTS.md`, then the names in `project_doc_fallback_filenames`. Skills: it scans `.agents/skills`. `/import` brings AGENTS.md, skills and memories from Claude Code or Cursor | [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md), [skills](https://learn.chatgpt.com/docs/build-skills), [import](https://learn.chatgpt.com/docs/import) |
 | GitHub Copilot | Yes: "the nearest `AGENTS.md` file in the directory tree will take precedence" | [GitHub docs](https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions) |
-| Cursor | Yes, `AGENTS.md` at the project root as a simple alternative to its own rules | [agents.md](https://agents.md) lists it; `[VERIFY: Cursor's own docs page on AGENTS.md; I could not open it, only forum and search summaries, checked 2026-10-07]` |
-| Gemini CLI | **Not by default.** It reads `GEMINI.md`; set `"context": { "fileName": ["AGENTS.md", "GEMINI.md"] }` in its `settings.json` | [Gemini CLI docs](https://geminicli.com/docs/cli/gemini-md/) |
-| Claude Code | Reads `CLAUDE.md` first; reads `AGENTS.md` when there is no `CLAUDE.md` above it, in recent versions. This repo has both, so it reads `CLAUDE.md`, which links to `AGENTS.md` | [Claude Code docs](https://code.claude.com/docs/en/memory) |
+| Cursor | Yes: "Cursor supports AGENTS.md in the project root and subdirectories." Its own rules live in `.cursor/rules` as `.mdc` files | [Cursor rules](https://cursor.com/docs/context/rules); skills: [Cursor skills](https://cursor.com/docs/skills) |
+| Gemini CLI | **Not by default.** It reads `GEMINI.md`; set `"context": { "fileName": ["AGENTS.md", "GEMINI.md"] }` in its `settings.json`. **Availability changed:** on 2026-06-18 it stopped serving free, Google AI Pro and Ultra individual users (moved to Antigravity CLI); it stays available for Standard and Enterprise and with paid API keys | [Gemini CLI docs](https://geminicli.com/docs/cli/gemini-md/); [Google announcement](https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/); [repo README](https://github.com/google-gemini/gemini-cli) |
+| Claude Code | Reads `CLAUDE.md` first; reads `AGENTS.md` when there is no `CLAUDE.md` above it, in v2.1.277 or newer. This repo has both, so it reads `CLAUDE.md`, which links to `AGENTS.md` | [Claude Code docs](https://code.claude.com/docs/en/memory) |
 | Others (Windsurf, Zed, Aider, Devin, Jules, ...) | listed as supporting the format | [agents.md](https://agents.md); `[VERIFY: each tool's own page before relying on it, checked 2026-10-07]` |
 
 The format itself is described on [agents.md](https://agents.md) as "a README for agents".
@@ -57,6 +57,11 @@ fast.
 `[VERIFY: whether Cursor and Copilot, which read both folders, show each skill twice when the link exists; not measured, checked 2026-11-16]`
 
 `[VERIFY: on Windows the link is not created (install.ps1 does not do this step yet), so Codex and Gemini CLI do not find the skills there, checked 2026-11-16]`
+
+Claude Code with the Bash sandbox on: open it at the **repo root**, not inside `vault/`. The Claude Code
+[CHANGELOG](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md), version 2.1.319, says:
+"Changed nested skill loading: with the Bash sandbox on, skills in `.claude/skills` folders below the
+starting folder load only if you start Claude Code there or `/cd` there". The skills live at the root.
 
 What does **not** depend on the model, and so is the same everywhere: `core/gate.py`, `core/ring.py`,
 `core/leak.py`, the pre-commit hook, `tools/ask.py` and `tools/import_chats.py`. They are scripts.
