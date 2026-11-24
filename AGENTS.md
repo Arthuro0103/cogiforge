@@ -6,7 +6,7 @@ Antigravity CLI); it remains for Standard and Enterprise and for paid API keys. 
 this file only if `context.fileName` lists it (see `docs/USING-OTHER-MODELS.md`).
 It states the same rules as `CLAUDE.md` and `vault/CLAUDE.md` without relying on any one model's
 features. If this file and those two ever disagree, the two `CLAUDE.md` files win and this one is a bug:
-please fix it.
+please fix it. A test (`tests/test_agents_md.py`) fails when the rules drift apart.
 
 You are at the **repo root**. The workbench (the user's notes, projects and memory) lives in `vault/`.
 Obsidian opens `vault/`; you run at the repo root.
@@ -21,7 +21,7 @@ Obsidian opens `vault/`; you run at the repo root.
 6. **Do not bypass the hook.** If a commit is blocked, the message names the file and the reason: fix the file. Use `--no-verify` only if the user says so.
 7. **Never run `git push`, create a remote, or make anything public without the user's order.**
 8. **Personal data does not enter the repo** (machine path, e-mail, phone, tax id, names from the user's private list). The hook blocks it; if it blocks, remove the data.
-9. **A task is a TaskNotes plugin note** in `vault/tasks/`: `status: open | in-progress | done`, `priority: none | low | normal | high`, and `projects:` with a full-path link to the project root.
+9. **A task is a TaskNotes plugin note** in `vault/tasks/`: `status: open | in-progress | done`, `priority: none | low | normal | high`, and `projects:` with a full-path link to the project root. Details in `vault/CLAUDE.md`.
 10. **If `graphify-out/GRAPH_REPORT.md` exists, read it before looking for connections.** It is generated: do not edit it, do not commit it.
 11. **A check that touched nothing is not OK.** If you could not verify something, say `NOT_VERIFIED` and why, instead of saying it is clean.
 
