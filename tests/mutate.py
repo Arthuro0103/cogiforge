@@ -518,7 +518,7 @@ PIECES = {
         ("the stage is read from the disk", 'if self.top is not None:\n                rel = self.rel(path)', 'if False:\n                rel = self.rel(path)'),
         ("the staged candidates are empty", 'raw = staged_raw(top)', 'raw = []'),
         ("a changed file type (symlink) is not judged", '--diff-filter=ACMRT', '--diff-filter=ACMR'),
-        ("a staged symlink is not a failure", 'if mode == "120000" and (k or protected(p, vault, root)):', 'if False:'),
+        ("a staged symlink is not a failure", 'if mode not in REGULAR and (k or protected(p, vault, root)):', 'if False:'),
         ("a symlink in place of a parent folder passes", r'r"^(?:$|people$|people/[^/]+$|memory(?:/|$)|people/[^/]+/memory(?:/|$))"', r'r"^(?:$)"'),
         ("a symlinked .claude passes", 'return rr is not None and bool(re.match(r"^\\.claude(?:/|$)", rr.casefold()))', 'return False'),
         ("an unstaged symlinked folder passes", 'if dp.is_symlink() and protected(dp, vault, root):', 'if False:'),
