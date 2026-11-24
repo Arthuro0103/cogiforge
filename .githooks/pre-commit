@@ -1,7 +1,7 @@
 #!/bin/sh
 # pre-commit — the tap, not the bucket.
 #
-# Six guards, and all only look at what THIS commit carries (a gate that fails you for something you
+# Seven guards, and all only look at what THIS commit carries (a gate that fails you for something you
 # did not do is a gate people learn to skip):
 #   1. ring   a vault/ .md note with no inbound or outbound link
 #   2. leak   machine path, e-mail, phone, CPF and your private blocklist
@@ -10,6 +10,8 @@
 #   4. sync   a sync-tool conflict or duplicate file (`x (1).md`, conflicted copy, .sync-conflict-, .icloud)
 #   5. target a NEW note under vault/notes/ with no `target:` (a warning; vault/gate.txt `target: block` blocks)
 #   6. budget a commit that makes a file loaded in every session bigger while the context is over its ceiling
+#   7. memory a line of vault/memory/ that is not an entry, has a future date, cites a file that does not hold the
+#             phrase, or any invisible character in a file a session loads (runs right after the leak)
 #
 # Versioned in .githooks/ because a hook in .git/hooks/ vanishes on the next clone, and
 # `core.hooksPath` is LOCAL config: after cloning, run `sh install.sh`.
@@ -18,7 +20,7 @@
 root=$(git rev-parse --show-toplevel) || exit 1
 cd "$root" || exit 1
 
-for f in core/ring.py core/leak.py core/people.py core/conflicts.py core/target.py core/budget.py; do
+for f in core/ring.py core/leak.py core/people.py core/conflicts.py core/target.py core/budget.py core/memory.py; do
     if [ ! -f "$f" ]; then
         echo "" >&2
         echo "  ⛔ COMMIT BLOCKED — $f does not exist: the installation is incomplete." >&2
@@ -59,6 +61,30 @@ elif grep -q 'NOT_VERIFIED' "$out"; then
 fi
 # the leak scanner warns when the private list still has its old name (negra.txt)
 grep '^WARNING' "$out" | sed 's/^/  /' || true
+
+# 7. the memory. What every later session obeys has to be what the user said: rc 1 = a rule failed; rc 2 = gate.txt unreadable
+#    or malformed; rc 3 = git did not say what is staged: that BLOCKS too (the gate never passes blind). Runs right after the leak, as the second content guard.
+python3 core/memory.py --vault vault --root . --staged >"$out" 2>&1
+rc=$?
+if [ "$rc" -eq 1 ] || [ "$rc" -eq 2 ]; then
+    echo ""
+    if [ "$rc" -eq 1 ]; then
+        echo "  ⛔ COMMIT BLOCKED — a memory line or a loaded file does not hold up (format, date, source or hidden text)"
+    else
+        echo "  ⛔ COMMIT BLOCKED — the memory check could not run (vault/gate.txt malformed, or usage)"
+    fi
+    echo ""
+    sed 's/^/     /' "$out" | head -24
+    blocked=1
+elif [ "$rc" -eq 3 ]; then
+    echo ""
+    echo "  ⛔ COMMIT BLOCKED — memory gate: could not tell what is staged; commit blocked (the memory gate never passes blind)"
+    echo ""
+    sed 's/^/     /' "$out" | head -12
+    blocked=1
+else
+    grep -E '^(NOT_VERIFIED|WARNING)' "$out" | head -12 | sed 's/^/  /' || true
+fi
 
 # 3. the people (team mode). rc 1 = blocked by a rule; rc 2/3 = it could not judge, and not judging is not OK
 python3 core/people.py --vault vault --staged >"$out" 2>&1

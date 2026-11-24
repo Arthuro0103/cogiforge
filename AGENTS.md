@@ -14,7 +14,7 @@ Obsidian opens `vault/`; you run at the repo root.
 ## The rules
 
 1. **Read and write only inside `vault/`.** `core/`, `tools/`, `tests/` and `.githooks/` change only if the user asks.
-2. **Never write about the user what they did not say.** Propose a line in `vault/memory/observations.md`. A line enters `vault/memory/profile.md` only after the user says "yes", with a date and their verbatim phrase.
+2. **Never write about the user what they did not say.** Propose a line in `vault/memory/observations.md`. A line enters `vault/memory/profile.md` only after the user says "yes", with a date and their verbatim phrase. The hook checks it (`core/memory.py`: format, date, the literal phrase in the source when the source is a file, invisible text).
 3. **The target comes first.** An item (a chat export, a loose note, a video) counts as processed only when a file that already existed changed. Name the target before writing: `project::`, `article::`, `question::`, `task::` or `none`. `none` is a legitimate answer: the item stays in `vault/inbox/` with a date.
 4. **Link by full path from `vault/`**, in the middle of the text, only where the connection is real, for example `[[projects/example-my-first-project/instructions|the project]]`. No `## Connections` block at the bottom of a note.
 5. **A note title is a statement of up to 10 words**, not a category (prose-as-title).
@@ -58,8 +58,9 @@ Body with the argument. The link goes here, in the middle:
 | find passages in the vault, check an answer's citations exist | `python3 tools/ask.py search "<question>"` · `python3 tools/ask.py cite <answer.md>` |
 | which notes were used and which sit still, by area (`idle --project <name>` lists up to 3 for a project) | `python3 tools/usage.py` · `python3 tools/usage.py idle --project <name>` |
 | record that an answer used notes (after the citations exist) | `python3 tools/ask.py cite <answer.md> --log "<question>"` |
+| the memory: line format, date, the phrase in its source (when the source is a file), invisible text (`NOT_VERIFIED` is never OK) | `python3 core/memory.py` · `--staged` · `--json` |
 | bytes a session loads, against its ceiling | `python3 core/budget.py` |
-| does each citation (URL, arXiv id, DOI) exist and say what the text claims? (`NOT_VERIFIED` is never OK) | `python3 tools/citation.py <file.md>` · `--no-network` · `--selftest` |
+| does each citation (URL, arXiv id, DOI) exist and say what the text claims? (`NOT_VERIFIED` is never OK) | `python3 tools/citation.py <file.md>` · `--no-network` · `--selftest` · `--quotes NOTE.md` (a quote against the vault file linked on its line) |
 | a verdict with a typed reason for "no value" (library for your own checks) | `python3 core/proof.py --selftest` |
 | background subagents that stopped without finishing (STOPPED is the alarm) | `python3 tools/agents_watch.py [--session <id>] [--min 10]` |
 | move the older dated lines of a memory file to an archive (plan first, `--apply` with the user's yes) | `python3 tools/cool.py memory/<file>.md --keep 40` |

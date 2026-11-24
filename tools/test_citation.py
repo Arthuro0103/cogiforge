@@ -318,3 +318,73 @@ def test_visible_text_keeps_prose_and_drops_markup_script_and_style():
     got = cit.visible_text(page)
     assert "77.6%" in got and "20" in got and "a < b" in got
     assert "999" not in got and "555" not in got and "<" not in got.replace("a < b", "")
+
+
+# ---- --quotes: a quote of 5+ words against the vault file linked on the same line ---------------
+
+SOURCE = "I never said I wanted a rest. I said that the work is the only thing that keeps me calm at night.\n"
+
+
+def quotes_note(tmp_path, line, source=SOURCE):
+    (tmp_path / "vault" / "chats").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "vault" / "chats" / "c.md").write_text(source, encoding="utf-8")
+    note = tmp_path / "vault" / "n.md"
+    note.write_text(line + "\n", encoding="utf-8")
+    return note
+
+
+def quote_states(tmp_path, line, source=SOURCE):
+    note = quotes_note(tmp_path, line, source)
+    return [r["state"] for r in cit.check_quotes(note.read_text(encoding="utf-8"), note, tmp_path / "vault")]
+
+
+def test_quotes_verified_when_every_stretch_is_in_the_linked_file(tmp_path):
+    line = 'He said "the work is the only thing that keeps me calm" in [[chats/c]].'
+    assert quote_states(tmp_path, line) == [cit.VERIFIED]
+
+
+def test_quotes_editorial_brackets_and_ellipsis_are_allowed(tmp_path):
+    line = 'He said "the work [of the day] is the only thing ... keeps me calm at night" ([c](chats/c.md)).'
+    assert quote_states(tmp_path, line) == [cit.VERIFIED]
+
+
+def test_quotes_broken_when_a_stretch_is_invented(tmp_path):
+    line = 'He said "the work is the only thing that makes me deeply happy" in [[chats/c]].'
+    assert quote_states(tmp_path, line) == [cit.BROKEN]
+
+
+def test_quotes_without_a_link_or_with_a_missing_file_are_not_verified(tmp_path):
+    assert quote_states(tmp_path, 'He said "the work is the only thing that keeps me calm" somewhere.') == [cit.NOT_VERIFIED]
+    assert quote_states(tmp_path, 'He said "the work is the only thing that keeps me calm" in [[chats/nope]].') == [cit.NOT_VERIFIED]
+
+
+def test_quotes_short_quotes_and_curly_quotes(tmp_path):
+    assert quote_states(tmp_path, 'He said "keeps me calm" in [[chats/c]].') == []
+    assert quote_states(tmp_path, 'He said “the work is the only thing that keeps me calm” in [[chats/c]].') == [cit.VERIFIED]
+
+
+def test_quotes_cli_uses_the_citation_rc(tmp_path):
+    note = quotes_note(tmp_path, 'He said "the work is the only thing that makes me deeply happy" in [[chats/c]].')
+    r = subprocess.run([sys.executable, CITATION, "--quotes", str(note), "--vault", str(tmp_path / "vault")], capture_output=True, text=True)
+    assert r.returncode == 1 and "BROKEN" in r.stdout
+    note.write_text('No quotes here.\n', encoding="utf-8")
+    r = subprocess.run([sys.executable, CITATION, "--quotes", str(note), "--vault", str(tmp_path / "vault")], capture_output=True, text=True)
+    assert r.returncode == 3 and "NOT_VERIFIED" in r.stdout
+
+
+def test_quotes_inside_a_fenced_block_are_not_checked(tmp_path):
+    line = '```\nHe said "the work is the only thing that makes me deeply happy" in [[chats/c]].\n```'
+    assert quote_states(tmp_path, line) == []
+
+
+def test_quotes_a_link_that_resolves_outside_the_vault_is_not_a_source(tmp_path):
+    (tmp_path / "secret.md").write_text(SOURCE, encoding="utf-8")
+    note = tmp_path / "vault" / "n.md"
+    note.parent.mkdir(parents=True)
+    note.write_text('He said "the work is the only thing that keeps me calm" in [[secret]].\n', encoding="utf-8")
+    res = cit.check_quotes(note.read_text(encoding="utf-8"), note, tmp_path / "vault")
+    assert [r["state"] for r in res] == [cit.NOT_VERIFIED] and "outside the vault" in res[0]["note"]
+    (tmp_path / "link.md").write_text(SOURCE, encoding="utf-8")
+    (tmp_path / "vault" / "viaLink.md").symlink_to(tmp_path / "link.md")
+    note.write_text('He said "the work is the only thing that keeps me calm" in [[viaLink]].\n', encoding="utf-8")
+    assert [r["state"] for r in cit.check_quotes(note.read_text(encoding="utf-8"), note, tmp_path / "vault")] == [cit.NOT_VERIFIED]

@@ -20,8 +20,10 @@ import sys
 from datetime import date
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "core"))
+from memory import POINTER  # noqa: E402  (the line this tool leaves behind is the one core/memory.py lets through)
+
 ENTRY = re.compile(r"^\s*(?:[-*]\s+)?(\d{4}-\d{2}-\d{2})\b")
-POINTER = re.compile(r"^.*\[\[memory/archive/[^\]]+\]\].*$")
 
 
 def parse(text: str) -> list[dict]:

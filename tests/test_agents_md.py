@@ -72,3 +72,12 @@ def test_guides_are_linked_from_the_readme():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for doc in ("AGENTS.md", "docs/EXPORTING-CHATS.md", "docs/RESEARCH.md", "docs/USING-OTHER-MODELS.md"):
         assert doc in readme and (ROOT / doc).is_file(), doc
+
+
+def test_rule_2_says_the_same_about_the_memory_hook_in_both_files():
+    """The sentence that tells the agent the hook checks the memory is word for word the same in CLAUDE.md and AGENTS.md."""
+    sentence = "The hook checks it (`core/memory.py`: format, date, the literal phrase in the source when the source is a file, invisible text)."
+    for name in ("CLAUDE.md", "AGENTS.md"):
+        assert sentence in (ROOT / name).read_text(encoding="utf-8"), name
+    for name in ("CLAUDE.md", "AGENTS.md"):
+        assert "python3 core/memory.py" in (ROOT / name).read_text(encoding="utf-8"), f"{name}: the command table lacks core/memory.py"

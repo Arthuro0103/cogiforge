@@ -196,7 +196,7 @@ def test_install_rejects_an_unknown_flag(clone):
 def test_member_in_another_folder_blocks_the_commit(clone):
     team(clone)
     as_member(clone)
-    r = commit(clone, "vault/people/ana/memory/extra.md", "# x\n\n[[home]]\n")
+    r = commit(clone, "vault/people/ana/memory/extra.md", "# x\n\n[[home]]\n\nFormat of each line: x\n")
     assert r.returncode == 1 and "COMMIT BLOCKED" in r.stdout + r.stderr and "people/ana/" in r.stdout + r.stderr
 
 
@@ -233,7 +233,7 @@ def test_unknown_author_is_blocked_by_the_hook(clone):
 
 def test_admin_can_touch_another_persons_folder(clone):
     team(clone)
-    r = commit(clone, "vault/people/other/memory/x.md", "# x\n\n[[home]]\n")
+    r = commit(clone, "vault/people/other/memory/x.md", "# x\n\n[[home]]\n\nFormat of each line: x\n")
     assert r.returncode == 0, r.stdout + r.stderr
 
 
@@ -241,7 +241,7 @@ def test_removing_roles_goes_back_to_solo(clone):
     team(clone)
     as_member(clone)
     (clone / "vault/roles.txt").unlink()
-    r = commit(clone, "vault/people/ana/memory/extra.md", "# x\n\n[[home]]\n")
+    r = commit(clone, "vault/people/ana/memory/extra.md", "# x\n\n[[home]]\n\nFormat of each line: x\n")
     assert r.returncode == 0, r.stdout + r.stderr
 
 
