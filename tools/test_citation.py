@@ -388,3 +388,19 @@ def test_quotes_a_link_that_resolves_outside_the_vault_is_not_a_source(tmp_path)
     (tmp_path / "vault" / "viaLink.md").symlink_to(tmp_path / "link.md")
     note.write_text('He said "the work is the only thing that keeps me calm" in [[viaLink]].\n', encoding="utf-8")
     assert [r["state"] for r in cit.check_quotes(note.read_text(encoding="utf-8"), note, tmp_path / "vault")] == [cit.NOT_VERIFIED]
+
+
+def test_quotes_every_piece_must_be_there_and_in_the_same_order(tmp_path):
+    src = "You should push to main when the tests pass, and never before that, as the team agreed last week.\n"
+    assert quote_states(tmp_path, 'He said "never ... push to main" in [[chats/c]].', src) == [cit.BROKEN]  # never comes AFTER
+    assert quote_states(tmp_path, 'He said "you should push to main ... as the team agreed last week" in [[chats/c]].', src) == [cit.VERIFIED]
+    assert quote_states(tmp_path, 'He said "as the team agreed last week ... you should push to main" in [[chats/c]].', src) == [cit.BROKEN]
+    assert quote_states(tmp_path, 'He said "you should push to main ... and never ... agreed last week" in [[chats/c]].', src) == [cit.VERIFIED]
+    assert quote_states(tmp_path, 'He said "you should push to main [sic] ... always ... agreed last week" in [[chats/c]].', src) == [cit.BROKEN]
+
+
+def test_quotes_a_one_word_piece_still_counts():
+    import quote as q
+    assert q.found_ordered("push ... never", "you should push to main and never before") is True
+    assert q.found_ordered("never ... push", "you should push to main and never before") is False
+    assert q.found_ordered("[only editorial]", "x") is None
