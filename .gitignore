@@ -20,3 +20,6 @@ vault/memory/ask-log.jsonl
 
 # team mode: what is intimate stays on the person's machine (git has no permission per folder)
 vault/people/*/private/
+
+# Claude Code: "don't ask again" writes approved commands (sometimes with a secret) here
+**/.claude/settings.local.json
