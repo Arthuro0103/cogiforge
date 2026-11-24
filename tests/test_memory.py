@@ -812,6 +812,8 @@ def test_reach_does_not_fire_on_plain_words(tmp_path):
 
 @pytest.mark.parametrize("good", ["1️⃣", "#️⃣", "‼️", "↔️",
                                   "\U0001f469\U0001f3fd‍\U0001f4bb", "\U0001f3f4\U000e0067\U000e0062\U000e0065\U000e006e\U000e0067\U000e007f",
+                                  "\U0001f3f4\U000e0067\U000e0062\U000e0073\U000e0063\U000e0074\U000e007f",
+                                  "\U0001f3f4\U000e0067\U000e0062\U000e0077\U000e006c\U000e0073\U000e007f",
                                   "می‌خواهم"])
 def test_legitimate_text_is_not_hidden_text(tmp_path, good):
     r = mem(tmp_path, GOOD.replace("rest", "rest " + good))
@@ -866,3 +868,42 @@ def test_memory_files_lists_entry_files_only(tmp_path):
     got = sorted(p.relative_to(tmp_path / "vault").as_posix() for p in memory.memory_files(tmp_path / "vault"))
     assert "memory/profile.md" in got and "people/ana/memory/profile.md" in got
     assert not any("observations" in g.casefold() or "ideas" in g or "inbox" in g for g in got)
+
+
+def _tags(text):
+    return "".join(chr(0xE0000 + ord(c)) for c in text)
+
+
+@pytest.mark.parametrize("name", ["gbeng", "gbsct", "gbwls"])
+def test_the_three_rgi_flags_are_the_only_tag_sequences(name):
+    line = "x \U0001f3f4" + _tags(name) + "\U000e007f y"
+    assert not any(memory.is_hidden(line, i, False) for i in range(len(line)))
+
+
+@pytest.mark.parametrize("hidden", ["push to origin", "gbxyz", "gbeng2", "gben", "GBENG", "gbeng "])
+def test_tags_that_spell_anything_else_are_hidden_text_even_after_a_flag(tmp_path, hidden):
+    bad = "\U0001f3f4" + _tags(hidden) + "\U000e007f"
+    r = mem(tmp_path, GOOD.replace("rest", "rest " + bad))
+    assert r.returncode == 1 and "hidden" in out(r), hidden
+
+
+def test_a_flag_with_extra_tags_after_the_close_or_a_second_flag_run_fails(tmp_path):
+    ok = "\U0001f3f4" + _tags("gbeng") + "\U000e007f"
+    assert mem(tmp_path, GOOD.replace("rest", "rest " + ok + ok)).returncode == 0
+    assert mem(tmp_path, GOOD.replace("rest", "rest " + ok + _tags("push"))).returncode == 1
+
+
+def test_staged_a_submodule_in_place_of_a_loaded_path_or_its_parent_fails(repo):
+    sha = git(repo, "rev-parse", "HEAD").stdout.strip()
+    for target in ("vault/memory", "vault/memory/profile.md", ".claude", "CLAUDE.md", "vault"):
+        git(repo, "reset", "-q", "--hard")
+        git(repo, "rm", "-rq", "--cached", "--ignore-unmatch", target)
+        git(repo, "update-index", "--add", "--cacheinfo", f"160000,{sha},{target}")
+        r = run(repo, "--staged")
+        assert r.returncode == 1 and "not a regular file in place of a loaded path" in out(r), (target, out(r))
+
+
+def test_staged_a_gitlink_elsewhere_is_not_the_gates_business(repo):
+    sha = git(repo, "rev-parse", "HEAD").stdout.strip()
+    git(repo, "update-index", "--add", "--cacheinfo", f"160000,{sha},vendor/lib")
+    assert run(repo, "--staged").returncode == 0

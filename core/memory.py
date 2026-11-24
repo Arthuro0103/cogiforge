@@ -39,14 +39,15 @@ The checks:
              category Cf, Co and Cc (but tab, LF, and CR right before LF), U+2028, U+2029, U+2800, the fillers and
              selectors in HIDDEN_EXTRA. file:line:column and the code point. Fine: a BOM at the start of the file;
              FE0E/FE0F after a symbol (So, Sm, Po); a keycap; a ZWJ between two emoji (skin tones count); a flag tag
-             sequence; a ZWNJ between two letters. A run of two or more invisibles stays a failure                      always blocks
+             sequence (only the three RGI flags England, Scotland and Wales; any other tag spells hidden ASCII); a ZWNJ between two letters. A run of two or more invisibles stays a failure                      always blocks
   reach      a URL, a domain with a common TLD and a slash, `www.`, or a shell-looking command (curl, wget, | sh,
              | bash, git push, --no-verify, rm -rf, chmod +x, sudo/eval in backticks) on ANY line of a .md under
              memory/, the header and titles included                                                                   warns
   header     (--staged) the text above and including the format line changed against HEAD, or the memory file is
              new                                                                                                       warns
   unreadable a memory or loaded file that does not open or is not valid UTF-8 is a failure, not a pass                   blocks
-  symlink    a symlink in place of a loaded path, or of a folder above one (vault, memory, people/<x>, .claude...)    blocks
+  symlink    a symlink, or anything else that is not a regular file (a submodule, mode 160000), in place of a loaded
+             path or of a folder above one (vault, memory, people/<x>, .claude...)                                    blocks
 `reach` and `header` block with `memory-reach: block` in vault/gate.txt. With --staged vault/gate.txt is read
 from the index (absent there = defaults).
 
@@ -95,6 +96,7 @@ REACH = re.compile(
     r"|`[^`\n]*(?:\bcurl\b|\bwget\b|\brm\s|\bsudo\b|\beval\b)[^`\n]*`", re.I)
 MODES = ("warn", "block")
 LOADED_NAMES = ("claude.md", "agents.md", "claude.local.md")
+REGULAR = ("100644", "100755")
 SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__", ".pytest_cache"}
 
 # Hidden text: every character of Unicode category Cf (zero-width, bidi controls, soft hyphen, BOM, tag characters...),
@@ -458,17 +460,21 @@ def judge_header(rel: str, text: str, frel: str | None, reader: Reader, modes: d
 
 # ---- hidden text -----------------------------------------------------------------------------------------------------
 
+FLAGS = tuple("\U0001f3f4" + "".join(chr(0xE0000 + ord(c)) for c in name) + "\U000e007f" for name in ("gbeng", "gbsct", "gbwls"))
+
+
 def _tag_sequence_ok(line: str, i: int) -> bool:
-    """A flag written with tag characters: U+1F3F4, tags U+E0020-E007E, closed by U+E007F."""
+    """A tag character is fine only inside one of the three RGI subdivision flags (England, Scotland, Wales):
+    U+1F3F4, the tags of gbeng / gbsct / gbwls letter by letter, U+E007F. Any other tag spells hidden ASCII."""
     s = i
-    while s > 0 and 0xE0020 <= ord(line[s - 1]) <= 0xE007F:
+    while s > 0 and 0xE0000 <= ord(line[s - 1]) <= 0xE007F:
         s -= 1
+    if s == 0 or line[s - 1] != "\U0001f3f4":
+        return False
     e = i
-    while e < len(line) and 0xE0020 <= ord(line[e]) <= 0xE007F:
+    while e < len(line) and 0xE0000 <= ord(line[e]) <= 0xE007F:
         e += 1
-    run = line[s:e]
-    return (s > 0 and line[s - 1] == "\U0001f3f4" and len(run) >= 2 and ord(run[-1]) == 0xE007F
-            and all(0xE0020 <= ord(c) <= 0xE007E for c in run[:-1]))
+    return line[s - 1:e] in FLAGS
 
 
 def _emoji_base(c: str) -> bool:
@@ -585,8 +591,9 @@ def main(argv: list[str] | None = None) -> int:
     if a.staged:
         for mode, p in raw:
             k = kinds(p, vault, root)
-            if mode == "120000" and (k or protected(p, vault, root)):
-                fails.append(Failure(rel(p), "symlink", "symlink in place of a loaded path"))
+            if mode not in REGULAR and (k or protected(p, vault, root)):
+                fails.append(Failure(rel(p), "symlink", "symlink in place of a loaded path" if mode == "120000"
+                                     else "not a regular file in place of a loaded path"))
             elif k:
                 items[p] = k
     else:
