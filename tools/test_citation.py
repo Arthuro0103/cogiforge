@@ -335,7 +335,7 @@ def quotes_note(tmp_path, line, source=SOURCE):
 
 def quote_states(tmp_path, line, source=SOURCE):
     note = quotes_note(tmp_path, line, source)
-    return [r["state"] for r in cit.check_quotes(note.read_text(encoding="utf-8"), note)]
+    return [r["state"] for r in cit.check_quotes(note.read_text(encoding="utf-8"), note, tmp_path / "vault")]
 
 
 def test_quotes_verified_when_every_stretch_is_in_the_linked_file(tmp_path):
@@ -365,13 +365,26 @@ def test_quotes_short_quotes_and_curly_quotes(tmp_path):
 
 def test_quotes_cli_uses_the_citation_rc(tmp_path):
     note = quotes_note(tmp_path, 'He said "the work is the only thing that makes me deeply happy" in [[chats/c]].')
-    r = subprocess.run([sys.executable, CITATION, "--quotes", str(note)], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, CITATION, "--quotes", str(note), "--vault", str(tmp_path / "vault")], capture_output=True, text=True)
     assert r.returncode == 1 and "BROKEN" in r.stdout
     note.write_text('No quotes here.\n', encoding="utf-8")
-    r = subprocess.run([sys.executable, CITATION, "--quotes", str(note)], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, CITATION, "--quotes", str(note), "--vault", str(tmp_path / "vault")], capture_output=True, text=True)
     assert r.returncode == 3 and "NOT_VERIFIED" in r.stdout
 
 
 def test_quotes_inside_a_fenced_block_are_not_checked(tmp_path):
     line = '```\nHe said "the work is the only thing that makes me deeply happy" in [[chats/c]].\n```'
     assert quote_states(tmp_path, line) == []
+
+
+def test_quotes_a_link_that_resolves_outside_the_vault_is_not_a_source(tmp_path):
+    (tmp_path / "secret.md").write_text(SOURCE, encoding="utf-8")
+    note = tmp_path / "vault" / "n.md"
+    note.parent.mkdir(parents=True)
+    note.write_text('He said "the work is the only thing that keeps me calm" in [[secret]].\n', encoding="utf-8")
+    res = cit.check_quotes(note.read_text(encoding="utf-8"), note, tmp_path / "vault")
+    assert [r["state"] for r in res] == [cit.NOT_VERIFIED] and "outside the vault" in res[0]["note"]
+    (tmp_path / "link.md").write_text(SOURCE, encoding="utf-8")
+    (tmp_path / "vault" / "viaLink.md").symlink_to(tmp_path / "link.md")
+    note.write_text('He said "the work is the only thing that keeps me calm" in [[viaLink]].\n', encoding="utf-8")
+    assert [r["state"] for r in cit.check_quotes(note.read_text(encoding="utf-8"), note, tmp_path / "vault")] == [cit.NOT_VERIFIED]

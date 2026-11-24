@@ -24,7 +24,7 @@ hundred to open. This tool opens each one and gives one of four states:
 --quotes is the offline sibling: a line of the note that has a link to a file of the vault (`[[path]]` or
 `[text](path.md)`) and a quote of 5+ words in double quotes (straight or curly) is checked with core/quote.py
 against THAT file: VERIFIED (every stretch is there; `[brackets]` and `...` are allowed), BROKEN (some stretch
-is not), NOT_VERIFIED (no link on the line, the file does not exist, or nothing in the quote is measurable).
+is not), NOT_VERIFIED (no link on the line, the file does not exist or is outside `--vault` (default `vault`), or nothing in the quote is measurable).
 
 A number is found only as a WHOLE number: `86` does not match `1986` or `860`; `77,6` and `77.6` are the
 same; a number with `%` needs `%` or the word percent next to it. That the number is on the page does not
@@ -459,22 +459,30 @@ RE_VAULT_LINK = re.compile(r"\[\[([^\[\]\n|#^]+)(?:[#^][^\[\]\n|]*)?(?:\|[^\[\]\
 QUOTE_MIN_WORDS = 5
 
 
-def resolve_link(note: Path, target: str) -> "Path | None":
-    """The file a vault link points to: relative to the note, then to each folder above it (the vault root)."""
+def resolve_link(note: Path, target: str, vault: "Path | None" = None) -> "tuple[Path | None, bool]":
+    """(file, outside): the file a vault link points to, looking relative to the note and then to each folder above
+    it. A file that resolves outside the vault is never returned: `outside` is True and the quote stays NOT_VERIFIED."""
     target = unquote(target).strip().replace("\\", "/")
     if not target or re.match(r"[a-z][a-z0-9+.-]*:", target, re.I):
-        return None
+        return None, False
+    vroot = (vault if vault is not None else Path("vault")).resolve()
     names = [target] if target.lower().endswith(".md") else [target + ".md", target]
     here = note.resolve().parent
+    outside = False
     for base in [here, *here.parents]:
         for n in names:
             c = base / n
             if c.is_file():
-                return c
-    return None
+                try:
+                    c.resolve().relative_to(vroot)
+                except ValueError:
+                    outside = True
+                    continue
+                return c, False
+    return None, outside
 
 
-def check_quotes(text: str, note: Path) -> list[dict]:
+def check_quotes(text: str, note: Path, vault: "Path | None" = None) -> list[dict]:
     """One result per quote of 5+ words, judged against the vault file(s) linked on the same line."""
     results = []
     in_fence = False
@@ -488,14 +496,17 @@ def check_quotes(text: str, note: Path) -> list[dict]:
         quotes = [q for q in quotes if len(q.split()) >= QUOTE_MIN_WORDS]
         if not quotes:
             continue
-        files = [f for f in (resolve_link(note, m.group(1) or m.group(2)) for m in RE_VAULT_LINK.finditer(line)) if f]
+        resolved = [resolve_link(note, m.group(1) or m.group(2), vault) for m in RE_VAULT_LINK.finditer(line)]
+        files = [f for f, _ in resolved if f]
+        outside = any(o for _, o in resolved)
         has_link = bool(RE_VAULT_LINK.search(line))
         for q in quotes:
             item = dict(kind="quote", target=q, line=ln, context=line.strip(), note="")
             if not has_link:
                 item.update(state=NOT_VERIFIED, note="no link to a vault file on this line, so there is no source to open")
             elif not files:
-                item.update(state=NOT_VERIFIED, note="the linked file does not exist or is not a vault file")
+                item.update(state=NOT_VERIFIED, note="the linked file is outside the vault, so it is not a source" if outside
+                            else "the linked file does not exist or is not a vault file")
             else:
                 verdicts = []
                 for f in files:
@@ -614,6 +625,7 @@ def main(argv: "list[str] | None" = None) -> int:
     ap.add_argument("file", nargs="?")
     ap.add_argument("--no-network", action="store_true", help="read the form only; every citation is NOT_VERIFIED")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--vault", default="vault", help="with --quotes: the only folder a link may resolve into (default: vault)")
     ap.add_argument("--quotes", metavar="NOTE.md", help="check quotes of 5+ words against the vault file linked on the same line")
     ap.add_argument("--selftest", action="store_true")
     args = ap.parse_args(argv)
@@ -631,7 +643,7 @@ def main(argv: "list[str] | None" = None) -> int:
     except OSError as e:
         print(f"NOT_VERIFIED: could not read {path} ({e})")
         return 3
-    results = check_quotes(text, path) if args.quotes else check_text(text, None if args.no_network else fetch_http)
+    results = check_quotes(text, path, Path(args.vault)) if args.quotes else check_text(text, None if args.no_network else fetch_http)
     shown = [{k: (clean(v) if isinstance(v, str) else v) for k, v in r.items()} for r in results]
     if args.json:
         print(json.dumps({"file": clean(str(path)), "citations": shown}, ensure_ascii=False, indent=2))
