@@ -133,7 +133,7 @@ datada, e cada uma tem um teste que falha sem ela: veja o [WHY.md](WHY.md).
 As medições com número, comando e commit estão no [README.md](README.md), seção *What is verified, and what is
 not*. Não copiei todos os números para cá de propósito: uma cópia envelhece sozinha. Os dois que mais importam:
 
-- Testes: `python3 -m pytest -q` deu **TESTS_PASSED passed, 2 skipped** (commit COMMIT_SHA), depois de `sh install.sh` e `python3 -m pip install pytest`.
+- Testes: `python3 -m pytest -q` deu **1504 passed, 2 skipped** (commit `34854ac`, 24/11/2026), depois de `sh install.sh` e `python3 -m pip install pytest`.
 - Mutação: cada checagem é quebrada uma por vez e uma mutação que nenhum teste percebe é uma falha. `python3 tests/mutate.py --dry` lista 698 mutantes e confere em segundos que todos ainda se aplicam; o CI (`.github/workflows/prova.yml`) roda todos a cada push.
 
 Em resumo: macOS e Linux são provados
