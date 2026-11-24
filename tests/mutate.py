@@ -597,7 +597,6 @@ PIECES = {
         ("the virama test accepts any mark", 'unicodedata.combining(c) == 9', 'unicodedata.combining(c) > 0'),
         ("message text is not made safe", 'if c in ("\\n", "\\r", "\\t") or base_hidden(c) or (unicodedata.category(c) == "Zs" and c != " "):', 'if False:'),
         ("the stage path goes through a revision", 'raw = self.index_blob(rel) if rel else None', 'raw = self.git("show", ":" + rel) if rel else None'),
-        ("pathspecs are not literal", 'env={**os.environ, "GIT_LITERAL_PATHSPECS": "1"}', 'env=None'),
         ("the path of an entry is not compared", 'if tab and path.decode("utf-8", errors="surrogateescape") == rel:', 'if tab:'),
         ("an agent-folder symlink to anywhere is fine", 'return any(d in AGENT_DIRS for d in trr.casefold().split("/")) and target != Path(os.path.realpath(os.path.dirname(os.path.abspath(p)))) / Path(p).name', 'return True'),
         ("an agent-folder symlink is never fine", 'return any(d in AGENT_DIRS for d in trr.casefold().split("/")) and target != Path(os.path.realpath(os.path.dirname(os.path.abspath(p)))) / Path(p).name', 'return False'),

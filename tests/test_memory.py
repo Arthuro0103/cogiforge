@@ -1357,3 +1357,34 @@ def test_entry_parsing_rejects_what_the_old_regex_rejected():
     assert memory.ENTRY.match('hello | "x" | chat') is None
     assert memory.ENTRY.match('2026-11-01 | "a" b" | chat').group(2) == 'a" b'   # the closing quote is the rightmost one
     assert memory.ENTRY.match('2026-11-01 "x" | chat') is None
+
+
+def test_a_zwj_after_a_mark_that_is_not_a_virama_is_hidden(tmp_path):
+    assert loaded_run(tmp_path, "x क़‍ष").returncode == 1  # a nukta is a combining mark, not a virama
+    assert loaded_run(tmp_path, "x क्‍ष").returncode == 0
+
+
+def test_a_tail_with_no_bar_after_the_closing_quote_is_no_entry():
+    assert memory.ENTRY.match('2026-11-01 | "x" yy') is None
+
+
+def test_the_reader_matches_a_path_exactly_not_by_prefix(repo):
+    reader = memory.Reader(repo.resolve())
+    assert reader.index_entry("vault/memory") is None and reader.index_entry("vault/memory/profile.md") is not None
+    assert reader.head_entry("vault/memory")[1] == "tree" and reader.head_entry("vault/memory/profile.md")[1] == "blob"
+    assert reader.head_entry("vault/mem") is None
+
+
+def test_a_link_inside_a_dot_claude_folder_never_gets_the_agent_exception(tmp_path):
+    put(tmp_path, "vault/memory/profile.md", HEAD)
+    put(tmp_path, ".gemini/real/x.md", "# x\n")
+    (tmp_path / ".cursor").mkdir()
+    (tmp_path / ".cursor/.claude").symlink_to("../.gemini/real")
+    assert run(tmp_path).returncode == 1
+
+
+def test_an_absolute_link_is_never_read_as_a_relative_one(tmp_path):
+    put(tmp_path, "vault/memory/profile.md", HEAD)
+    put(tmp_path, ".gemini/.cursor/real/x.md", "# x\n")
+    (tmp_path / ".gemini/r").symlink_to("/.cursor/real")  # a broken link for the OS, a fine one for a careless parser
+    assert run(tmp_path).returncode == 1
