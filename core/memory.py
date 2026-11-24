@@ -310,21 +310,38 @@ def protected(p: Path, vault: Path, root: Path) -> bool:
 LENIENT_DIRS = (".agents", ".cursor", ".gemini")
 
 
-def agent_link_ok(p: Path, link: str, vault: Path, root: Path) -> bool:
-    """A symlink inside `.agents/`, `.cursor/` or `.gemini/` is fine when it only points to another path that is already
-    scanned (for example `.agents/skills -> ../.claude/skills`, how one skills folder serves every agent). Anything that
-    points outside the repo, or to a place nobody scans, still fails. `.claude/` and memory never get this."""
+def agent_link_ok(p: Path, link: str, vault: Path, root: Path, staged: bool = False) -> bool:
+    """A symlink inside `.agents/`, `.cursor/` or `.gemini/` that only points to another agent folder (how one skills
+    folder serves every agent). Staged, the only link accepted is exactly `.agents/skills -> ../.claude/skills`, which
+    install.sh creates (and hides from git, so it hardly ever shows up here). On the disk it is accepted only if no
+    component of the target text is a symlink itself, the target exists, and its realpath is inside an agent folder of
+    the real repo, so the operating system and this check agree on where the link goes. `.claude/` and memory never
+    get this."""
     rr = rel_to(p, root)
-    parts = rr.casefold().split("/") if rr is not None else []
-    if not any(d in LENIENT_DIRS for d in parts[:-1] + ([parts[-1]] if parts else [])) or ".claude" in parts or kinds(p, vault, root) & {"memory", "entries"}:
+    if rr is None:
+        return False
+    if staged:
+        return rr == ".agents/skills" and link == "../.claude/skills"
+    parts = rr.casefold().split("/")
+    if not any(d in LENIENT_DIRS for d in parts) or ".claude" in parts or kinds(p, vault, root) & {"memory", "entries"}:
         return False
     if not link or link.startswith("/") or "\x00" in link:
         return False
-    target = Path(os.path.normpath(os.path.join(os.path.dirname(p), link)))
-    if rel_to(target, root) is None or in_memory_folder((rel_to(target, vault) or "").casefold()):
+    cur = os.path.dirname(os.path.abspath(p))
+    for comp in link.split("/"):
+        if comp in ("", "."):
+            continue
+        if comp == "..":
+            cur = os.path.dirname(cur)
+            continue
+        cur = os.path.join(cur, comp)
+        if os.path.islink(cur):
+            return False  # the target text goes through another link: the OS would follow it somewhere this check did not look
+    target = Path(os.path.realpath(cur))
+    trr = rel_to(target, Path(os.path.realpath(root)))
+    if trr is None or not target.exists() or in_memory_folder((rel_to(target, Path(os.path.realpath(vault))) or "").casefold()):
         return False
-    trr = (rel_to(target, root) or "").casefold().split("/")
-    return any(d in AGENT_DIRS for d in trr) and target != Path(os.path.abspath(p))
+    return any(d in AGENT_DIRS for d in trr.casefold().split("/")) and target != Path(os.path.realpath(os.path.dirname(os.path.abspath(p)))) / Path(p).name
 
 
 def memory_files(vault: Path) -> list[Path]:
@@ -421,12 +438,17 @@ class Reader:
         e = self.index_entry(rel)
         return self.blob(e[1]) if e else None
 
-    def exists(self, path: Path) -> bool:
+    def file_state(self, path: Path) -> str:
+        """"absent" (nothing there: skip), "regular", or "other" (a symlink, a submodule, anything that is not a regular file)."""
         if self.top is None:
-            return Path(path).is_file()
+            if Path(path).is_symlink():
+                return "other"
+            return "regular" if Path(path).is_file() else "absent"
         rel = self.rel(path)
         e = self.index_entry(rel) if rel else None
-        return bool(e) and e[0] in REGULAR
+        if e is None:
+            return "absent"
+        return "regular" if e[0] in REGULAR else "other"
 
     def text(self, path: Path) -> str:
         try:
@@ -843,7 +865,7 @@ def main(argv: list[str] | None = None) -> int:
         for mode, p in raw:
             k = kinds(p, vault, root)
             if mode == "120000" and (k or protected(p, vault, root)) and agent_link_ok(
-                    p, (reader.index_blob(reader.rel(p) or "") or b"").decode("utf-8", errors="replace"), vault, root):
+                    p, (reader.index_blob(reader.rel(p) or "") or b"").decode("utf-8", errors="replace"), vault, root, staged=True):
                 continue
             if mode not in REGULAR and (k or protected(p, vault, root)):
                 fails.append(Failure(rel(p), "symlink", "symlink in place of a loaded path" if mode == "120000"
@@ -907,7 +929,14 @@ def main(argv: list[str] | None = None) -> int:
         if depth < MAX_IMPORT_DEPTH and (depth > 0 or p.name.casefold() in IMPORTERS):
             for target in imports_of(text, p, root):
                 ap_ = Path(os.path.abspath(target))
-                if ap_ in seen or not reader.exists(ap_):
+                if ap_ in seen:
+                    continue
+                state = reader.file_state(ap_)
+                if state == "absent":
+                    continue
+                if state == "other":
+                    seen.add(ap_)
+                    fails.append(Failure(rel(ap_), "symlink", "not a regular file in place of a loaded path"))
                     continue
                 seen.add(ap_)
                 queue.append((ap_, kinds(ap_, vault, root) | {"loaded"}, depth + 1))

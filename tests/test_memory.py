@@ -1231,3 +1231,91 @@ def test_a_home_import_is_not_followed(tmp_path):
     put(tmp_path, "~/x.txt", "bad\u2063\n")
     put(tmp_path, "@y.txt", "bad\u2063\n")
     assert run(tmp_path).returncode == 0
+
+
+# ---- review round 4, part 2: how a link is accepted ---------------------------------------------------------------------
+
+def test_a_link_through_another_link_or_to_nothing_is_refused_on_the_disk(tmp_path):
+    put(tmp_path, "vault/memory/profile.md", HEAD)
+    put(tmp_path, ".claude/inner/SKILL.md", "# s\n")
+    (tmp_path / ".claude/lnk").symlink_to("inner")  # a link inside .claude that is itself refused, so use a dir outside it
+    (tmp_path / ".claude/lnk").unlink()
+    put(tmp_path, ".cursor/real/x.md", "# x\n")
+    (tmp_path / ".cursor/hop").symlink_to("real")                      # a link inside an agent folder
+    (tmp_path / ".gemini").mkdir()
+    (tmp_path / ".gemini/r").symlink_to("../.cursor/hop")             # whose target text goes THROUGH that link
+    r = run(tmp_path)
+    assert r.returncode == 1 and ".gemini/r" in out(r)
+    (tmp_path / ".gemini/r").unlink()
+    (tmp_path / ".cursor/hop").unlink()
+    (tmp_path / ".gemini/r").symlink_to("../.cursor/real")           # the same place, by a clean path
+    assert run(tmp_path).returncode == 0
+    (tmp_path / ".gemini/r").unlink()
+    (tmp_path / ".gemini/r").symlink_to("../.cursor/missing")        # nothing there
+    assert run(tmp_path).returncode == 1
+    (tmp_path / ".gemini/r").unlink()
+    (tmp_path / ".gemini/r").symlink_to("../.cursor/real/../real")   # a dotdot that the OS resolves the same way
+    assert run(tmp_path).returncode == 0
+
+
+def test_a_link_whose_realpath_leaves_the_agent_folders_is_refused(tmp_path):
+    put(tmp_path, "vault/memory/profile.md", HEAD)
+    put(tmp_path, "docs/z.md", "clean\n")
+    (tmp_path / ".gemini").mkdir()
+    (tmp_path / ".gemini/r").symlink_to("../docs")
+    assert run(tmp_path).returncode == 1
+
+
+def test_staged_only_the_one_install_link_is_accepted(repo):
+    put(repo, ".claude/skills/s/SKILL.md", "# s\n")
+    (repo / ".cursor").mkdir()
+    for where, target, ok in ((".agents/skills", "../.claude/skills", True), (".agents/skills", "../.claude", False), (".agents/skills", "../.claude/skills/", False),
+                              (".agents/other", "../.claude/skills", False), (".cursor/skills", "../.claude/skills", False), (".gemini/skills", "../.claude/skills", False)):
+        git(repo, "reset", "-q")
+        for stale in (".agents", ".gemini", ".cursor/skills"):
+            if (repo / stale).is_symlink():
+                (repo / stale).unlink()
+            elif (repo / stale).is_dir():
+                import shutil
+                shutil.rmtree(repo / stale)
+        (repo / where).parent.mkdir(parents=True, exist_ok=True)
+        (repo / where).symlink_to(target)
+        git(repo, "add", "-f", where)
+        r = run(repo, "--staged")
+        assert (r.returncode == 0) == ok, (where, target, out(r))
+
+
+# D. an import that is not a regular file
+
+def test_an_import_that_is_a_symlink_is_a_failure_not_a_skip(tmp_path):
+    put(tmp_path, "vault/memory/profile.md", HEAD)
+    put(tmp_path, "CLAUDE.md", "@docs/link.txt\n")
+    put(tmp_path, "elsewhere.txt", "bad⁣\n")
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs/link.txt").symlink_to(tmp_path / "elsewhere.txt")
+    r = run(tmp_path)
+    assert r.returncode == 1 and "docs/link.txt" in out(r) and "not a regular file in place of a loaded path" in out(r)
+    (tmp_path / "docs/link.txt").unlink()
+    assert run(tmp_path).returncode == 0  # completely absent: skipped
+
+
+def test_staged_an_import_that_is_a_symlink_or_a_gitlink_is_a_failure(repo):
+    put(repo, "CLAUDE.md", "@docs/link.txt\n")
+    (repo / "docs").mkdir()
+    put(repo, "elsewhere.txt", "x\n")
+    (repo / "docs/link.txt").symlink_to(repo / "elsewhere.txt")
+    git(repo, "add", "-A")
+    r = run(repo, "--staged")
+    assert r.returncode == 1 and "docs/link.txt" in out(r) and "not a regular file" in out(r)
+    git(repo, "rm", "-q", "--cached", "docs/link.txt")
+    sha = git(repo, "rev-parse", "HEAD").stdout.strip()
+    git(repo, "update-index", "--add", "--cacheinfo", f"160000,{sha},docs/link.txt")
+    r = run(repo, "--staged")
+    assert r.returncode == 1 and "docs/link.txt" in out(r) and "not a regular file" in out(r)
+    git(repo, "update-index", "--force-remove", "docs/link.txt")
+    assert run(repo, "--staged").returncode == 0  # not in the index at all: skipped
+
+
+def test_an_empty_where_says_so(tmp_path):
+    r = mem(tmp_path, '2026-11-01 | "I never said I wanted to rest" |\n')
+    assert r.returncode == 1 and "nowhere where it was said" in out(r)
