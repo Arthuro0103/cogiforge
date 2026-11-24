@@ -16,7 +16,7 @@
 
 ## Quickstart
 
-You need `git`, Python 3.10+, Obsidian and Claude Code. macOS and Linux are what the CI proves. Windows has an installer (`install.ps1`) and an informational CI job that is not guaranteed green; see [docs/WINDOWS.md](docs/WINDOWS.md), where every unconfirmed claim is marked `[VERIFY]`. To run this
+You need `git`, Python 3.10+ and Obsidian, plus a coding agent: Claude Code gets everything (skills load by themselves); Codex, Cursor and others follow [AGENTS.md](AGENTS.md) (what changes: [docs/USING-OTHER-MODELS.md](docs/USING-OTHER-MODELS.md)). macOS and Linux are what the CI proves. Windows has an installer (`install.ps1`) and an informational CI job that is not guaranteed green; see [docs/WINDOWS.md](docs/WINDOWS.md), where every unconfirmed claim is marked `[VERIFY]`. To run this
 repo's own tests you also need `pytest` (`python3 -m pip install pytest`); nothing else in the repo uses it.
 
 ```sh

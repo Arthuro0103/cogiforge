@@ -14,7 +14,7 @@ a planejar, e melhora junto com você** conforme você usa.
 
 ## Começo rápido
 
-Você precisa de `git`, Python 3.10+, Obsidian e Claude Code. macOS e Linux são o que o CI prova. O Windows tem
+Você precisa de `git`, Python 3.10+ e Obsidian, mais um agente de código: o Claude Code tem tudo (as skills carregam sozinhas); Codex, Cursor e outros seguem o [AGENTS.md](AGENTS.md) (o que muda: [docs/USING-OTHER-MODELS.md](docs/USING-OTHER-MODELS.md)). macOS e Linux são o que o CI prova. O Windows tem
 um instalador (`install.ps1`) e um job de CI só informativo, que não garante estar verde; veja
 [docs/WINDOWS.md](docs/WINDOWS.md), onde cada afirmação não confirmada está marcada `[VERIFY]`. Para rodar os
 testes do próprio repo você também precisa do `pytest` (`python3 -m pip install pytest`).
