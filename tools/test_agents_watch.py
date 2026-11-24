@@ -122,3 +122,43 @@ def test_current_session_slug_matches_real_claude_code_folders(tmp_path):
         (root / slug).mkdir(parents=True)
         (root / slug / "abc.jsonl").write_text("", encoding="utf-8")
         assert w.find_session("current", root, Path(cwd)) == root / slug / "abc"
+
+
+def test_a_legacy_console_encoding_does_not_crash_a_message_on_stderr():
+    # stderr under cp1252 with errors=strict: only _safe_stdio keeps "→" from raising
+    code = ("import sys; sys.path.insert(0, sys.argv[1]); import agents_watch as m; m._safe_stdio(); "
+            "sys.stderr.write('error → message\\n'); sys.stderr.flush()")
+    env = {**__import__("os").environ, "PYTHONIOENCODING": "cp1252:strict"}
+    r = subprocess.run([sys.executable, "-B", "-c", code, str(Path(__file__).resolve().parent)],
+                       capture_output=True, env=env, timeout=60)
+    assert r.returncode == 0, r.stderr.decode("cp1252", "replace")
+    assert b"UnicodeEncodeError" not in r.stderr
+    assert "error ? message".encode("cp1252") in r.stderr
+
+
+def test_a_long_cwd_finds_the_truncated_project_folder(tmp_path):
+    cwd = "/mnt/u/" + "/".join(["deeply-nested-folder-name"] * 10)
+    slug = w.re.sub(r"[^A-Za-z0-9]", "-", cwd)
+    assert len(slug) > 200
+    root = tmp_path / "root"
+    (root / (slug[:200] + "-abc123")).mkdir(parents=True)
+    (root / (slug[:200] + "-abc123") / "sess.jsonl").write_text("", encoding="utf-8")
+    assert w.find_session("current", root, Path(cwd)) == root / (slug[:200] + "-abc123") / "sess"
+
+
+def test_a_long_cwd_with_two_truncated_folders_is_ambiguous(tmp_path):
+    import pytest
+    cwd = "/mnt/u/" + "/".join(["deeply-nested-folder-name"] * 10)
+    slug = w.re.sub(r"[^A-Za-z0-9]", "-", cwd)
+    root = tmp_path / "root"
+    for h in ("aaa", "bbb"):
+        (root / (slug[:200] + "-" + h)).mkdir(parents=True)
+    with pytest.raises(FileNotFoundError, match="ambiguous.*--session"):
+        w.find_session("current", root, Path(cwd))
+
+
+def test_a_long_cwd_with_no_truncated_folder_is_the_usual_error(tmp_path):
+    import pytest
+    cwd = "/mnt/u/" + "/".join(["deeply-nested-folder-name"] * 10)
+    with pytest.raises(FileNotFoundError, match="no session transcript"):
+        w.find_session("current", tmp_path, Path(cwd))

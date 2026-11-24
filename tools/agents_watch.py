@@ -230,7 +230,15 @@ def find_session(target: str, root: Path = ROOT, cwd: Path | None = None) -> Pat
     """Session folder (the one with subagents/). 'current' = newest session of the project whose cwd is this one."""
     if target == "current":
         slug = re.sub(r"[^A-Za-z0-9]", "-", str((cwd or Path.cwd()).resolve()))
-        folder = root / slug
+        folder = root / slug[:200] if len(slug) > 200 else root / slug  # a name over 255 would raise on stat
+        if len(slug) > 200:
+            # Claude Code truncates a long project folder name to the first 200 characters + "-<hash>"
+            # (rule read in binary 2.1.331; the hash is not reproduced here, so match by prefix)
+            cands = sorted(d for d in root.glob(slug[:200] + "-*") if d.is_dir())
+            if len(cands) > 1:
+                raise FileNotFoundError(
+                    f"ambiguous: {len(cands)} project folders share the truncated name of this directory under {root}; pass --session")
+            folder = cands[0] if cands else root / "-no-such-project-folder"
         sessions = sorted(folder.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True) if folder.is_dir() else []
         if not sessions:
             raise FileNotFoundError(f"no session transcript for this directory under {root}; pass --session")
