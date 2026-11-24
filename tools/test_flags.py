@@ -177,7 +177,7 @@ def test_every_flag_in_one_command_is_checked_not_only_the_first(tmp_path):
 
 def test_a_legacy_console_encoding_does_not_crash_the_output(tmp_path):
     import os
-    script = put(tmp_path / "ação→" / "t.py", ARGPARSE)
+    script = put(tmp_path / "→" / "t.py", ARGPARSE)
     env = {**os.environ, "PYTHONIOENCODING": "cp1252"}
     r = subprocess.run([sys.executable, FLAGS, str(script)], capture_output=True, env=env, timeout=60)
     assert b"UnicodeEncodeError" not in r.stderr, r.stderr.decode("cp1252", "replace")
