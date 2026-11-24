@@ -1402,5 +1402,5 @@ def test_a_link_to_a_place_outside_the_repo_is_refused_without_a_crash(tmp_path)
 
 def test_quote_pieces_are_whole_words_in_order():
     import quote as q
-    assert q.found_ordered("push to main", "you pushed to maintain it") is False
+    assert q.found_ordered("push to main", "you unpush to maintain it") is False
     assert q.found_ordered("push to main", "you push to main") is True
