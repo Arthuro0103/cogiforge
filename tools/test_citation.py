@@ -370,3 +370,8 @@ def test_quotes_cli_uses_the_citation_rc(tmp_path):
     note.write_text('No quotes here.\n', encoding="utf-8")
     r = subprocess.run([sys.executable, CITATION, "--quotes", str(note)], capture_output=True, text=True)
     assert r.returncode == 3 and "NOT_VERIFIED" in r.stdout
+
+
+def test_quotes_inside_a_fenced_block_are_not_checked(tmp_path):
+    line = '```\nHe said "the work is the only thing that makes me deeply happy" in [[chats/c]].\n```'
+    assert quote_states(tmp_path, line) == []
