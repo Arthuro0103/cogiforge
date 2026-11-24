@@ -91,9 +91,18 @@ the commands above. Where a skill says "ask the user one question at a time", do
 | `cf-task-observer` | during work: notice what repeats or was corrected, and only propose improvements |
 | `cf-claude-corner` | the user is away: reread, connect and test outside `vault/`, and only propose |
 | `cf-adapt-skill` | the user wants their own skill from a worksheet in `vault/skill-worksheets/`: you do not write it alone |
+| `cf-extract-routine` | a routine lives only in someone's head: one question at a time until another person could follow it; the agent never declares it `validated` |
+| `cf-brainstorm` | an idea is still loose: three different paths, a comparison by criteria the user picks, and a brief; nothing is built before their explicit yes |
+| `cf-whats-real` | before a demo, delivery or launch: what works (with proof), what is simulated, what is unknown; checked again afterwards |
+| `cf-import-knowledge` | the user brings an existing base (another vault, a folder, documents): run `tools/import.py`, read the report, then propose the triage from the inbox to `notes/`, target first; the user approves |
+| `cf-adopt` | the user already has an Obsidian vault and does not want to start from zero or copy anything: dry-run `tools/adopt.py`, explain the plan and the debt measured today, apply only after a clear yes |
+| `cf-know-my-product` | the user wants you to understand their product and pains: one question at a time, fills `projects/<name>/product.md` in their words, proposes the pain ranking |
+| `cf-study` | the user wants to learn something their way: one question at a time on what, why, deadline, how and time; three level questions; a plan; then explain, recall, log. `mastered` only after a retest on another day, never without proof |
 | `cf-new-project` | the user wants a new project: ask the name, then their own one-sentence target (copied unchanged), `--dry-run`, their "yes", then `tools/new_project.py` |
 | `cf-brand` | the user wants their voice rules or a project's DNA, messaging, design system or manual: one question at a time, only their words, a "yes" before saving, no default colors; `manual` only assembles and marks what is empty. Checks with `tools/voice_check.py` and `tools/brand_preview.py` |
 | `cf-new-rule` | the user hit a real, dated mistake and wants it to become a rule: the mistake first, then a pair of inputs, a test seen red, the rule, a mutation, a `WHY.md` entry; nothing outside `vault/` is written without their "yes" |
+
+Shared mode: if `vault/roles.txt` exists, read `docs/TEAMS.md` first. After saving a note, run `python3 tools/hub.py`: a note in `projects/<name>/` enters the root's block on its own; a note in `notes/` only shows up there through the link in the body.
 
 Features that depend on the agent (running a skill by `/name`, loading it by its description) are
 conveniences. The rules in this file do not depend on them. More in
