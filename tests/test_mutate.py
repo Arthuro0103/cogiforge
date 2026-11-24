@@ -67,3 +67,13 @@ def test_a_signal_kills_the_suite_and_its_children(tmp_path, sig):
                 os.kill(int(pidfile.read_text()), signal.SIGKILL)
             except ProcessLookupError:
                 pass
+
+
+def test_a_mutant_gets_three_times_the_baseline_and_never_less_than_the_floor():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("mutate_mod", Path(__file__).resolve().parent / "mutate.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert mod.mutant_limit(10) == mod.SUITE_TIMEOUT          # a fast suite keeps the floor
+    assert mod.mutant_limit(362) == 3 * 362                   # the hook suite of 2026-11-24 (362 s) gets 1086 s
+    assert mod.BASELINE_TIMEOUT > 3 * mod.SUITE_TIMEOUT        # the unmutated run is never cut at the mutant floor

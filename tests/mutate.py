@@ -13,12 +13,13 @@ every round and runs with PYTHONDONTWRITEBYTECODE=1.
     python3 tests/mutate.py                 all pieces
     python3 tests/mutate.py leak ring       only these
     python3 tests/mutate.py --dry           only checks that each mutant applies (seconds, no suite)
-Each suite run has a time limit (SUITE_TIMEOUT, 300 s) and never inherits the terminal's stdin. A mutant whose
+Each suite run has a time limit and never inherits the terminal's stdin. A mutant whose
 suite does not finish in time (a hang is a suite that did not stay green) counts as DEAD and is reported as
 `killed (timeout)` with the mutant's name; the whole process group is killed so no child is left behind (a mutant that only makes the suite slow shows up as
 `killed (timeout)`, not as a survivor). Ctrl-C, SIGTERM and SIGHUP kill the suite that is running before mutate.py exits.
 Without `os.killpg` (Windows) only the suite process itself is killed.
-The baseline run (no mutation) that times out is "already red": rc 2.
+The limit: the unmutated baseline of a piece gets BASELINE_TIMEOUT (1800 s) and is timed; each mutant then gets
+mutant_limit() = max(SUITE_TIMEOUT 300 s, 3 x the baseline). A baseline that times out is "already red": rc 2.
 rc: 0 every mutant dead · 1 a mutant survived · 2 suite already red / inapplicable mutant
 """
 import os
@@ -26,11 +27,19 @@ import re
 import shutil
 import signal
 import subprocess
+import time
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SUITE_TIMEOUT = 300  # seconds per suite run
+SUITE_TIMEOUT = 300  # seconds per suite run: the floor of each mutant's limit
+BASELINE_TIMEOUT = 1800  # the unmutated run of a piece may take this long before it counts as red
+
+
+def mutant_limit(baseline_seconds):
+    """Time limit for one mutant: three times what the green baseline took, never under SUITE_TIMEOUT.
+    A fixed 300 s broke when the hook suite grew past it (2026-11-24): the baseline itself timed out."""
+    return max(SUITE_TIMEOUT, 3 * baseline_seconds)
 TIMEOUT_RC = -999   # run_suite's return code when the time ran out
 
 PIECES = {
@@ -912,7 +921,7 @@ def install_handlers():
             signal.signal(getattr(signal, name), _on_signal)
 
 
-def run_suite(suite):
+def run_suite(suite, timeout=SUITE_TIMEOUT):
     global CURRENT
     for d in ROOT.rglob("__pycache__"):
         shutil.rmtree(d, ignore_errors=True)
@@ -923,7 +932,7 @@ def run_suite(suite):
                             cwd=ROOT, env=env, start_new_session=True)
     CURRENT = proc
     try:
-        out, _ = proc.communicate(timeout=SUITE_TIMEOUT)
+        out, _ = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
         kill_group(proc)
         proc.communicate()
@@ -984,11 +993,17 @@ def main():
             print(f"[{piece}] {spec['file']} does not exist yet — skipped")
             continue
         original = file.read_text(encoding="utf-8")
-        rc, _ = run_suite(spec["suite"])
+        started = time.monotonic()
+        rc, _ = run_suite(spec["suite"], timeout=BASELINE_TIMEOUT)
+        took = time.monotonic() - started
+        if rc == TIMEOUT_RC:
+            print(f"[{piece}] the suite did not finish in {BASELINE_TIMEOUT} s without mutation — counted as RED.")
+            return 2
         if rc != 0:
             print(f"[{piece}] the suite is already RED without mutation — fix it before mutating.")
             return 2
-        print(f"[{piece}] baseline green")
+        limit = mutant_limit(took)
+        print(f"[{piece}] baseline green ({took:.0f} s; each mutant gets {limit:.0f} s)")
         try:
             for name, fn in mutants(piece, original):
                 try:
@@ -999,7 +1014,7 @@ def main():
                     continue
                 total += 1
                 file.write_text(new, encoding="utf-8")
-                rc, failed = run_suite(spec["suite"])
+                rc, failed = run_suite(spec["suite"], timeout=limit)
                 if rc == 0:
                     alive.append(f"{piece}/{name}")
                     print(f"  SURVIVED    {name}")
