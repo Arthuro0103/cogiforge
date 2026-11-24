@@ -7,6 +7,7 @@ from pathlib import Path
 RECALL = str(Path(__file__).with_name("recall.py"))
 
 POINTER = "- [[memory/archive/decisions|3 older entries, moved word for word on 2026-10-01]]\n"
+IMPORTS = "".join(f"@vault/memory/{m}.md\n" for m in ("profile", "patterns", "decisions"))
 POS = {"id": "pos", "type": "positive-control", "question": "Favorite tea?", "accept": ["jasmine"]}
 NEG = {"id": "neg", "type": "negative-control", "question": "Account number?"}
 REC = {"id": "rec", "type": "recall", "question": "Start time?", "accept": ["6 am"]}
@@ -25,8 +26,8 @@ def world(tmp_path, items, profile="The user likes jasmine tea.\n", decisions=""
     put(v / "memory" / "decisions.md", decisions)
     if archive is not None:
         put(v / "memory" / "archive" / "decisions.md", archive)
-    if rules:
-        put(tmp_path / "CLAUDE.md", rules)
+    # the root CLAUDE.md imports the three memory files, which is what makes a session load them
+    put(tmp_path / "CLAUDE.md", rules + ("\n" if rules else "") + IMPORTS)
     if agents:
         put(tmp_path / "AGENTS.md", agents)
     if vault_rules:
@@ -415,3 +416,10 @@ def test_continuation_lines_belong_to_the_answer_above(tmp_path):
     clean(tmp_path, [POS, REC, NEG])
     r = recall(tmp_path, "--run", fake_model(tmp_path, "1. jasmine\n2. at\n   6 am sharp\n3. I don't know"))
     assert r.returncode == 0
+
+
+def test_memory_that_nothing_imports_is_not_loaded(tmp_path):
+    world(tmp_path, [POS, REC])
+    (tmp_path / "CLAUDE.md").write_text("no imports here\n", encoding="utf-8")
+    r = recall(tmp_path, "--static")
+    assert "MISSING" in r.stdout and r.returncode != 0

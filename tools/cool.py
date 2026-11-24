@@ -4,7 +4,7 @@
     python3 tools/cool.py memory/decisions.md [--vault vault] [--keep 40]            plan: prints, writes nothing
     python3 tools/cool.py memory/decisions.md [--vault vault] [--keep 40] --apply    does it
 
-A memory file (profile, patterns, decisions) is loaded in every session, so it can only grow until it crosses
+A memory file (profile, patterns, decisions) is loaded in every session (the root CLAUDE.md imports it with an `@` line), so it can only grow until it crosses
 the ceiling in core/budget.py. An entry is a line that starts with a date (`- 2026-08-14: ...`) plus the
 indented lines under it. An entry with a `superseded_by:` field moves FIRST, whatever its date and `--keep`
 (a superseded line that stays loaded is still obeyed). Of the rest, the `--keep` NEWEST entries stay; the older ones move, word for word, to

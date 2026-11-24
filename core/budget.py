@@ -5,8 +5,9 @@
     budget.py --staged                                    the hook: rc 1 only if THIS commit makes a loaded file bigger and a ceiling is crossed
 
 Two numbers, in bytes (a token is about 4 bytes of English):
-  every session   CLAUDE.md, vault/CLAUDE.md, the three memory files (profile, patterns, decisions) and the
-                  `description:` of every skill. Paid in every session. Ceiling: ALWAYS_MAX.
+  every session   CLAUDE.md, vault/CLAUDE.md, every file they import with an `@path` line (Claude Code follows
+                  those, up to 5 levels: the three memory files, profile, patterns and decisions, come in this way)
+                  and the `description:` of every skill. Paid in every session. Ceiling: ALWAYS_MAX.
   open a project  the above, plus what `cf-open-session <name>` reads: the project root, the 3 newest diary
                   entries and up to 5 open tasks. The WORST project counts. Ceiling: OPEN_MAX.
 Why a ceiling: a context that is cut short is cut in silence. A session once answered "I do not know" to
@@ -18,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -27,6 +29,8 @@ ALWAYS_MAX = 32_000   # about 8k tokens. Measured 2026-11-24: the empty skeleton
 OPEN_MAX = 48_000     # the always-loaded part plus one project's reading (root, 3 diary entries, 5 tasks)
 DIARY_READ, TASKS_READ = 3, 5
 MEMORY = ("profile", "patterns", "decisions")
+IMPORT_DEPTH = 5      # Claude Code follows `@path` imports up to 5 levels deep (code.claude.com/docs/en/memory.md)
+IMPORT = re.compile(r"^@(\S+)\s*$")
 DESCRIPTION = re.compile(r"^description:\s*(.+)$", re.M)
 TASK_OPEN = re.compile(r"^status:\s*(open|in-progress)\s*$", re.M)
 PROJECT_LINK = re.compile(r"projects/([^/|\]\"']+)/instructions")
@@ -51,8 +55,47 @@ def skill_descriptions(root: Path) -> int:
     return total
 
 
+def import_lines(text: str) -> list[str]:
+    """The `@path` lines of a CLAUDE.md, outside code fences (Claude Code does not import from code)."""
+    out, fence = [], None
+    for line in text.splitlines():
+        m = re.match(r"^\s*(```+|~~~+)", line)
+        if m:
+            fence = None if fence == m.group(1)[:3] else (fence or m.group(1)[:3])
+            continue
+        if fence is None and (i := IMPORT.match(line)):
+            out.append(i.group(1))
+    return out
+
+
 def loaded_files(vault: Path, root: Path) -> list[Path]:
-    return [root / "CLAUDE.md", vault / "CLAUDE.md"] + [vault / "memory" / f"{m}.md" for m in MEMORY]
+    """CLAUDE.md, vault/CLAUDE.md and what they import with `@path` (relative to the importing file, inside the
+    repo only, up to IMPORT_DEPTH levels, each file once). An imported file that does not exist stays in the list:
+    the report says it is missing."""
+    top = root.resolve()
+    seen: set[Path] = set()
+    out: list[Path] = []
+
+    def visit(path: Path, depth: int) -> None:
+        key = path.resolve()
+        if key in seen:
+            return
+        seen.add(key)
+        out.append(path)
+        if depth >= IMPORT_DEPTH or not path.is_file():
+            return
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return
+        for rel in import_lines(text):
+            target = (path.parent / rel).resolve()
+            if target == top or top in target.parents:
+                visit(Path(os.path.normpath(path.parent / rel)), depth + 1)
+
+    visit(root / "CLAUDE.md", 0)
+    visit(vault / "CLAUDE.md", 0)
+    return out
 
 
 def skill_files(root: Path) -> list[Path]:
