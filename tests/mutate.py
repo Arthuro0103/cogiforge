@@ -460,7 +460,7 @@ PIECES = {
         ("a same-name file elsewhere is not looked for", 'found = names.get(Path(c).name.lower(), [])', 'found = []'),
         ("a missing git is OK", 'return r.returncode == 0 and r.stdout.strip() == "true"', 'return True'),
         ("memory files are not listed", 'for f in memory.memory_files(vault):', 'for f in []:'),
-        ("a commit on the entry day counts", 'since = (day + timedelta(days=1)).isoformat()', 'since = day.isoformat()'),
+        ("a commit on the entry day counts", 'since = f"{(day + timedelta(days=1)).isoformat()} 00:00:00"', 'since = f"{day.isoformat()} 00:00:00"'),
         ("not verified is OK", 'return 3 if nv else 0', 'return 0'),
         ("a line suffix is kept", 'p = re.sub(r":\\d+(?:-\\d+)?$", "", p)\n        if EXT', 'if EXT'),
     ]),

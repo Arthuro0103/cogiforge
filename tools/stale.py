@@ -97,7 +97,9 @@ def git_ok(vault: Path) -> bool:
 
 def commits_after(vault: Path, rel: str, day: date) -> int | None:
     """Commits that touched `rel` after the end of `day`; None when git cannot say."""
-    since = (day + timedelta(days=1)).isoformat()
+    # midnight spelled out: git reads a bare date as that day at the CURRENT time of day, so the count
+    # would change with the hour the tool runs
+    since = f"{(day + timedelta(days=1)).isoformat()} 00:00:00"
     try:
         r = subprocess.run(["git", "-C", str(vault), "log", f"--since={since}", "--format=%H", "--", rel],
                            capture_output=True, text=True)
