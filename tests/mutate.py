@@ -540,7 +540,7 @@ PIECES = {
         ("a tab is refused in memory", 'if c == "\\t" or (c == "\\r" and n < len(lines) and i == len(line) - 1):', 'if (c == "\\r" and n < len(lines) and i == len(line) - 1):'),
         ("a BOM is refused in memory", 'if c == BOM and n == 1 and i == 0:\n                continue', 'if False:\n                continue'),
         ("memory takes the loaded exceptions", 'if base_hidden(c):\n                out.append(Failure(at, "hidden", f"invisible character U+{ord(c):04X}{MEMORY_HINT}"))', 'if is_hidden(line, i, n == 1, before_nl=n < len(lines)):\n                out.append(Failure(at, "hidden", f"invisible character U+{ord(c):04X}{MEMORY_HINT}"))'),
-        ("the memory hint is gone", 'MEMORY_HINT = " (memory takes plain text only;', 'MEMORY_HINT = " (x;'),
+        ("the memory hint is gone", 'does not fit in it: take it out)"', 'x)"'),
         ("where is not normalized-checked", 'if where != posixpath.normpath(where) or ".." in where.split("/"):', 'if False:'),
         ("a leading dotdot is accepted", 'or ".." in where.split("/"):', ':'),
         ("an entry may be unquoted", 'if rest[:1] not in (\'"\', "\\u201c"):', 'if False:'),

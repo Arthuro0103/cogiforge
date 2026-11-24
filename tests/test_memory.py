@@ -1319,3 +1319,41 @@ def test_staged_an_import_that_is_a_symlink_or_a_gitlink_is_a_failure(repo):
 def test_an_empty_where_says_so(tmp_path):
     r = mem(tmp_path, '2026-11-01 | "I never said I wanted to rest" |\n')
     assert r.returncode == 1 and "nowhere where it was said" in out(r)
+
+
+@pytest.mark.parametrize("line", ["͸", "", "a⁥b", "\U000f0000", "￿"])
+def test_unassigned_and_private_use_characters_are_hidden_in_a_loaded_file(tmp_path, line):
+    assert loaded_run(tmp_path, "x " + line).returncode == 1, line
+
+
+def test_a_modifier_symbol_may_carry_one_emoji_selector_in_a_loaded_file(tmp_path):
+    assert loaded_run(tmp_path, "x " + chr(0xA8) + chr(0xFE0F)).returncode == 0
+
+
+def test_a_bom_a_tab_and_a_cr_in_a_loaded_file(tmp_path):
+    put(tmp_path, "vault/memory/profile.md", HEAD)
+    (tmp_path / "AGENTS.md").write_bytes("﻿# x\nplain\ttext\r\nmore\n".encode("utf-8"))
+    assert run(tmp_path).returncode == 0
+    (tmp_path / "AGENTS.md").write_bytes("# x\n﻿plain\n".encode("utf-8"))
+    assert run(tmp_path).returncode == 1
+    (tmp_path / "AGENTS.md").write_bytes("﻿﻿# x\n".encode("utf-8"))
+    assert run(tmp_path).returncode == 1
+    (tmp_path / "AGENTS.md").write_bytes("# x\nlone\rcr\n".encode("utf-8"))
+    assert run(tmp_path).returncode == 1
+    (tmp_path / "AGENTS.md").write_bytes("# x\ncr at the end\r".encode("utf-8"))  # a CR with no LF after it
+    assert run(tmp_path).returncode == 1
+
+
+def test_a_flag_spelling_anything_but_the_three_names_is_hidden_in_a_loaded_file(tmp_path):
+    for name in ("push", "gbeng2", "gb", "usa"):
+        bad = "\U0001f3f4" + _tags(name) + "\U000e007f"
+        assert loaded_run(tmp_path, "x " + bad).returncode == 1, name
+
+
+def test_entry_parsing_rejects_what_the_old_regex_rejected():
+    assert memory.ENTRY.match('2026-11-01 | phrase "x" | chat') is None   # the phrase has to open with a quote
+    assert memory.ENTRY.match('2026-11-01 | "x" y | chat') is None        # a quote with no bar after it does not close the phrase
+    assert memory.ENTRY.match('2026-1-01 | "x" | chat') is None           # a real date shape
+    assert memory.ENTRY.match('hello | "x" | chat') is None
+    assert memory.ENTRY.match('2026-11-01 | "a" b" | chat').group(2) == 'a" b'   # the closing quote is the rightmost one
+    assert memory.ENTRY.match('2026-11-01 "x" | chat') is None
