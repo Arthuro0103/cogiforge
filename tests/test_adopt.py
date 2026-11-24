@@ -5,6 +5,7 @@ Every test builds a small synthetic vault in tmp and runs the real command line.
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -27,6 +28,20 @@ def adopt(vault, *args, env_extra=None):
     env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1", **(env_extra or {})}
     return subprocess.run([sys.executable, ADOPT, str(vault), *args], capture_output=True, text=True,
                           env=env, stdin=subprocess.DEVNULL)
+
+
+def preview_sha(vault, cwd=None, env_extra=None):
+    """The plan-sha256 the dry run prints (a zero hash if it printed none, so the apply is refused, not skipped)."""
+    env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1", **(env_extra or {})}
+    r = subprocess.run([sys.executable, ADOPT, str(vault)], capture_output=True, text=True, env=env, cwd=cwd,
+                       stdin=subprocess.DEVNULL)
+    m = re.search(r"plan-sha256: ([0-9a-f]{64})", r.stdout)
+    return m.group(1) if m else "0" * 64
+
+
+def confirmed(vault, *extra, env_extra=None):
+    """preview, then --apply --confirm <that sha>: the only way to apply."""
+    return adopt(vault, "--apply", "--confirm", preview_sha(vault, env_extra=env_extra), *extra, env_extra=env_extra)
 
 
 def git_init(vault):
@@ -110,7 +125,7 @@ def test_apply_without_confirmation_writes_nothing(tmp_path):
     git_init(tmp_path)
     before = tree(tmp_path)
     r = adopt(tmp_path, "--apply")
-    assert r.returncode == 2 and "--yes" in r.stderr
+    assert r.returncode == 2 and "--confirm" in r.stderr
     assert tree(tmp_path) == before
 
 
@@ -118,7 +133,7 @@ def test_apply_yes_installs_and_leaves_notes_alone(tmp_path):
     build(tmp_path, MINI)
     git_init(tmp_path)
     before = tree(tmp_path)
-    r = adopt(tmp_path, "--apply", "--yes")
+    r = confirmed(tmp_path)
     assert r.returncode == 0, r.stdout + r.stderr
     after = tree(tmp_path)
     assert all(after[k] == v for k, v in before.items())
@@ -135,7 +150,7 @@ def test_apply_yes_installs_and_leaves_notes_alone(tmp_path):
 def test_the_installed_hook_blocks_a_new_orphan_and_ignores_old_debt(tmp_path):
     build(tmp_path, MINI)
     git_init(tmp_path)
-    assert adopt(tmp_path, "--apply", "--yes").returncode == 0
+    assert confirmed(tmp_path).returncode == 0
     env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
            "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com",
            "LEAK_BLOCKLIST": str(tmp_path / "absent.txt")}
@@ -154,7 +169,7 @@ def test_never_overwrites_an_existing_areas_file(tmp_path):
     build(tmp_path, {**MINI, "areas.txt": "mine: mine\n"})
     git_init(tmp_path)
     assert "CONFLICT" in adopt(tmp_path).stdout
-    r = adopt(tmp_path, "--apply", "--yes")
+    r = confirmed(tmp_path)
     assert r.returncode == 1
     assert (tmp_path / "areas.txt").read_text() == "mine: mine\n"
     assert (tmp_path / ".cogiforge" / "baseline.json").is_file()  # the free items are still installed
@@ -171,7 +186,7 @@ def test_a_foreign_hook_is_never_overwritten_and_blocks_the_apply(tmp_path):
     assert plan.returncode == 1 and "third-party hook runs" in plan.stdout and "Read it" in plan.stdout
     assert "never overwrites nor chains" in plan.stdout
     before = tree(tmp_path)
-    r = adopt(tmp_path, "--apply", "--yes")
+    r = confirmed(tmp_path)
     assert r.returncode == 1 and "NOT APPLIED" in r.stderr
     assert tree(tmp_path) == before and (tmp_path / ".git" / "hooks" / "pre-commit").read_text() == FOREIGN
     assert local_cfg(tmp_path, "core.hooksPath") == "" and local_cfg(tmp_path, "cogiforge.home") == ""
@@ -182,7 +197,7 @@ def test_an_identical_hook_is_kept(tmp_path):
     build(tmp_path, MINI)
     git_init(tmp_path)
     build(tmp_path, {".git/hooks/pre-commit": mod.HOOK_TEXT})
-    r = adopt(tmp_path, "--apply", "--yes")
+    r = confirmed(tmp_path)
     assert r.returncode == 0, r.stdout + r.stderr
     assert (tmp_path / ".git" / "hooks" / "pre-commit").read_text() == mod.HOOK_TEXT
     assert local_cfg(tmp_path, "core.hooksPath") == ""
@@ -199,7 +214,7 @@ def test_a_fifo_hook_is_refused_without_being_opened(tmp_path):
             subprocess.run(["git", "-C", str(v), "config", "--local", "core.hooksPath", ".githooks"], check=True)
         (v / rel).parent.mkdir(parents=True, exist_ok=True)
         os.mkfifo(v / rel)
-        r = subprocess.run([sys.executable, ADOPT, str(v), "--apply", "--yes"], capture_output=True, text=True,
+        r = subprocess.run([sys.executable, ADOPT, str(v), "--apply", "--confirm", preview_sha(v)], capture_output=True, text=True,
                            timeout=30, stdin=subprocess.DEVNULL)
         assert r.returncode == 1 and "not a regular file" in r.stdout and "NOT APPLIED" in r.stderr, (rel, r.stdout[-400:])
 
@@ -219,7 +234,7 @@ def test_a_planted_cogiforge_home_file_is_never_followed(tmp_path):
     v = tmp_path / "v"
     build(v, {**MINI, ".cogiforge/home": str(evil) + "\n"})
     git_init(v)
-    assert adopt(v, "--apply", "--yes").returncode == 0
+    assert confirmed(v).returncode == 0
     env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
            "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com", "LEAK_BLOCKLIST": str(v / "absent.txt")}
     subprocess.run(["git", "-C", str(v), "add", "Ideas/a.md"], check=True)
@@ -242,7 +257,7 @@ def test_the_hook_refuses_an_invalid_cogiforge_home(tmp_path):
     v = tmp_path / "v"
     build(v, MINI)
     git_init(v)
-    assert adopt(v, "--apply", "--yes").returncode == 0
+    assert confirmed(v).returncode == 0
     empty = tmp_path / "emptydir"
     empty.mkdir()
     some_file = tmp_path / "f"
@@ -257,7 +272,7 @@ def test_a_vault_with_a_different_cogiforge_home_in_git_config_blocks_the_apply(
     build(tmp_path, MINI)
     git_init(tmp_path)
     subprocess.run(["git", "-C", str(tmp_path), "config", "--local", "cogiforge.home", str(tmp_path / "other")], check=True)
-    r = adopt(tmp_path, "--apply", "--yes")
+    r = confirmed(tmp_path)
     assert r.returncode == 1 and not (tmp_path / ".git" / "hooks" / "pre-commit").exists()
 
 
@@ -265,7 +280,7 @@ def test_not_a_git_repo_is_pending_and_never_runs_git_init(tmp_path):
     build(tmp_path, MINI)
     before = tree(tmp_path)
     assert adopt(tmp_path).returncode == 1
-    r = adopt(tmp_path, "--apply", "--yes")
+    r = confirmed(tmp_path)
     assert r.returncode == 1 and "not a git repository" in (r.stdout + r.stderr)
     assert tree(tmp_path) == before and not (tmp_path / ".git").exists()
 
@@ -378,7 +393,7 @@ def test_what_git_init_and_git_clone_write_is_accepted(tmp_path):
         fh.write('[user]\n\tname = Ana Souza\n\temail = ana@example.com\n'
                  '[remote "origin"]\n\turl = https://example.com/x.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n'
                  '[branch "main"]\n\tremote = origin\n\tmerge = refs/heads/main\n# a comment\n')
-    assert adopt(tmp_path / "v", "--apply", "--yes").returncode == 0
+    assert confirmed(tmp_path / "v").returncode == 0
     # a real clone
     src = tmp_path / "src"
     build(src, MINI)
@@ -388,7 +403,7 @@ def test_what_git_init_and_git_clone_write_is_accepted(tmp_path):
     subprocess.run(["git", "-C", str(src), "add", "-A"], check=True)
     subprocess.run(["git", "-C", str(src), "commit", "-qm", "i"], check=True, env=env)
     subprocess.run(["git", "clone", "-q", str(src), str(tmp_path / "clone")], check=True)
-    r = adopt(tmp_path / "clone", "--apply", "--yes")
+    r = confirmed(tmp_path / "clone")
     assert r.returncode == 0, r.stdout + r.stderr
 
 
@@ -421,7 +436,7 @@ def test_each_variant_is_blocked_with_the_line_cited_and_nothing_executes(tmp_pa
         before = tree(v)
         plan = adopt(v)
         assert plan.returncode == 1 and "allowlist" in plan.stdout and "entry" in plan.stdout, (name, plan.stdout[-600:])
-        r = adopt(v, "--apply", "--yes")
+        r = confirmed(v)
         assert r.returncode == 1 and "NOT APPLIED" in r.stderr, (name, r.stderr)
         assert tree(v) == before and not marker.exists(), name
         assert not (v / ".git" / "hooks" / "pre-commit").exists() and "cogiforge" not in (v / ".git" / "config").read_text(encoding="utf-8")
@@ -468,11 +483,11 @@ def test_git_dir_that_is_a_symlink_or_file_is_unsafe(tmp_path):
     build(v, MINI)
     (v / ".git").symlink_to(real / ".git")
     before = tree(v)
-    r = adopt(v, "--apply", "--yes")
+    r = confirmed(v)
     assert r.returncode == 1 and tree(v) == before and not (real / ".git" / "hooks" / "pre-commit").exists()
     w = tmp_path / "w"
     build(w, {**MINI, ".git": "gitdir: /somewhere/else\n"})
-    assert adopt(w, "--apply", "--yes").returncode == 1 and not (w / ".githooks").exists()
+    assert confirmed(w).returncode == 1 and not (w / ".githooks").exists()
 
 
 def test_a_symlinked_hooks_or_cogiforge_folder_is_never_written_through(tmp_path):
@@ -486,7 +501,7 @@ def test_a_symlinked_hooks_or_cogiforge_folder_is_never_written_through(tmp_path
         if (v / name).exists():
             shutil.rmtree(v / name)
         (v / name).symlink_to(out)
-        r = adopt(v, "--apply", "--yes")
+        r = confirmed(v)
         assert r.returncode == 1 and not any(out.iterdir()), name
 
 
@@ -504,7 +519,7 @@ def test_a_note_name_starting_with_a_dash_is_not_an_option_for_the_hook(tmp_path
     v = tmp_path / "v"
     build(v, {**MINI, "-x.md": "links to [[a]] and [[ghost-nowhere]]\n"})
     git_init(v)
-    assert adopt(v, "--apply", "--yes").returncode == 0
+    assert confirmed(v).returncode == 0
     r = _hook_run(v, ROOT.as_posix())  # stages Ideas/a.md only
     assert r.returncode == 0
     env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
@@ -515,11 +530,11 @@ def test_a_note_name_starting_with_a_dash_is_not_an_option_for_the_hook(tmp_path
     assert r.returncode != 0 and "ghost-nowhere" in out and "unrecognized arguments" not in out  # judged as a note
 
 
-def test_yes_never_skips_the_plan_or_the_blocks(tmp_path):
-    build(tmp_path, MINI)  # not a git repo: --yes alone must not write
-    r = adopt(tmp_path, "--apply", "--yes")
+def test_confirm_never_skips_the_plan_or_the_blocks(tmp_path):
+    build(tmp_path, MINI)  # not a git repo: a confirmation alone must not write
+    r = confirmed(tmp_path)
     assert "adopt plan for" in r.stdout and r.returncode == 1 and not (tmp_path / ".cogiforge").exists()
-    assert adopt(tmp_path, "--yes").returncode == 2  # --yes without --apply is a usage error
+    assert adopt(tmp_path, "--confirm", "0" * 64).returncode == 2  # --confirm without --apply is a usage error
 
 
 # ---------------------------------------------------------------- the hook lives outside the versioned tree (COGIFORGE-026)
@@ -555,7 +570,7 @@ def _push_hook_upstream(origin, git, marker):
 def test_a_hook_that_arrives_by_pull_never_runs_after_adopt(tmp_path):
     """Reproduced on main: with core.hooksPath=.githooks, a pulled .githooks/post-merge ran on the pull."""
     origin, vault, git = _origin_and_clone(tmp_path, "fixed")
-    r = adopt(vault, "--apply", "--yes")
+    r = confirmed(vault)
     assert r.returncode == 0, r.stdout + r.stderr
     marker = tmp_path / "PWNED"
     _push_hook_upstream(origin, git, marker)
@@ -590,7 +605,7 @@ def test_an_old_install_is_migrated_out_of_githooks(tmp_path):
     git(vault, "config", "--local", "cogiforge.home", ROOT.as_posix())
     plan = adopt(vault)
     assert "unset" in plan.stdout and "older install" in plan.stdout, plan.stdout[-800:]
-    r = adopt(vault, "--apply", "--yes")
+    r = confirmed(vault)
     assert r.returncode == 0, r.stdout + r.stderr
     assert local_cfg(vault, "core.hooksPath") == ""
     assert (vault / ".git" / "hooks" / "pre-commit").read_text() == m.HOOK_TEXT
@@ -608,7 +623,7 @@ def test_an_old_install_with_other_files_in_githooks_blocks_and_keeps_the_key(tm
         git_init(v)
         subprocess.run(["git", "-C", str(v), "config", "--local", "core.hooksPath", ".githooks"], check=True)
         before = tree(v)
-        r = adopt(v, "--apply", "--yes")
+        r = confirmed(v)
         assert r.returncode == 1 and "other files" in (r.stdout + r.stderr) and tree(v) == before, extra
         assert local_cfg(v, "core.hooksPath") == ".githooks" and not (v / ".git" / "hooks" / "pre-commit").exists()
 
@@ -616,7 +631,7 @@ def test_an_old_install_with_other_files_in_githooks_blocks_and_keeps_the_key(tm
 def test_a_githooks_folder_without_hookspath_is_inert_and_does_not_block(tmp_path):
     build(tmp_path, {**MINI, ".githooks/post-checkout": "#!/bin/sh\necho hostile\n"})
     git_init(tmp_path)
-    r = adopt(tmp_path, "--apply", "--yes")
+    r = confirmed(tmp_path)
     assert r.returncode == 0, r.stdout + r.stderr
     assert local_cfg(tmp_path, "core.hooksPath") == ""
 
@@ -627,11 +642,11 @@ def test_a_global_hookspath_blocks_because_git_would_skip_the_hook(tmp_path):
     glob = tmp_path / "global.gitconfig"
     glob.write_text("[core]\n\thooksPath = /somewhere/hooks\n")
     before = tree(tmp_path / "v")
-    r = adopt(tmp_path / "v", "--apply", "--yes", env_extra={"GIT_CONFIG_GLOBAL": str(glob)})
+    r = confirmed(tmp_path / "v", env_extra={"GIT_CONFIG_GLOBAL": str(glob)})
     assert r.returncode == 1 and "global or system" in r.stdout and "NOT APPLIED" in r.stderr
     assert tree(tmp_path / "v") == before and not (tmp_path / "v" / ".git" / "hooks" / "pre-commit").exists()
     # control: without that global key the same vault applies
-    assert adopt(tmp_path / "v", "--apply", "--yes", env_extra={"GIT_CONFIG_GLOBAL": "/dev/null"}).returncode == 0
+    assert confirmed(tmp_path / "v", env_extra={"GIT_CONFIG_GLOBAL": "/dev/null"}).returncode == 0
 
 
 def test_a_dangling_areas_symlink_is_a_conflict_and_never_written_through(tmp_path):
@@ -639,7 +654,7 @@ def test_a_dangling_areas_symlink_is_a_conflict_and_never_written_through(tmp_pa
     git_init(tmp_path / "v")
     target = tmp_path / "outside.txt"
     (tmp_path / "v" / "areas.txt").symlink_to(target)
-    r = adopt(tmp_path / "v", "--apply", "--yes")
+    r = confirmed(tmp_path / "v")
     assert r.returncode == 1 and not target.exists()
 
 
@@ -668,7 +683,7 @@ def test_the_hook_refuses_a_noncanonical_cogiforge_home(tmp_path):
     v = tmp_path / "v"
     build(v, MINI)
     git_init(v)
-    assert adopt(v, "--apply", "--yes").returncode == 0
+    assert confirmed(v).returncode == 0
     link = tmp_path / "link-to-root"
     link.symlink_to(ROOT)
     for bad in (ROOT.as_posix() + "/../" + ROOT.name, ROOT.as_posix() + "/", ROOT.as_posix() + "/./", link.as_posix(), "/" + ROOT.as_posix()):
@@ -686,7 +701,7 @@ def test_hostile_names_never_reach_the_terminal_raw_nor_areas_txt(tmp_path):
     out = adopt(tmp_path).stdout
     assert "\nFAKE LINE" not in out and "\x1b" not in out
     git_init(tmp_path)
-    assert adopt(tmp_path, "--apply", "--yes").returncode in (0, 1)
+    assert confirmed(tmp_path).returncode in (0, 1)
     areas = (tmp_path / "areas.txt").read_text(encoding="utf-8")
     assert "Evil" not in areas and all(":" in l for l in areas.splitlines() if l and not l.startswith("#"))
 
@@ -696,7 +711,7 @@ def test_a_note_with_a_newline_or_space_in_its_name_is_judged_by_the_hook(tmp_pa
     v = tmp_path / "v"
     build(v, MINI)
     git_init(v)
-    assert adopt(v, "--apply", "--yes").returncode == 0
+    assert confirmed(v).returncode == 0
     env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
            "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com", "LEAK_BLOCKLIST": str(v / "absent.txt")}
     for name in ("Ideas/with space.md", "Ideas/new\nline.md"):
@@ -831,7 +846,7 @@ def test_the_git_parser_executes_none_of_the_decoys(tmp_path):
     data = (v / ".git" / "config").read_bytes()
     entries, viol = m.validate_git_config(data)
     assert viol and not any(mk.exists() for mk in markers)
-    assert adopt(v, "--apply", "--yes").returncode == 1 and not any(mk.exists() for mk in markers)
+    assert confirmed(v).returncode == 1 and not any(mk.exists() for mk in markers)
     # (the control that plain git DOES run these decoys is test_controls_plain_git_does_run_the_decoy)
 
 
@@ -866,7 +881,7 @@ def test_untrusted_text_never_reaches_the_terminal_raw(tmp_path):
     with open(v / ".git" / "config", "a", encoding="utf-8") as fh:
         fh.write(f"[core]\n\tpager = {esc}{tmp_path}/decoy.sh\n")
     assert esc in (v / ".git" / "hooks" / "pre-commit").read_text(encoding="utf-8")  # control: the bait is really in the vault
-    for args in ((), ("--apply", "--yes"), ("--apply",)):
+    for args in ((), ("--apply", "--confirm", "0" * 64), ("--apply",)):
         r = adopt(v, *args)
         assert not raw_control(r.stdout + r.stderr), (args, [hex(ord(c)) for c in raw_control(r.stdout + r.stderr)])
         assert "\\x1b" in r.stdout  # shown, visibly escaped
@@ -884,7 +899,7 @@ def test_the_installed_hook_output_has_no_control_characters(tmp_path):
     v = tmp_path / "v"
     build(v, MINI)
     git_init(v)
-    assert adopt(v, "--apply", "--yes").returncode == 0
+    assert confirmed(v).returncode == 0
     env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
            "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com", "LEAK_BLOCKLIST": str(v / "absent.txt")}
     note = v / "Ideas" / "esc.md"
@@ -931,7 +946,7 @@ def test_commondir_indirection_is_blocked_and_plain_git_does_run_through_it(tmp_
         before = tree(v)
         plan = adopt(v)
         assert plan.returncode == 1 and "commondir" in plan.stdout, how
-        r = adopt(v, "--apply", "--yes")
+        r = confirmed(v)
         assert r.returncode == 1 and "NOT APPLIED" in r.stderr and tree(v) == before, how
         assert not marker.exists() and not (v / ".git" / "hooks" / "pre-commit").exists(), how
 
@@ -969,7 +984,7 @@ def test_every_extra_thing_in_dot_git_blocks_and_nothing_is_written(tmp_path):
         git_init(v)
         setup(v / ".git", tmp_path)
         before = tree(v)
-        r = adopt(v, "--apply", "--yes")
+        r = confirmed(v)
         assert r.returncode == 1 and "NOT APPLIED" in r.stderr and "plain repository" in r.stderr, (name, r.stderr[-500:])
         assert tree(v) == before and local_cfg(v, "core.hooksPath") == "", name
 
@@ -986,7 +1001,7 @@ def test_a_plain_repository_with_history_is_accepted(tmp_path):
     subprocess.run(["git", "-C", str(v), "gc", "-q"], check=True, env=env)
     (v / ".git" / "info").mkdir(exist_ok=True)
     (v / ".git" / "info" / "exclude").write_text("*.tmp\n")
-    r = adopt(v, "--apply", "--yes")
+    r = confirmed(v)
     assert r.returncode == 0, r.stdout + r.stderr
 
 
@@ -996,7 +1011,7 @@ def test_a_relative_vault_path_works_from_inside_the_vault(tmp_path):
     build(v, MINI)
     git_init(v)
     for arg, cwd in (("." , v), ("v", tmp_path)):
-        r = subprocess.run([sys.executable, ADOPT, arg, "--apply", "--yes"], capture_output=True, text=True, cwd=str(cwd),
+        r = subprocess.run([sys.executable, ADOPT, arg, "--apply", "--confirm", preview_sha(arg, cwd=str(cwd))], capture_output=True, text=True, cwd=str(cwd),
                            env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}, stdin=subprocess.DEVNULL)
         assert r.returncode == 0 and "Traceback" not in r.stderr, (arg, r.stdout[-300:], r.stderr)
         assert (v / ".git" / "hooks" / "pre-commit").is_file() and local_cfg(v, "cogiforge.home") == ROOT.as_posix()
@@ -1020,7 +1035,7 @@ def test_if_git_fails_the_config_is_written_first_so_nothing_else_is(tmp_path, m
         raise subprocess.CalledProcessError(1, "git")
     monkeypatch.setattr(m, "write_local_config", boom)
     before = tree(v)
-    rc = m.run(m.parser().parse_args([str(v), "--apply", "--yes"]))
+    rc = m.run(m.parser().parse_args([str(v), "--apply", "--confirm", m.build_plan(v)["plan_sha256"]]))
     assert rc == 1 and tree(v) == before
 
 
@@ -1037,7 +1052,7 @@ def test_a_vault_that_changes_during_the_apply_is_reported(tmp_path, monkeypatch
         (Path(vault) / ".git" / "commondir").write_text(str(evil) + "\n")
         return out
     monkeypatch.setattr(m, "apply", apply_then_tamper)
-    assert m.run(m.parser().parse_args([str(v), "--apply", "--yes"])) == 1
+    assert m.run(m.parser().parse_args([str(v), "--apply", "--confirm", m.build_plan(v)["plan_sha256"]])) == 1
     assert not marker.exists()
 
 
@@ -1050,3 +1065,66 @@ def test_remote_urls_that_could_smuggle_an_ssh_option_are_not_accepted():
     for bad in ("-Fevil@h:p", "-ofoo@h:p", "ssh://x@-Fevil/p", "ssh://-Fevil/p", "x@-Fevil:p", "_x@-h:p", "ext::sh -c x",
                 "file:///x", "https://h/--upload-pack=x", "ssh://h/--upload-pack=x", "-oProxyCommand=x"):
         assert not ok(bad), bad
+
+
+# ---------------------------------------------------------------- --confirm SHA: only the previewed plan can be applied
+
+def test_preview_prints_the_plan_sha_and_applying_it_writes(tmp_path):
+    build(tmp_path, MINI)
+    git_init(tmp_path)
+    out = adopt(tmp_path).stdout
+    sha = re.search(r"^plan-sha256: ([0-9a-f]{64})$", out, re.M).group(1)
+    assert out.rstrip().endswith(sha)
+    assert adopt(tmp_path).stdout == out  # same disk, same plan, same sha
+    r = adopt(tmp_path, "--apply", "--confirm", sha)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert (tmp_path / "areas.txt").is_file() and (tmp_path / ".cogiforge" / "baseline.json").is_file()
+
+
+def test_a_wrong_sha_is_refused_with_rc_5_and_writes_nothing(tmp_path):
+    build(tmp_path, MINI)
+    git_init(tmp_path)
+    before = tree(tmp_path)
+    git_before = (tmp_path / ".git" / "config").read_bytes()
+    r = adopt(tmp_path, "--apply", "--confirm", "0" * 64)
+    assert r.returncode == 5 and "REFUSED: the plan changed since the preview" in r.stderr
+    assert "expected " + "0" * 64 in r.stderr and "run the preview again" in r.stderr
+    assert tree(tmp_path) == before and (tmp_path / ".git" / "config").read_bytes() == git_before
+    assert not (tmp_path / ".git" / "hooks" / "pre-commit").exists()
+
+
+def test_a_touched_file_that_changes_after_the_preview_is_refused(tmp_path):
+    build(tmp_path, MINI)
+    git_init(tmp_path)
+    sha = preview_sha(tmp_path)
+    (tmp_path / "areas.txt").write_text("mine: mine\n")  # a file the apply touches (it becomes a conflict)
+    before = tree(tmp_path)
+    r = adopt(tmp_path, "--apply", "--confirm", sha)
+    assert r.returncode == 5 and "REFUSED" in r.stderr
+    assert tree(tmp_path) == before and not (tmp_path / ".git" / "hooks" / "pre-commit").exists()
+
+
+def test_a_touched_file_that_changes_between_the_check_and_the_write_is_refused(tmp_path, monkeypatch):
+    v = tmp_path / "v"
+    build(v, MINI)
+    git_init(v)
+    m = load_module()
+    real = m.build_plan
+
+    def plan_then_tamper(vault):
+        plan = real(vault)
+        (Path(vault) / "areas.txt").write_text("sneaked in\n")  # after the sha was computed, before the write
+        return plan
+    monkeypatch.setattr(m, "build_plan", plan_then_tamper)
+    sha = real(v)["plan_sha256"]
+    assert m.run(m.parser().parse_args([str(v), "--apply", "--confirm", sha])) == 5
+    assert (v / "areas.txt").read_text() == "sneaked in\n" and not (v / ".git" / "hooks" / "pre-commit").exists()
+
+
+def test_confirm_without_apply_is_a_usage_error_and_yes_is_gone(tmp_path):
+    build(tmp_path, MINI)
+    git_init(tmp_path)
+    before = tree(tmp_path)
+    assert adopt(tmp_path, "--confirm", preview_sha(tmp_path)).returncode == 2
+    assert adopt(tmp_path, "--apply", "--yes").returncode == 2
+    assert tree(tmp_path) == before

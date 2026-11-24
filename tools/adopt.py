@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """adopt.py: applies the cogiforge to an Obsidian vault you ALREADY have, in place, copying nothing. Stdlib only.
 
-    python3 tools/adopt.py VAULT [--apply [--yes]] [--json]
+    python3 tools/adopt.py VAULT [--apply [--confirm SHA]] [--json]
     python3 tools/adopt.py --selftest
 
 VAULT is the root of your vault (the folder that holds your notes and, ideally, `.git`). The default is a DRY
@@ -51,7 +51,10 @@ THREAT MODEL (7 lines)
   7. DEFENDS: a file that LATER reaches the versioned tree (a pull, merge or sync bringing `.githooks/post-merge`) never runs
      as a hook: the hook is written to `.git/hooks`, which git never versions, and adopt sets no `core.hooksPath`.
 
-`--apply` runs only after the plan was printed, and needs `--yes` or an interactive "yes". It writes only what the
+`--apply` runs only after the plan was printed, and needs `--confirm SHA` or an interactive "yes". The dry run ends with
+`plan-sha256: <hex>`: the hash of the operations `--apply` would do plus the hash of the bytes of every file they touch.
+`--apply --confirm <hex>` recomputes the plan and refuses (rc 5, nothing written) if it no longer matches, and checks the
+touched files once more right before writing. So you can only apply the exact plan you previewed. It writes only what the
 plan listed and never touches an existing note. It never runs `git init`: a vault that is not a git repository
 (or sits inside a bigger one) is reported as pending and `--apply` writes nothing (rc 1).
 
@@ -61,12 +64,13 @@ st_blocks 0 with st_size > 0), unreadable or non-UTF-8 notes, and symlinks. A va
 numbers are information.
 
 rc: 0 plan ok (or applied) and nothing pending · 1 something is pending (not a git repo, conflict, skipped
-file, nothing to adopt) · 2 usage, or `--apply` without confirmation · 3 vault unreadable
+file, nothing to adopt) · 2 usage, or `--apply` without confirmation · 3 vault unreadable · 5 the plan changed since the preview
 """
 import argparse
 import collections
 import contextlib
 import datetime
+import hashlib
 import io
 import json
 import os
@@ -597,6 +601,43 @@ def measure(vault, notes):
             "frontmatter_errors": fm_errors}
 
 
+def file_sha(path):
+    """sha256 of the bytes of a regular file; None if it does not exist; a fixed marker for anything else (never opened)."""
+    try:
+        st = os.lstat(path)
+    except FileNotFoundError:
+        return None
+    except OSError:
+        return "unreadable"
+    if not stat.S_ISREG(st.st_mode):
+        return "not-a-regular-file"
+    try:
+        return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    except OSError:
+        return "unreadable"
+
+
+def plan_ops(plan):
+    """The operations `--apply` would do, as a sorted list of [kind, relative path]."""
+    ops = []
+    for i in plan["items"]:
+        kind = {"create": "create", "set": "set", "unset": "unset", "identical (kept)": "chmod"}.get(i["status"])
+        if kind:
+            ops.append([kind, i["path"]])
+    return sorted(ops)
+
+
+def touched_state(vault, ops):
+    """{relative path: sha256 or None} of every file an operation touches (a git config key means .git/config)."""
+    paths = {".git/config" if p.startswith("git config") else p for _, p in ops}
+    return {p: file_sha(Path(vault) / p) for p in sorted(paths)}
+
+
+def plan_digest(plan):
+    blob = json.dumps({"ops": plan["ops"], "state": plan["state"]}, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
 def build_plan(vault):
     vault = Path(os.path.abspath(vault))
     s = scan(vault)
@@ -637,9 +678,13 @@ def build_plan(vault):
     pending += [f"conflict: {c} already exists, adopt keeps it" for c in conflicts]
     if s["skipped"]:
         pending.append(f"{len(s['skipped'])} note(s) skipped and NOT measured (see the list)")
-    return {"vault": str(vault), "git": state, "notes": len(s["notes"]), "skipped": s["skipped"], "areas": areas,
+    plan = {"vault": str(vault), "git": state, "notes": len(s["notes"]), "skipped": s["skipped"], "areas": areas,
             "items": items, "debt": debt, "pending": pending, "conflicts": conflicts, "blocking": blocking,
             "existing_hook": g["existing_hook"], "hook_text": HOOK_TEXT, "migrate": g["migrate"]}
+    plan["ops"] = plan_ops(plan)
+    plan["state"] = touched_state(vault, plan["ops"])
+    plan["plan_sha256"] = plan_digest(plan)
+    return plan
 
 
 def render(plan):
@@ -682,6 +727,7 @@ def render(plan):
         out += [f"       | {l}" for l in plan["hook_text"].splitlines()]
     if plan["pending"]:
         out += ["", "pending:"] + [f"   - {p}" for p in plan["pending"]]
+    out += ["", f"plan-sha256: {plan['plan_sha256']}"]
     return "\n".join(safe(x) for x in out)
 
 
@@ -733,6 +779,11 @@ def apply(plan, vault):
     return written
 
 
+def refuse(expected, now):
+    emit(f"REFUSED: the plan changed since the preview (expected {expected}, now {now}); run the preview again", file=sys.stderr)
+    return 5
+
+
 def run(args):
     vault = Path(os.path.abspath(args.vault))
     if not vault.is_dir():
@@ -749,18 +800,27 @@ def run(args):
     if plan["blocking"]:
         emit("\nNOT APPLIED, nothing was written: " + "; ".join(plan["blocking"]), file=sys.stderr)
         return 1
-    if not args.yes:
+    if args.confirm is not None:
+        if args.confirm.strip().lower() != plan["plan_sha256"]:
+            return refuse(args.confirm.strip().lower(), plan["plan_sha256"])
+    else:
         if not sys.stdin.isatty():
-            emit("\nNOT APPLIED: --apply needs --yes (or an interactive terminal). Nothing was written.", file=sys.stderr)
+            emit("\nNOT APPLIED: --apply needs --confirm <plan-sha256> (or an interactive terminal). Nothing was written.",
+                 file=sys.stderr)
             return 2
         try:
-            answer = input("\nApply this plan? Type 'yes': ").strip().lower()
+            answer = input(f"\nplan-sha256: {plan['plan_sha256']}\nApply this plan? Type 'yes': ").strip().lower()
         except EOFError:  # on Windows a null stdin (NUL) reports isatty() True, but there is nobody to answer
-            emit("\nNOT APPLIED: --apply needs --yes (or an interactive terminal). Nothing was written.", file=sys.stderr)
+            emit("\nNOT APPLIED: --apply needs --confirm <plan-sha256> (or an interactive terminal). Nothing was written.",
+                 file=sys.stderr)
             return 2
         if answer != "yes":
             emit("NOT APPLIED: no confirmation. Nothing was written.", file=sys.stderr)
             return 2
+    # right before writing: the touched files must still be what the plan hashed
+    now = plan_digest({"ops": plan["ops"], "state": touched_state(vault, plan["ops"])})
+    if now != plan["plan_sha256"]:
+        return refuse(plan["plan_sha256"], now)
     try:
         written = apply(plan, vault)
     except Blocked as e:
@@ -795,6 +855,9 @@ def selftest():
         finally:
             sys.stdin = keep
 
+    def confirmed(path):
+        return call(str(path), "--apply", "--confirm", build_plan(path)["plan_sha256"])
+
     def snap(root):
         return {p.relative_to(root).as_posix(): p.read_bytes() for p in Path(root).rglob("*")
                 if p.is_file() and ".git/" not in p.as_posix()}
@@ -812,11 +875,12 @@ def selftest():
               (len(plan["debt"]["orphans"]), len(plan["debt"]["dead_links"]), len(plan["debt"]["area_missing"])) == (1, 1, 2))
         check("dry run writes nothing", call(str(v)) == 1 and snap(v) == before)
         check("not a git repo: --apply is pending, rc 1, writes nothing",
-              call(str(v), "--apply", "--yes") == 1 and snap(v) == before and not (v / ".git").exists())
+              call(str(v), "--apply", "--confirm", "0" * 64) == 1 and snap(v) == before and not (v / ".git").exists())
         subprocess.run(["git", "init", "-q"], cwd=v, check=True)
         before = snap(v)
-        check("--apply without --yes (no tty): rc 2, writes nothing", call(str(v), "--apply") == 2 and snap(v) == before)
-        check("--apply --yes: rc 0", call(str(v), "--apply", "--yes") == 0)
+        check("--apply without --confirm (no tty): rc 2, writes nothing", call(str(v), "--apply") == 2 and snap(v) == before)
+        check("--apply with a wrong sha: rc 5, writes nothing", call(str(v), "--apply", "--confirm", "0" * 64) == 5 and snap(v) == before)
+        check("--apply --confirm <sha of the preview>: rc 0", confirmed(v) == 0)
         check("hook and baseline exist", (v / HOOK).is_file() and (v / BASELINE).is_file() and not (v / '.cogiforge' / 'home').exists())
         check("hook is outside the versioned tree, no core.hooksPath",
               not (v / LEGACY_HOOK).exists() and "hookspath" not in (v / ".git" / "config").read_text().lower())
@@ -824,7 +888,7 @@ def selftest():
               all(snap(v)[k] == b for k, b in before.items() if k.endswith(".md")))
         (v / AREAS).write_text("mine: mine\n")
         check("existing areas.txt is kept (conflict, rc 1)",
-              call(str(v), "--apply", "--yes") == 1 and (v / AREAS).read_text() == "mine: mine\n")
+              confirmed(v) == 1 and (v / AREAS).read_text() == "mine: mine\n")
         empty = Path(td) / "empty"
         (empty / ".obsidian").mkdir(parents=True)
         check("empty vault: rc 1, 'nothing to adopt'", call(str(empty)) == 1
@@ -837,7 +901,7 @@ def parser():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("vault", nargs="?")
     ap.add_argument("--apply", action="store_true")
-    ap.add_argument("--yes", action="store_true")
+    ap.add_argument("--confirm", metavar="SHA", help="with --apply: the plan-sha256 printed by the dry run")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--selftest", action="store_true")
     return ap
@@ -856,8 +920,8 @@ def main(argv=None):
     if not args.vault:
         ap.print_usage(sys.stderr)
         return 2
-    if args.yes and not args.apply:
-        emit("ERROR: --yes only makes sense with --apply", file=sys.stderr)
+    if args.confirm is not None and not args.apply:
+        emit("ERROR: --confirm only makes sense with --apply", file=sys.stderr)
         return 2
     return run(args)
 

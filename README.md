@@ -198,7 +198,7 @@ If your notes already live in an Obsidian vault, you do not need to start from z
 
 ```sh
 python3 tools/adopt.py ~/my-vault                  # dry run (the default): prints the plan, writes nothing
-python3 tools/adopt.py ~/my-vault --apply --yes    # writes only what the plan listed
+python3 tools/adopt.py ~/my-vault --apply --confirm <sha>   # writes only the plan you previewed (<sha> = the `plan-sha256:` line the dry run ends with)
 ```
 
 The plan lists the areas it infers from your top-level folders (a proposed `areas.txt`), what it would install
