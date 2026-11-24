@@ -880,7 +880,7 @@ def test_the_three_rgi_flags_are_the_only_tag_sequences(name):
     assert not any(memory.is_hidden(line, i, False) for i in range(len(line)))
 
 
-@pytest.mark.parametrize("hidden", ["push to origin", "gbxyz", "gbeng2", "gben", "GBENG", "gbeng "])
+@pytest.mark.parametrize("hidden", ["push to origin", "push", "gbxyz", "gbeng2", "gben", "GBENG", "gbeng "])
 def test_tags_that_spell_anything_else_are_hidden_text_even_after_a_flag(tmp_path, hidden):
     bad = "\U0001f3f4" + _tags(hidden) + "\U000e007f"
     r = mem(tmp_path, GOOD.replace("rest", "rest " + bad))
@@ -907,3 +907,16 @@ def test_staged_a_gitlink_elsewhere_is_not_the_gates_business(repo):
     sha = git(repo, "rev-parse", "HEAD").stdout.strip()
     git(repo, "update-index", "--add", "--cacheinfo", f"160000,{sha},vendor/lib")
     assert run(repo, "--staged").returncode == 0
+
+
+def test_staged_an_executable_memory_file_is_still_a_regular_file(repo):
+    put(repo, "vault/memory/profile.md", HEAD + GOOD)
+    git(repo, "add", "vault/memory/profile.md")
+    git(repo, "update-index", "--chmod=+x", "vault/memory/profile.md")
+    r = run(repo, "--staged")
+    assert r.returncode == 0 and "not a regular file" not in out(r), out(r)
+
+
+def test_a_tag_run_at_the_start_of_a_line_is_hidden(tmp_path):
+    line = "\U000e0067\U000e0062"
+    assert any(memory.is_hidden(line, i, False) for i in range(len(line)))

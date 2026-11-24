@@ -469,8 +469,6 @@ def _tag_sequence_ok(line: str, i: int) -> bool:
     s = i
     while s > 0 and 0xE0000 <= ord(line[s - 1]) <= 0xE007F:
         s -= 1
-    if s == 0 or line[s - 1] != "\U0001f3f4":
-        return False
     e = i
     while e < len(line) and 0xE0000 <= ord(line[e]) <= 0xE007F:
         e += 1

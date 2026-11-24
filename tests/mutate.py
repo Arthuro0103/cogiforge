@@ -498,7 +498,6 @@ PIECES = {
         ("a tag character is always hidden", 'return not _tag_sequence_ok(line, i)', 'return True'),
         ("a tag character is always fine", 'return not _tag_sequence_ok(line, i)', 'return False'),
         ("any tag text after a flag is fine", 'return line[s - 1:e] in FLAGS', 'return True'),
-        ("a tag run needs no black flag in front", 'if s == 0 or line[s - 1] != "\\U0001f3f4":', 'if False:'),
         ("Scotland is not a flag", '("gbeng", "gbsct", "gbwls")', '("gbeng", "gbwls")'),
         ("a made-up flag name is fine", '("gbeng", "gbsct", "gbwls")', '("gbeng", "gbsct", "gbwls", "push")'),
         ("a submodule in place of a loaded path passes", 'if mode not in REGULAR and (k or protected(p, vault, root)):', 'if mode != "120000" and (k or protected(p, vault, root)):'),
