@@ -153,7 +153,7 @@ def orphan_mode(vault):
     if not f.exists():
         return "block"
     try:
-        lines = f.read_text(encoding="utf-8").splitlines()
+        lines = f.read_text(encoding="utf-8-sig").splitlines()
     except (OSError, UnicodeDecodeError) as e:
         raise ValueError(f"vault/gate.txt exists but cannot be read ({type(e).__name__})")
     mode = "block"
