@@ -233,15 +233,15 @@ def test_a_dotdot_doi_is_not_requested():
 
 def test_control_and_bidi_characters_never_reach_the_output(tmp_path, capsys):
     f = tmp_path / "a.md"
-    f.write_text("see https://example.com/\x1b[2J‮evil here 5\n", encoding="utf-8")
+    f.write_text("see https://example.com/\x1b[2J\u202eevil here 5\n", encoding="utf-8")
     for extra in ([], ["--json"]):
         cit.main([str(f), "--no-network", *extra])
         out = capsys.readouterr().out
-        assert "\x1b" not in out and "‮" not in out
+        assert "\x1b" not in out and "\u202e" not in out
 
 
 def test_clean_replaces_control_format_and_bidi_characters():
-    assert cit.clean("a\x1b[31mb‮c\x00d") == "a?[31mb?c?d"
+    assert cit.clean("a\x1b[31mb\u202ec\x00d") == "a?[31mb?c?d"
 
 
 def test_the_address_checked_is_the_address_used(monkeypatch):
@@ -360,7 +360,7 @@ def test_quotes_without_a_link_or_with_a_missing_file_are_not_verified(tmp_path)
 
 def test_quotes_short_quotes_and_curly_quotes(tmp_path):
     assert quote_states(tmp_path, 'He said "keeps me calm" in [[chats/c]].') == []
-    assert quote_states(tmp_path, 'He said “the work is the only thing that keeps me calm” in [[chats/c]].') == [cit.VERIFIED]
+    assert quote_states(tmp_path, 'He said \u201cthe work is the only thing that keeps me calm\u201d in [[chats/c]].') == [cit.VERIFIED]
 
 
 def test_quotes_cli_uses_the_citation_rc(tmp_path):

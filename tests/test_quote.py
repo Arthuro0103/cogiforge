@@ -11,7 +11,7 @@ def test_norm_drops_accents_case_and_punctuation():
 
 
 def test_pieces_split_at_brackets_and_ellipses_and_drop_short_ones():
-    q = "one two three [sic] four five six ... seven eight nine … ten eleven"
+    q = "one two three [sic] four five six ... seven eight nine \u2026 ten eleven"
     assert quote.pieces(q) == ["one two three", "four five six", "seven eight nine"]
 
 
@@ -40,6 +40,6 @@ def test_nothing_measurable_is_none_not_true():
     assert quote.found("", SRC) is None
 
 
-@pytest.mark.parametrize("sep", ["...", "…"])
+@pytest.mark.parametrize("sep", ["...", "\u2026"])
 def test_both_ellipsis_forms_cut(sep):
     assert quote.found(f"i never said i {sep} later", SRC) is True
