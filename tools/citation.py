@@ -4,6 +4,7 @@
     python3 tools/citation.py <file.md>                 check every URL, arXiv id and DOI in the file
     python3 tools/citation.py <file.md> --no-network    form only: nothing can be better than NOT_VERIFIED
     python3 tools/citation.py <file.md> --json
+    python3 tools/citation.py --quotes NOTE.md          quotes of 5+ words against the vault file linked on the same line
     python3 tools/citation.py --selftest                proves the tool in both directions, offline
 
 A citation that was invented does not look wrong, it looks like a citation: an id with the right shape, a
@@ -19,6 +20,11 @@ hundred to open. This tool opens each one and gives one of four states:
                 number to compare. This is "I do not know", never an approval.
   BROKEN        the source does not exist: the page answered 404/410, the arXiv id has no entry, the DOI
                 has no handle. This is the case of the invented arXiv.
+
+--quotes is the offline sibling: a line of the note that has a link to a file of the vault (`[[path]]` or
+`[text](path.md)`) and a quote of 5+ words in double quotes (straight or curly) is checked with core/quote.py
+against THAT file: VERIFIED (every stretch is there; `[brackets]` and `...` are allowed), BROKEN (some stretch
+is not), NOT_VERIFIED (no link on the line, the file does not exist, or nothing in the quote is measurable).
 
 A number is found only as a WHOLE number: `86` does not match `1986` or `860`; `77,6` and `77.6` are the
 same; a number with `%` needs `%` or the word percent next to it. That the number is on the page does not
@@ -45,7 +51,10 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Callable
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote, unquote, urlsplit
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "core"))
+import quote as quotelib  # noqa: E402
 
 TIMEOUT = 10          # per socket operation: a slow drip beats it, so MAX_SECONDS bounds the whole fetch
 MAX_SECONDS = 15
@@ -445,9 +454,68 @@ def read_text(path: Path) -> str:
     return raw.decode("utf-8", errors="replace")
 
 
-def render(path: str, results: list[dict]) -> str:
+RE_QUOTE = re.compile(r"\"([^\"\n]+)\"|\u201c([^\u201d\n]+)\u201d")
+RE_VAULT_LINK = re.compile(r"\[\[([^\[\]\n|#^]+)(?:[#^][^\[\]\n|]*)?(?:\|[^\[\]\n]*)?\]\]|(?<!!)\[[^\]\n]*\]\(([^)\s#]+)(?:#[^)\s]*)?\)")
+QUOTE_MIN_WORDS = 5
+
+
+def resolve_link(note: Path, target: str) -> "Path | None":
+    """The file a vault link points to: relative to the note, then to each folder above it (the vault root)."""
+    target = unquote(target).strip().replace("\\", "/")
+    if not target or re.match(r"[a-z][a-z0-9+.-]*:", target, re.I):
+        return None
+    names = [target] if target.lower().endswith(".md") else [target + ".md", target]
+    here = note.resolve().parent
+    for base in [here, *here.parents]:
+        for n in names:
+            c = base / n
+            if c.is_file():
+                return c
+    return None
+
+
+def check_quotes(text: str, note: Path) -> list[dict]:
+    """One result per quote of 5+ words, judged against the vault file(s) linked on the same line."""
+    results = []
+    in_fence = False
+    for ln, line in enumerate(text.split("\n"), 1):
+        if re.match(r"^\s{0,3}(```|~~~)", line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        quotes = [m.group(1) or m.group(2) for m in RE_QUOTE.finditer(line)]
+        quotes = [q for q in quotes if len(q.split()) >= QUOTE_MIN_WORDS]
+        if not quotes:
+            continue
+        files = [f for f in (resolve_link(note, m.group(1) or m.group(2)) for m in RE_VAULT_LINK.finditer(line)) if f]
+        has_link = bool(RE_VAULT_LINK.search(line))
+        for q in quotes:
+            item = dict(kind="quote", target=q, line=ln, context=line.strip(), note="")
+            if not has_link:
+                item.update(state=NOT_VERIFIED, note="no link to a vault file on this line, so there is no source to open")
+            elif not files:
+                item.update(state=NOT_VERIFIED, note="the linked file does not exist or is not a vault file")
+            else:
+                verdicts = []
+                for f in files:
+                    try:
+                        verdicts.append(quotelib.found(q, f.read_bytes().decode("utf-8", errors="replace")))
+                    except OSError:
+                        verdicts.append(None)
+                if any(v is True for v in verdicts):
+                    item.update(state=VERIFIED, note=f"every stretch is in {files[0].name}" if len(files) == 1 else "every stretch is in a linked file")
+                elif any(v is False for v in verdicts):
+                    item.update(state=BROKEN, note="a stretch of the quote is not in the linked file")
+                else:
+                    item.update(state=NOT_VERIFIED, note="nothing measurable in the quote (no stretch of 3+ words outside [brackets] and ...) or the file could not be read")
+            results.append(item)
+    return results
+
+
+def render(path: str, results: list[dict], what: str = "external citation") -> str:
     if not results:
-        return (f"{path}: no external citation found.\n"
+        return (f"{path}: no {what} found.\n"
                 "NOT_VERIFIED: nothing was checked, and that is not an approval (the text may be missing its sources).")
     lines = []
     for r in sorted(results, key=lambda x: (SEVERITY[x["state"]], x["line"])):
@@ -546,26 +614,29 @@ def main(argv: "list[str] | None" = None) -> int:
     ap.add_argument("file", nargs="?")
     ap.add_argument("--no-network", action="store_true", help="read the form only; every citation is NOT_VERIFIED")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--quotes", metavar="NOTE.md", help="check quotes of 5+ words against the vault file linked on the same line")
     ap.add_argument("--selftest", action="store_true")
     args = ap.parse_args(argv)
 
     if args.selftest:
         return selftest()
-    if not args.file:
-        ap.error("give a file, or use --selftest")  # rc 2
+    if args.quotes and args.file:
+        ap.error("give either a file or --quotes NOTE.md, not both")
+    if not args.file and not args.quotes:
+        ap.error("give a file, or use --quotes NOTE.md, or --selftest")  # rc 2
 
-    path = Path(args.file)
+    path = Path(args.quotes or args.file)
     try:
         text = read_text(path)
     except OSError as e:
         print(f"NOT_VERIFIED: could not read {path} ({e})")
         return 3
-    results = check_text(text, None if args.no_network else fetch_http)
+    results = check_quotes(text, path) if args.quotes else check_text(text, None if args.no_network else fetch_http)
     shown = [{k: (clean(v) if isinstance(v, str) else v) for k, v in r.items()} for r in results]
     if args.json:
         print(json.dumps({"file": clean(str(path)), "citations": shown}, ensure_ascii=False, indent=2))
     else:
-        print(render(clean(str(path)), shown))
+        print(render(clean(str(path)), shown, "quote with a link" if args.quotes else "external citation"))
     return exit_code(results)
 
 
