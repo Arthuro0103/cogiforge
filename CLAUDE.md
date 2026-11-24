@@ -35,6 +35,7 @@ The same rules, written for any agent and not only Claude, are in [AGENTS.md](AG
 | does each citation exist and say what the text claims (`--quotes`: a quote against the vault file linked on its line) | `python3 tools/citation.py <file.md>` (`--no-network`, `--selftest`) · `--quotes NOTE.md` |
 | background subagents that stopped without finishing (STOPPED is the alarm) | `python3 tools/agents_watch.py [--session <id>] [--min 10]` |
 | check the memory: line format, date, the phrase in its source, invisible text | `python3 core/memory.py [--staged]` |
+| memory lines gone stale: dead or moved path, aged file, `stale_after`, `superseded_by` | `python3 tools/stale.py` (`--gate`, `--json`) |
 | check that the command tables cite only flags the scripts have | `python3 tools/flags.py --tables` |
 | was a correction already in the memory (repeats, lexical match) | `python3 tools/repeat.py` |
 | connection map (optional, needs graphify installed) | `/graphify vault` at the repo root |

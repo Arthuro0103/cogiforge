@@ -157,3 +157,16 @@ def test_a_different_memory_file_gets_its_own_archive(tmp_path):
     v = vault(tmp_path, name="profile")
     assert cool(v, "--keep", "1", "--apply", file="memory/profile.md").returncode == 0
     assert (v / "memory/archive/profile.md").is_file()
+
+
+def test_a_superseded_entry_moves_first_whatever_its_date_and_keep(tmp_path):
+    text = ('Format of each line:\n'
+            '2026-01-01 | "old but alive" | chat\n'
+            '2026-09-09 | "newest but replaced" | chat | superseded_by: 2026-09-10\n'
+            '2026-05-05 | "middle" | chat\n')
+    v = vault(tmp_path, text)
+    r = cool(v, "--keep", "2", "--apply")
+    mem, arch = read(v), read(v, "memory/archive/decisions.md")
+    assert r.returncode == 0 and "newest but replaced" in arch and "newest but replaced" not in mem
+    assert "old but alive" in mem and "middle" in mem and "old but alive" not in arch   # --keep counts only what is left
+    assert "1 older entries" in mem
