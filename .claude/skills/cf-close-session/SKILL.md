@@ -122,7 +122,16 @@ briefing, under *What is still standing*, one line each with the link and its ag
 in the target file (a link in the middle of the text), never in a block at the bottom. If the command prints
 `NOT_VERIFIED`, say so; if it finds nothing, omit the line.
 
-### 8. Deliver and ask (you)
+### 8. Show what went stale in the memory (one command)
+
+```bash
+python3 tools/stale.py
+```
+
+Show the findings to the user as they are (dead path, moved, aged, expired, superseded). Only show: do not edit
+the memory without their "yes". If it prints `NOT_VERIFIED`, say so.
+
+### 9. Deliver and ask (you)
 
 Chat, at most 8 lines: paths of the files created, how many pains collected, tasks opened,
 result of the verifiers (or "skipped: they do not exist"). Ask: *"do you want me to commit?"* Only with a yes,

@@ -6,7 +6,8 @@
 
 A memory file (profile, patterns, decisions) is loaded in every session, so it can only grow until it crosses
 the ceiling in core/budget.py. An entry is a line that starts with a date (`- 2026-08-14: ...`) plus the
-indented lines under it. The `--keep` NEWEST entries stay; the older ones move, word for word, to
+indented lines under it. An entry with a `superseded_by:` field moves FIRST, whatever its date and `--keep`
+(a superseded line that stays loaded is still obeyed). Of the rest, the `--keep` NEWEST entries stay; the older ones move, word for word, to
 `memory/archive/<name>.md`, and one pointer line stays behind in the memory file, linking the archive by its
 full path (so the archive is never an orphan). Nothing is reworded, merged or dropped: what the user said,
 with its date and quote, is moved and never edited (rule 2 of the repo). Run it with the user's yes.
@@ -21,7 +22,7 @@ from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "core"))
-from memory import POINTER  # noqa: E402  (the line this tool leaves behind is the one core/memory.py lets through)
+from memory import ENTRY as MEMORY_ENTRY, FIELD, POINTER  # noqa: E402  (the line this tool leaves behind is the one core/memory.py lets through)
 
 ENTRY = re.compile(r"^\s*(?:[-*]\s+)?(\d{4}-\d{2}-\d{2})\b")
 
@@ -42,11 +43,19 @@ def parse(text: str) -> list[dict]:
     return items
 
 
+def superseded(entry: dict) -> bool:
+    """The entry line carries a `| superseded_by: DATE` final field (see core/memory.py)."""
+    m = MEMORY_ENTRY.match(entry["lines"][0])
+    return bool(m) and any(k == "superseded_by" and v for k, v in FIELD.findall(m.group(4)))
+
+
 def choose(items: list[dict], keep: int) -> list[dict]:
-    """The entries that move: all but the `keep` newest (ties: the later line is the newer one)."""
+    """The entries that move: first every superseded one (whatever its date), then all but the `keep` newest of
+    the rest (ties: the later line is the newer one). `--keep` counts only the entries that are left."""
     entries = [i for i in items if i["kind"] == "entry"]
-    newest = sorted(range(len(entries)), key=lambda k: (entries[k]["date"], k), reverse=True)[:keep]
-    return [e for k, e in enumerate(entries) if k not in set(newest)]
+    rest = [e for e in entries if not superseded(e)]
+    newest = {id(rest[k]) for k in sorted(range(len(rest)), key=lambda k: (rest[k]["date"], k), reverse=True)[:keep]}
+    return [e for e in entries if superseded(e) or id(e) not in newest]
 
 
 def rebuild(items: list[dict], moved: list[dict], archive_rel: str, total: int, today: str) -> str:
@@ -80,7 +89,8 @@ def main(argv: list[str] | None = None) -> int:
         return 3
     items = parse(text)
     moved = choose(items, a.keep)
-    kept = [i for i in items if i["kind"] == "entry" and i not in moved]
+    moved_ids = {id(m) for m in moved}
+    kept = [i for i in items if i["kind"] == "entry" and id(i) not in moved_ids]
     if not kept and not moved:
         print(f"NOT_VERIFIED: {a.file} has no dated entry (a line that starts with YYYY-MM-DD), so nothing can be cooled.")
         return 3
