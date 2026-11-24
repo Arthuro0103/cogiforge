@@ -1,6 +1,6 @@
 ---
 name: cf-new-project
-description: Creates a new project in the workbench without hand-copying the example - asks one question at a time (name, what exists when it succeeds, type, status), shows a --dry-run, waits for a yes, then runs tools/new_project.py. TRIGGERS - "new project", "start a project called X". Do NOT trigger for existing projects (cf-open-session), importing a base (cf-import-knowledge), adopting a vault (cf-adopt) or judging an idea (cf-brainstorm).
+description: Creates a new project in the workbench without hand-copying the example - asks one question at a time (name, what exists when it succeeds, type, status), shows a --dry-run, waits for a yes, then runs tools/new_project.py. TRIGGERS - "new project", "start a project called X". Do NOT trigger when it already exists (cf-open-session), for an existing base (cf-import-knowledge), to adopt a vault (cf-adopt) or to judge an idea.
 ---
 
 # cf-new-project: a project that is registered from the first minute
