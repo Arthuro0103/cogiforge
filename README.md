@@ -16,7 +16,7 @@
 
 ## Quickstart
 
-You need `git`, Python 3.10+, Obsidian and Claude Code. macOS and Linux are what the CI proves. Windows has an installer (`install.ps1`) and an informational CI job that is not guaranteed green; see [docs/WINDOWS.md](docs/WINDOWS.md), where every unconfirmed claim is marked `[VERIFY]`. To run this
+You need `git`, Python 3.10+ and Obsidian, plus a coding agent: Claude Code gets everything (skills load by themselves); Codex, Cursor and others follow [AGENTS.md](AGENTS.md) (what changes: [docs/USING-OTHER-MODELS.md](docs/USING-OTHER-MODELS.md)). macOS and Linux are what the CI proves. Windows has an installer (`install.ps1`) and an informational CI job that is not guaranteed green; see [docs/WINDOWS.md](docs/WINDOWS.md), where every unconfirmed claim is marked `[VERIFY]`. To run this
 repo's own tests you also need `pytest` (`python3 -m pip install pytest`); nothing else in the repo uses it.
 
 ```sh
@@ -40,8 +40,8 @@ in the [tutorial](TUTORIAL.md).
 
 | You | Start here |
 |---|---|
-| **Just you** | `/cf-onboard`, then `/cf-open-session <project>` and `/cf-close-session`. |
-| **Studying** | `/cf-study <topic>`: you choose how you learn, recall comes first, "mastered" needs a retest on another day. See [docs/STUDENTS.md](docs/STUDENTS.md). |
+| **Just you** | `/cf-onboard`, then `/cf-open-session <name>` and `/cf-close-session`. |
+| **Studying** | `/cf-study <topic>`: you choose how you learn, each block is explained your way and then you answer a recall question without the material, "mastered" needs a retest on another day. See [docs/STUDENTS.md](docs/STUDENTS.md). |
 | **A team or a school** | `sh install.sh --team <handle>`, one folder per person, admin and member roles. See *Teams and schools* below, [docs/SYNC.md](docs/SYNC.md) and [docs/WINDOWS.md](docs/WINDOWS.md). |
 
 <p align="center">
@@ -62,25 +62,28 @@ cogiforge came out of using Claude on a real vault. Three decisions shaped it:
 
 ## What you get
 
-| Piece | What it does |
-|---|---|
-| `vault/` | The workbench: `inbox/` for quick capture, `notes/` for processed notes, `projects/` with one root file per project, `memory/` for what *you* told it, `tasks/` for tasks. Open this folder in Obsidian. |
-| `/cf-onboard` | Onboarding. Asks one question at a time, each following your last answer, and writes what **you said**, dated and quoted. It never guesses. |
-| `/cf-open-session <project>` | Starts work on a project: reads its root file, the last diary entries and the open tasks, and tells you where you stopped. |
-| `/cf-close-session` | Ends the day: diary, a briefing per session, the **pains you voiced** collected in one file, tasks opened for what is pending. It commits only if you say so and never pushes. |
-| `/cf-task-observer` | Watches how you work and **only proposes** improvements (a missing skill, a step you repeated three times, a correction you made twice). You decide. |
-| `/cf-claude-corner` | When you say you are leaving, Claude uses that time to reread your notes, find real connections and test ideas in a throwaway place. It **only proposes**, in a file. |
-| Tasks (**TaskNotes**) | Tasks are notes in `vault/tasks/`, managed by the public [TaskNotes](https://github.com/callumalpass/tasknotes) Obsidian plugin (MIT). Not bundled: you install it from Obsidian's community plugin store. `cf-open-session` and `cf-close-session` read and write the same format. |
-| Connection map (**graphify**, optional) | The public [graphify](https://github.com/Graphify-Labs/graphify) (Apache-2.0) maps your notes into a graph you can query. Install it yourself; its output folder is git-ignored. See the tutorial. |
-| `/cf-brainstorm` | Brainstorming for any product, project, study, event or loose idea. Checks what the vault already says, proposes **three genuinely different paths**, compares them on criteria you choose, recommends one **without choosing for you**, and stops at a brief you approve. No code and no plan before your "yes". |
-| `/cf-extract-routine` | Gets a real routine out of your head by interview, one question at a time. What you do not know stays `[CONFIRM]`; Claude never invents a step. It can reach `ready-for-human-review`; `validated` needs a second person who follows the order without guessing. |
-| `/cf-new-project <name>` | Creates a project for you: asks the name, then what exists in the world when it works out (your sentence, copied word for word), shows a dry run and creates it only after your "yes". Adds it to `projects/_index.md`, runs the hub, and checks gate and ring. |
-| `/cf-whats-real` | Keeps, per project, what **works (with proof)**, what is **simulated or a demo**, and what is **unknown**. An item moves to "works" only with proof run again. |
-| `/cf-know-my-product` | Interviews you about your product and collects your pains with your literal words and the date, then proposes a ranking. You approve before anything is saved. |
-| `/cf-import-knowledge` | Brings an existing base (another vault, a folder, documents, chat exports) into the inbox and walks you through the triage, target first. See *Bringing an existing knowledge base*. |
-| `/cf-brand <mode>` | Keeps your brand in your words, one question at a time: your voice rules (and a project's, which inherits yours), a project's DNA, messaging and design system (no default colors), and a manual that assembles them and marks what is empty. Checks texts with `tools/voice_check.py` and previews colors with `tools/brand_preview.py`, offline. See [docs/BRAND.md](docs/BRAND.md). |
-| `/cf-adapt-skill` | Helps you write **your own** skill from a worksheet in `vault/skill-worksheets/`. One question at a time; Claude never writes it for you, and "this is not for me" is a valid answer that gets recorded. |
-| `/cf-new-rule` | Turns one real mistake of yours into a rule that can be checked: one question at a time (what happened, when, the number), then a pair of inputs, a test you see red, the rule, a mutation and a `WHY.md` entry. No dated mistake, no rule; nothing outside `vault/` is written without your "yes". |
+| Piece | What it does | Writes |
+|---|---|---|
+| `vault/` | The workbench: `inbox/` for quick capture, `notes/` for processed notes, `projects/` with one root file per project, `memory/` for what *you* told it, `tasks/` for tasks. Open this folder in Obsidian. Claude Code loads the three memory files (`profile.md`, `patterns.md`, `decisions.md`) by itself, through the `@` import lines in `CLAUDE.md`; other agents read them because `AGENTS.md` tells them to. See [docs/MEMORY.md](docs/MEMORY.md). | Everything the skills below write lives here. |
+| `/cf-onboard` | Onboarding. Asks one question at a time, each following your last answer, and writes what **you said**, dated and quoted. It never guesses. | `vault/_questions_about_me.md` and approved lines in `vault/memory/profile.md`, only after your yes. |
+| `/cf-open-session <name>` | Starts work on a project: reads its root file, the last diary entries and the open tasks, and tells you where you stopped. | Nothing (read only). |
+| `/cf-close-session` | Ends the day: diary, a briefing per session, the **pains you voiced** collected in one file, tasks opened for what is pending. Runs the verifiers (`core/gate.py`, `core/ring.py`, `tools/usage.py`, `tools/stale.py`). It commits only if you say so and never pushes. | Briefing in `vault/memory/briefings/`, diary in `vault/memory/diary/`, pains appended to `vault/memory/ideas/_pains.md`, tasks in `vault/tasks/`. Commit only if you say so. |
+| `/cf-task-observer` | Watches how you work and **only proposes** improvements (a missing skill, a step you repeated three times, a correction you made twice). You decide. | Only appends to `vault/memory/observations.md`, at most 3 per session. |
+| `/cf-claude-corner` | When you say you are leaving, Claude uses that time to reread your notes, find real connections and test ideas in a throwaway place. It **only proposes**, in a file. With no deadline from you it stops at 1h30, and what you asked before leaving is done first. | Only `vault/memory/corner/`; tests run in a throwaway folder outside `vault/`. |
+| Tasks (**TaskNotes**) | Tasks are notes in `vault/tasks/`, managed by the public [TaskNotes](https://github.com/callumalpass/tasknotes) Obsidian plugin (MIT). Not bundled: you install it from Obsidian's community plugin store. `cf-open-session` and `cf-close-session` read and write the same format. | `vault/tasks/` (`cf-close-session` and the import skill add tasks). |
+| Connection map (**graphify**, optional) | The public [graphify](https://github.com/Graphify-Labs/graphify) (Apache-2.0) maps your notes into a graph you can query. Install it yourself; its output folder is git-ignored. See the tutorial. | Its own output folder (git-ignored). |
+| `/cf-brainstorm` | Brainstorming for any loose idea. Checks what the vault already says, proposes **three genuinely different paths**, compares them on criteria you choose, recommends one **without choosing for you**, and stops at a brief you approve. No code and no plan before your "yes". | Draft `vault/projects/<name>/brief.md`, only after you agree to see it; `approved` only on your "approve". |
+| `/cf-extract-routine` | Gets a real routine out of your head by interview, one question at a time. What you do not know stays `[CONFIRM]`; Claude never invents a step. It can reach `ready-for-human-review`; `validated` needs a second person who follows the order without guessing. | `vault/projects/<name>/routines/<routine>.md`, only after your yes. |
+| `/cf-new-project <name>` | Creates a project for you: asks the name, then what exists in the world when it works out (your sentence, copied word for word), shows a dry run and creates it only after your "yes". Adds it to `projects/_index.md`, runs the hub, and checks gate and ring. | After your yes: `vault/projects/<name>/instructions.md` and a row in `vault/projects/_index.md`, then the hub block. |
+| `/cf-whats-real` | Keeps, per project, what **works (with proof)**, what is **simulated or a demo**, and what is **unknown**. An item moves to "works" only with proof run again. | `vault/projects/<name>/whats-real.md` and `diary.md`. |
+| `/cf-know-my-product <name>` | Interviews you about your product and collects your pains with your literal words and the date, then proposes a ranking. You approve before anything is saved. | `vault/projects/<name>/product.md` after your yes; only the pains you approve are appended to `vault/memory/ideas/_pains.md`. |
+| `/cf-import-knowledge` | Brings an existing base (another vault, a folder, documents, chat exports) into the inbox and walks you through the triage, target first. See *Bringing an existing knowledge base*. | `vault/inbox/imported/<name>/` (with `_import-report.md`), or `vault/inbox/chats/` for chat exports; notes move to `vault/notes/` only in batches you approve. |
+| `/cf-brand <mode> <name>` | Modes: `voice --person`, `voice --project <name>`, `dna <name>`, `messaging <name>`, `design <name>`, `manual <name>`. Keeps your brand in your words, one question at a time: your voice rules (and a project's, which inherits yours), a project's DNA, messaging and design system (no default colors), and a manual that assembles them and marks what is empty. Checks texts with `tools/voice_check.py` and previews colors with `tools/brand_preview.py`, offline. See [docs/BRAND.md](docs/BRAND.md). | After your yes: `vault/memory/voice.md` and, in `vault/projects/<name>/brand/`, `voice.md`, `dna.md`, `messaging.md`, `design.md`, `tokens.json`, `manual.md` (plus `preview.html`), then the hub block. |
+| `/cf-adapt-skill` | Helps you write **your own** skill from a worksheet in `vault/skill-worksheets/`. One question at a time; Claude builds the `SKILL.md` with you from your answers, shows it whole and saves it only after your "yes". "This is not for me" is a valid answer that gets recorded. | After your yes: `.claude/skills/<name>/SKILL.md`; one line in `vault/memory/skills-reviewed.md`. |
+| `/cf-ask` | Answers a question using **only your own notes**, citing every claim with `[[path#Heading]]` that `tools/ask.py` checks (local, no API). When nothing supports it, it says the vault does not cover it. Optional `--try-first`: you write what you remember before it shows anything. | Nothing in your notes; with `--log`, one line (date and cited notes, not the question) in `vault/memory/ask-log.jsonl`. |
+| `/cf-adopt` | Applies the workbench to an Obsidian vault you **already have**, in place, copying nothing: it dry-runs `tools/adopt.py`, explains the plan and the debt in plain words, and applies only after your clear "yes" and with the sha of the dry run you saw. | Only after your yes and the dry-run's sha, in the vault you name: `areas.txt`, `.cogiforge/baseline.json` and the pre-commit hook in `.git/hooks`. Never an existing note. |
+| `/cf-study <topic>` | Helps you learn what you want, your way: interviews you one question at a time, writes a study plan, explains each block the way you chose, then asks a recall question without the material in front of you and logs proof. "Mastered" only after a retest on another day; it never invents sources. | `vault/projects/<topic>/study-plan.md` (you approve the plan first) and `mastery.md`. |
+| `/cf-new-rule` | Turns one real mistake of yours into a rule that can be checked: one question at a time (what happened, when, the number), then a pair of inputs, a test you see red, the rule, a mutation and a `WHY.md` entry. No dated mistake, no rule; nothing outside `vault/` is written without your "yes". | Nothing until your "yes, write it there"; then the test, `tests/mutate.py`, `WHY.md`, `CLAUDE.md` and `AGENTS.md`. |
 
 ![An Obsidian window on the vault: file tree, a note whose link sits inside the argument, the local graph, and Claude Code opening a project session below.](assets/workbench.svg)
 
@@ -123,6 +126,8 @@ nothing changes: solo mode is identical.
 - [docs/USING-OTHER-MODELS.md](docs/USING-OTHER-MODELS.md): use the vault with agents other than Claude Code, and what you lose without its skills.
 - [docs/SYNC.md](docs/SYNC.md): keep the vault in sync without duplicates or conflicts, and what the commit guard catches.
 - [docs/STUDENTS.md](docs/STUDENTS.md): study what you want, the way you want, with `/cf-study <topic>`: recall questions, a mastery log and retests on another day.
+- [docs/MEMORY.md](docs/MEMORY.md): how the memory works: the three files, cooling, recall, stale lines, and the memory gate with its threat model.
+- [docs/TEAMS.md](docs/TEAMS.md): the shared-mode rules (who is talking, whose folder, roles) that `vault/CLAUDE.md` points to.
 
 ## Context, worksheets and pains
 
@@ -133,7 +138,7 @@ specific and in your own words.
 - [docs/PRODUCT-AND-PAINS.md](docs/PRODUCT-AND-PAINS.md): how the workbench learns your product and collects your pains, and how to ask "what do I build first?".
 - [docs/BRAND.md](docs/BRAND.md): your voice, a project's DNA, messaging, design system and manual, made with Claude's help from your own words, and what it will not do for you.
 - Worksheets in [`vault/worksheets/`](vault/worksheets/): [product-brief](vault/worksheets/product-brief.md), [pains](vault/worksheets/pains.md), [audience](vault/worksheets/audience.md), [project-brief](vault/worksheets/project-brief.md), [decisions-log](vault/worksheets/decisions-log.md), [weekly-review](vault/worksheets/weekly-review.md). `pains` and `decisions-log` also come as CSV in `vault/worksheets/csv/` for Sheets or Excel.
-- `/cf-know-my-product <project>`: interviews you one question at a time and fills the product brief with your words only.
+- `/cf-know-my-product <name>`: interviews you one question at a time and fills the product brief with your words only.
 
 ## What keeps it healthy
 
@@ -144,6 +149,11 @@ This is the foundation under the workbench. It is deliberately small and runs on
 - **Link check** (`core/gate.py`). Dead links, broken links, a path that only matches by file name, a bad `area:`, unreadable files (reported as "could not read", never as OK).
 - **Leak scanner** (`core/leak.py`). Blocks machine paths, e-mails, phone numbers, CPF and a **private list of terms that lives outside the repo**. Without that list it says `NOT_VERIFIED`, never "clean".
 - **No Portuguese by accident** (`tests/test_no_portuguese.py`). The repo moved to English in October 2026, and this test fails on accented letters, common Portuguese words and the old Portuguese folder and script names. The few deliberate exceptions are in `tests/pt_allowlist.txt`, one `path: reason` per line, and a second test fails when an exception no longer exists or no longer needs to be one.
+- **Memory gate** (`core/memory.py`, run by the hook). A line in `vault/memory/` must be an entry with a date and the literal phrase, and when its source is a file of the vault, that file must hold the **whole phrase** and must already have been in the previous commit. Only allowed characters may appear in the memory: invisible text is blocked in every file a session loads (`CLAUDE.md`, `AGENTS.md`, `.claude/`, `memory/`). It fails closed: a file it cannot read blocks. The honest limit, as with team mode: it is not a jail. `git commit --no-verify` exists, and the gate catches text copied in from outside and careless entries, not an agent that skips the hook. See [docs/MEMORY.md](docs/MEMORY.md).
+- **Stale memory** (`tools/stale.py`). Reports memory lines whose cited file is gone or moved, whose file changed a lot since the entry date, or that carry `stale_after:` or `superseded_by:`. It measures and decides nothing; `--gate` turns a finding into exit 1.
+- **Recall** (`tools/recall.py`). Does a new session still find what the memory says? `--static` reads the disk and uses no model; `--run "<cmd>"` asks a model the bank's questions, with a positive control (a fact surely in the memory) and a negative control (a question the memory cannot answer). A missed positive control is `NOT_VERIFIED`, never "0 of N".
+- **Rules in sync** (`tests/test_agents_md.py`). Compares the numbered rules of `CLAUDE.md` and `AGENTS.md` and fails when they drift apart.
+- **Per-session budget** (`core/budget.py`). Counts the bytes a session loads before any work, `@` imports and skill descriptions included, and blocks a commit that grows a loaded file while the context is over its ceiling (32 KB every session, 48 KB when a project is opened). Measured on the empty skeleton: 17,899 bytes, 56% of the ceiling.
 - **CI** (`.github/workflows/prova.yml`). Installs from a clean clone, runs the tests and the mutation check, and tries the orphan gate end to end. The step that proves the hook test goes red now insists on that exact failure: a renamed test once made it print "ok" without testing anything.
 
 The hook can be bypassed on purpose with `git commit --no-verify`. Every rule here comes from a real,
@@ -151,11 +161,11 @@ dated failure, and each one has a test that fails without it: see [WHY.md](WHY.m
 
 ## What is verified, and what is not
 
-Measured on 2026-10-07, after team mode, the importers, the sync guard, `/cf-adopt`, `/cf-study`, private folders and the `cf-` skill names were merged, on one machine (macOS):
+Measured at the commit named below, on one machine (macOS):
 
-- Tests: after `sh install.sh` and `python3 -m pip install pytest`, `python3 -m pytest -q` gave **543 passed, 2 skipped** (commit `79ecad2`). Run before `sh install.sh`, one test fails on purpose: it checks that the hook is active.
-- Mutation: `python3 tests/mutate.py` breaks every check one at a time and gave **236 of 236 mutants killed, 0 alive, 0 inapplicable** (commit `2d54a04`; the later commit `79ecad2` changed only `tools/adopt.py`, its tests and its skill, which the mutation check does not cover). `python3 tests/mutate.py --dry` only checks, in seconds, that every mutant still applies (all 236 apply), so a rename that breaks one is caught before the long run.
-- CI: the run for commit `2d54a04` ([run 37642244068](https://github.com/Arthuro0103/cogiforge/actions/runs/37642244068), 2026-10-07) had **8 of 8 jobs green**, on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. Each job starts from a clean checkout, runs `install.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end.
+- Tests: after `sh install.sh` and `python3 -m pip install pytest`, `python3 -m pytest -q` gave **TESTS_PASSED passed, 2 skipped** (commit COMMIT_SHA). Run before `sh install.sh`, one test fails on purpose: it checks that the hook is active.
+- Mutation: `python3 tests/mutate.py` breaks every check one at a time, and a mutant that no test notices is a failure. The long run is not repeated by hand for this page: `python3 tests/mutate.py --dry` lists the mutants and checks in seconds that every one still applies (698 apply, 0 inapplicable), so a rename that breaks one is caught early, and the CI (`.github/workflows/prova.yml`, step `python tests/mutate.py`) runs all of them on every push.
+- CI: each job starts from a clean checkout, runs `install.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end, on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. The badge at the top shows the latest run.
 - Windows: the first `windows-latest` run (same commit, informational job) installed fine with `install.ps1` (hook active, ring selftest passed), then **468 tests passed and 67 failed**. The failures sit mostly in the tests of the leak scanner and of `adopt`; they were fixed on 2026-10-08 (the job passed in CI on the branch at `b319264`, merged in `7f41ac7`; the tests that are skipped there check POSIX-only behavior). It has not been tried by hand on a real Windows machine, so Windows is still **not** claimed as supported.
 - Two tests compare this link checker with the author's private vault, which is not in this repo. They are **skipped** (reported as skipped, not as passed).
 - **It is new.** If something breaks or you get stuck, tell us where: that is the most useful thing you can send.

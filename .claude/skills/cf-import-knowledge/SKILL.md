@@ -36,6 +36,19 @@ python3 tools/import.py <SRC> --person <HANDLE>   # into that person's inbox (va
 Start with `--dry-run` when the source is large or the user is unsure. The result is the same folder
 structure, markdown where it could be converted, and `_import-report.md` at the destination.
 
+#### A chat export (Claude or ChatGPT)
+
+If the source is a chat export (the `.zip` or its `conversations.json`), use `tools/import_chats.py` instead of
+`tools/import.py`: it writes one note per conversation into `vault/inbox/chats/` (add `--dry-run` first). Point the
+user to `docs/EXPORTING-CHATS.md` for how to get the file and for the privacy warning (an export holds everything
+they ever typed; run `python3 core/leak.py .` before any commit). Read its output the way you read the report, and
+do the triage (steps 3 and 4) as for any other inbox note.
+
+```bash
+python3 tools/import_chats.py <export.zip | conversations.json> --dry-run
+python3 tools/import_chats.py <export.zip | conversations.json>
+```
+
 ### 2. Read the report (you)
 
 Open `<dest>/_import-report.md` and tell the user, in at most 8 lines: how many files were in the source and

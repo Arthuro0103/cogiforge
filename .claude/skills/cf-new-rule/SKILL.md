@@ -59,10 +59,12 @@ user wants a new check or to drop the rule. Do not build a new check unprompted.
 ### 3. The pair and the red test (you)
 
 Write the two inputs in a scratch folder (never in `vault/`): the one that must fail and the plausible one that
-must pass. Write the test, run it **without** the rule, and show the red output.
+must pass. Write the test as a temporary file outside the repo (for example `$TMPDIR/cf-new-rule/test_<name>.py`),
+run it **without** the rule from there, and show the red output. It moves to `tests/test_<name>.py` only after the
+user's "yes, write it there" (rule 6).
 
 ```bash
-python3 -m pytest -q tests/test_<name>.py
+python3 -m pytest -q $TMPDIR/cf-new-rule/test_<name>.py
 ```
 
 ### 4. The rule (you)
@@ -72,7 +74,7 @@ suite and report the counts as they appear.
 
 ### 5. The mutation (you)
 
-Add an entry in `tests/mutate.py` that breaks the new check, and run `python3 tests/mutate.py --dry` and then the
+(After the user's yes, rule 6.) Add an entry in `tests/mutate.py` that breaks the new check, and run `python3 tests/mutate.py --dry` and then the
 mutation of that piece. A mutant that stays alive means the test is not good enough: go back to step 3.
 
 ### 6. The record (you, with the user's "yes")
