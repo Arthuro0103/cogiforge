@@ -191,3 +191,11 @@ def test_every_file_keeps_an_edge_so_none_becomes_an_orphan(tmp_path):
     notes, degree = ring.analyze(tmp_path)
     assert ring.chk_orphans(notes, degree) == []
     assert degree["projects/p/_files.md"] == 61          # 60 files + the root
+
+
+def test_hidden_folders_are_not_listed(tmp_path):
+    d = project(tmp_path, extras=["a.md", ".drafts/x.md", "sub/.git/y.md"])
+    assert hub(tmp_path).returncode == 0
+    text = (d / "instructions.md").read_text()
+    assert "[[projects/p/a|a]]" in text
+    assert "x]]" not in text and "y]]" not in text and ".drafts" not in text and ".git" not in text

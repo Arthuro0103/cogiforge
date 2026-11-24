@@ -341,6 +341,7 @@ PIECES = {
         ("the overflow list is never written", 'path.write_text(want, encoding="utf-8")', 'pass'),
         ("a dry run writes the overflow list", 'side = None if dry else sync_overflow(folder, vault, check)', 'side = sync_overflow(folder, vault, check)'),
         ("a stale overflow list is not reported", 'if side == "STALE":\n        return "STALE"', 'if False:\n        return "STALE"'),
+        ("a hidden folder is listed", 'and not any(part.startswith(".") for part in p.relative_to(folder).parts))', ')'),
         ("the root has no pointer to the list", 'lines.append(f"- [[{rel}|all {len(files)} files of this project]]")', 'pass'),
     ]),
     "target": dict(file="core/target.py", suite=["tests/test_target.py"], texts=[

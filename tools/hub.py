@@ -35,7 +35,9 @@ VAULT = Path(__file__).resolve().parent.parent / "vault"
 
 
 def list_files(folder: Path) -> list[Path]:
-    return sorted(p for p in folder.rglob("*.md") if p != folder / "instructions.md" and p != folder / OVERFLOW)
+    # a hidden folder (.drafts, .git, ...) is not indexed by Obsidian: a wikilink to it would be a phantom node
+    return sorted(p for p in folder.rglob("*.md") if p != folder / "instructions.md" and p != folder / OVERFLOW
+                  and not any(part.startswith(".") for part in p.relative_to(folder).parts))
 
 
 def generate(folder: Path, vault: Path) -> str:
