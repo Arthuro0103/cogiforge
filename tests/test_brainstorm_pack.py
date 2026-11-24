@@ -92,7 +92,8 @@ def test_whats_real_has_the_three_sections():
 
 
 def test_new_lines_are_in_the_when_to_use_table():
-    table = (ROOT / "vault" / "CLAUDE.md").read_text(encoding="utf-8")
+    """The table moved out of vault/CLAUDE.md (it loads every session) into AGENTS.md."""
+    table = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
     for name in NAMES:
         assert re.search(rf"^\| `{re.escape(name)}` \|", table, re.M)
 

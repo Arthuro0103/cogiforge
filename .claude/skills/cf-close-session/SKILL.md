@@ -1,6 +1,6 @@
 ---
 name: cf-close-session
-description: Closes the workday - writes the diary (vault/memory/diary/) and one briefing per session, collects pains from the user's own words, opens a task in vault/tasks/ for what is pending, runs the verifiers. New skills or projects come out only as proposals. Commits only if told, never pushes. Use for "fecha a sessão", "summarize the day". Not for a short chat, opening a session (cf-open-session) or process review (cf-task-observer).
+description: Closes the workday - writes the diary (vault/memory/diary/) and one briefing per session, collects pains from the user's own words, opens a task in vault/tasks/ for what is pending, runs the verifiers. New skills or projects only as proposals. Never pushes. TRIGGERS - "fecha a sessão", "summarize the day". Do NOT trigger for a short chat, opening a session (cf-open-session) or process review (cf-task-observer).
 ---
 
 # cf-close-session: what is left of the day, written down before it is forgotten

@@ -1,6 +1,6 @@
 ---
 name: cf-study
-description: Helps a student learn what they want, their way - interviews one question at a time, asks three level questions, writes projects/<topic>/study-plan.md, then explains a block, asks recall questions and logs proof in mastery.md. Mastered only after a retest on a different day; never invents sources. Use for "help me study", "quiz me on", "I have an exam on". Not for doing homework, sourced research, or judging ideas.
+description: Helps a student learn what they want, their way - interviews one question at a time, writes projects/<topic>/study-plan.md, then explains a block, asks recall questions and logs proof in mastery.md. Mastered only after a retest on a different day; never invents sources. TRIGGERS - "help me study", "quiz me on", "I have an exam on". Do NOT trigger to do homework, sourced research (the research guide), or to judge ideas (cf-brainstorm).
 ---
 
 # cf-study: learn what you want, the way you want

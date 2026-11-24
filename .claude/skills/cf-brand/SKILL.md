@@ -1,6 +1,6 @@
 ---
 name: cf-brand
-description: Interviews the user one question at a time and writes brand pieces using only their words - voice rules (person or project), and for a project the DNA, messaging, design system (design.md, tokens.json) and manual. Nothing saved before a yes. Use for "my voice rules", "brand of my project", "design system". Not for getting to know the user (cf-onboard), the product brief (cf-know-my-product) or creating a project.
+description: Interviews the user, one question at a time, and writes brand pieces in their own words - voice rules (person or project), and a project's DNA, messaging, design system (design.md, tokens.json) and manual. Nothing saved before a yes. TRIGGERS - "my voice rules", "brand of my project", "design system", "brand manual". Do NOT trigger for cf-onboard, cf-know-my-product, cf-new-project, nor to choose between paths (a decision, not an interview).
 ---
 
 # cf-brand: the brand comes from what the person said, not from the model

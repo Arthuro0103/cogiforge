@@ -1,6 +1,6 @@
 ---
 name: cf-whats-real
-description: Keeps vault/projects/<name>/whats-real.md - Works (each with the command run, output and date), Simulated or demo, and Unknown, plus a short diary.md. Created BEFORE a milestone (demo, delivery, launch) and CHECKED after - a Works item without re-run proof goes back to Unknown. Use for "what actually works", "before the demo". Not for fixing what is broken, day summaries, or judging an idea.
+description: Keeps vault/projects/<name>/whats-real.md - Works (each with the command run, output and date), Simulated or demo, and Unknown - plus a short diary.md. Created BEFORE a milestone and CHECKED after; a Works item without re-run proof goes back to Unknown. TRIGGERS - "what actually works", "before the demo", "what did we only simulate". Do NOT trigger to fix what is broken, summarize a day (cf-close-session) or judge an idea.
 ---
 
 # cf-whats-real: separate what works from what only looks like it works

@@ -1,6 +1,6 @@
 ---
 name: cf-new-rule
-description: Turns ONE real, dated mistake into a rule that is justified, checked and tested - interviews one question at a time, builds a failing/passing input pair, a test seen RED, the rule, a mutation entry and a WHY.md entry. Refuses a rule with no real mistake behind it. Use for "turn this mistake into a rule", "it passed and it should not have", "this keeps happening". Not for hypothetical mistakes, preferences, or writing a skill.
+description: Turns ONE real, dated mistake into a rule that is justified, checked and tested - builds a failing/passing input pair, a test seen RED, the rule, a mutation entry and a WHY.md entry, one question at a time. Refuses a rule with no real mistake behind it. TRIGGERS - "turn this mistake into a rule", "it passed and it should not have". Do NOT trigger for hypothetical mistakes, preferences, writing a skill (cf-adapt-skill) or checking what works.
 ---
 
 # cf-new-rule: a mistake in, a rule with a test out

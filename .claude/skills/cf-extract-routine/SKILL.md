@@ -1,6 +1,6 @@
 ---
 name: cf-extract-routine
-description: Pulls a real routine out of the user's head by interview and writes it so someone else can run it - expected result, trigger, inputs, steps, decisions, exceptions, proof of done. One question at a time; unknowns are [CONFIRM]; never invents a step. Output - vault/projects/<name>/routines/<routine>.md. Use for "document this process", "how do I hand this over". Not for running the routine, choosing ways of working, or one-off events.
+description: Pulls a real routine out of the user's head by interview and writes it so someone else can run it - result, trigger, inputs, steps, decisions, exceptions, proof of done. One question at a time; unknowns are [CONFIRM]; never invents a step. Output vault/projects/<name>/routines/. TRIGGERS - "document this process", "how do I hand this over". Do NOT trigger to run the routine, choose ways of working, or record one-off events.
 ---
 
 # cf-extract-routine: get the routine out of one head and onto one page

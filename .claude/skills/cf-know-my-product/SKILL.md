@@ -1,6 +1,6 @@
 ---
 name: cf-know-my-product
-description: Interviews the user about their product, one question at a time, and fills vault/projects/<name>/product.md in their own words (users, problem, what it is NOT, success metric, constraints). Collects pains with the literal quote and date and proposes a ranking. Use for "understand my product", "fill the product brief", "collect my pains". Not for getting to know the user (cf-onboard), answering from notes (cf-ask) or choosing paths.
+description: Interviews the user about their product, one question at a time, and fills vault/projects/<name>/product.md in their own words (users, problem, what it is NOT, metric, constraints). Collects pains with the literal quote and date and proposes a ranking. TRIGGERS - "understand my product", "fill the product brief", "collect my pains". Do NOT trigger to get to know the user (cf-onboard), answer from notes (cf-ask) or choose paths.
 ---
 
 # cf-know-my-product: the workbench learns the product from the person who builds it

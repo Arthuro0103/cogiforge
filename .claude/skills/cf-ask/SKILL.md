@@ -1,6 +1,6 @@
 ---
 name: cf-ask
-description: Answers a question about the user's own notes using ONLY what they say, citing every claim with [[path#Heading]] checked by tools/ask.py (local, no API). Says "the vault does not cover this" when nothing supports it. Use for "what do my notes say about X", "ask the vault". Not for code or world questions, writing notes, or deciding between paths. Mode --try-first asks for the user's own attempt first.
+description: Answers a question about the user's own notes using ONLY what they say, citing every claim with [[path#Heading]] checked by tools/ask.py (local, no API). Says "the vault does not cover this" when nothing supports it. TRIGGERS - "ask the vault", "what do my notes say about X". Do NOT trigger for code or world questions, writing notes, or deciding between paths. OPTIONAL MODE - "--try-first" asks for the user's own attempt first.
 ---
 
 # cf-ask: answer from the notes, and prove the citations exist

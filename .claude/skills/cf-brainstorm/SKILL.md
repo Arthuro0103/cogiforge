@@ -1,6 +1,6 @@
 ---
 name: cf-brainstorm
-description: Brainstorming for any loose idea (product, project, study, event). Asks about the goal one question at a time, scans the vault first, proposes 3 genuinely different paths, compares them by criteria the person picks, recommends one without choosing, and closes in vault/projects/<name>/brief.md. No code or plan before an explicit yes. Not for building a chosen path, nor for picking between two existing options.
+description: Brainstorming for any loose idea. Asks about the goal one question at a time, scans the vault first, proposes 3 genuinely different paths, compares them by criteria the person picks, recommends one without choosing, closes in vault/projects/<name>/brief.md. No code before an explicit yes. TRIGGERS - "I have an idea", "help me think this through". Do NOT trigger to build a chosen path, nor to pick between two options.
 ---
 
 # cf-brainstorm: think before building, and stop at an approved brief

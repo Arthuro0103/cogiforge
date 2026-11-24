@@ -1,6 +1,6 @@
 ---
 name: cf-adapt-skill
-description: Guides the user to make a skill of THEIR OWN from a catalog worksheet in vault/skill-worksheets/ - separates the method from the original author, tests it on a real case, records the verdict. One question per message; Claude never writes it alone. Use for "does this skill fit me?", "how do I make a skill", "what is in the catalog". Not for using an existing skill, nor for cf-task-observer proposals.
+description: Guides the user to make a skill of THEIR OWN from a catalog worksheet in vault/skill-worksheets/ - separates the method from the original author, tests it on a real case, records the verdict. One question per message; Claude never writes it alone. TRIGGERS - "does this skill fit me?", "how do I make a skill", "what is in the skill catalog". Do NOT trigger to use an existing skill, nor for cf-task-observer proposals.
 ---
 
 # cf-adapt-skill: learn to make your own by looking at someone else's

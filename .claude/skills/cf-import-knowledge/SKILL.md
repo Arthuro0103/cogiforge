@@ -1,6 +1,6 @@
 ---
 name: cf-import-knowledge
-description: Brings an existing knowledge base (another vault, a notes folder, a wiki export, loose documents) into the workbench - runs tools/import.py, reads its report, then helps triage the imported inbox into vault/notes/ in batches, target first, a real link per note. Proposes, the user approves. Use for "import my old notes", "bring my wiki in". Not for one loose idea, opening or closing a session, or notes already in vault/notes/.
+description: Brings an existing knowledge base (another vault, a notes folder, a wiki export, loose documents) into the workbench - runs tools/import.py, reads its report, then helps triage the imported inbox into vault/notes/, target first, a real link per note. The user approves. TRIGGERS - "import my old notes", "bring my wiki in". Do NOT trigger for one loose idea, opening or closing a session, or notes already in vault/notes/.
 ---
 
 # cf-import-knowledge: bring it in whole, then decide note by note

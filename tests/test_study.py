@@ -71,8 +71,8 @@ def test_template_without_an_inbound_link_fails_the_ring(tmp_path):
     assert "skill-worksheets/mastery-template.md" in ring.chk_orphans(notes, deg)
 
 
-def test_vault_claude_md_has_the_study_row():
-    t = (VAULT / "CLAUDE.md").read_text(encoding="utf-8")
+def test_agents_md_has_the_study_row():
+    t = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
     assert re.search(r"^\| `cf-study` \|", t, re.M)
 
 

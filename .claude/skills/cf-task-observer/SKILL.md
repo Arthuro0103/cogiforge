@@ -1,6 +1,6 @@
 ---
 name: cf-task-observer
-description: Observes a work session and ONLY PROPOSES process improvements in vault/memory/observations.md (date, what was seen, what is proposed) - a missing skill, a step repeated three times, a correction made twice. Never writes profile, patterns, decisions or notes, never creates a skill. Use for "what do I repeat a lot?", "what could be automated?". Not for doing the task, closing the day, or creating a skill.
+description: Observes a work session and ONLY PROPOSES process improvements in vault/memory/observations.md - a missing skill, a step repeated three times, a correction made twice. Never writes profile, patterns, decisions or notes, never creates a skill. TRIGGERS - "what do I repeat a lot?", "what could be automated?", "observa essa sessão". Do NOT trigger to do the task, close the day (cf-close-session) or create a skill (cf-adapt-skill).
 ---
 
 # cf-task-observer: see the process while it happens

@@ -75,7 +75,7 @@ def test_skill_has_name_and_description_and_is_in_the_table():
     assert re.search(r"^name: cf-know-my-product$", fm, re.M)
     desc = re.search(r"^description: (.+)$", fm, re.M)
     assert desc and "TRIGGERS" in desc.group(1) and "Do NOT trigger" in desc.group(1)
-    assert "`cf-know-my-product`" in (VAULT / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "`cf-know-my-product`" in (ROOT / "AGENTS.md").read_text(encoding="utf-8")
 
 
 def test_readme_links_the_guides():

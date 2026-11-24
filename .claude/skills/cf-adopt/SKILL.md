@@ -1,6 +1,6 @@
 ---
 name: cf-adopt
-description: Applies the workbench to an Obsidian vault the person ALREADY has, in place, copying nothing - dry-runs tools/adopt.py, explains the plan and the debt in plain words, applies only after a clear yes. Use for "I already have an Obsidian vault", "start from my current notes", "do not start from zero". Not for bringing loose files into this vault (cf-import-knowledge) nor for opening or closing a session.
+description: Applies the workbench to an Obsidian vault the person ALREADY has, in place, copying nothing - dry-runs tools/adopt.py, explains the plan and the debt in plain words, applies only after a clear yes. TRIGGERS - "I already have an Obsidian vault", "start from my current notes", "do not start from zero". Do NOT trigger to bring loose files into this vault (cf-import-knowledge), nor to open or close a session.
 ---
 
 # cf-adopt: put the gate on the vault you already have

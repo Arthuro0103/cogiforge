@@ -1,6 +1,6 @@
 ---
 name: cf-open-session
-description: Opens a work session on one workbench project. Takes a project NAME, reads its root (vault/projects/<name>/instructions.md), the latest diary entries and open tasks, and says in a few lines where it stands and what the last session left. Reports only what the files say. Use for "onde parei no X", "resume X", "what is left on X". Not without a project name, for closing the day, or for a loose code question.
+description: Opens a work session on one workbench project. Takes a project NAME, reads its root (vault/projects/<name>/instructions.md), the latest diary entries and open tasks, and says in a few lines where it stands and what the last session left. Reports only what the files say. TRIGGERS - "onde parei no X", "resume X", "what is left on X". Do NOT trigger without a project name, to close the day, or for a loose code question.
 ---
 
 # cf-open-session: start by knowing where you stopped

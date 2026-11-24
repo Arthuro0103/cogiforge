@@ -1,6 +1,6 @@
 ---
 name: cf-claude-corner
-description: Claude's corner - when the user says they are leaving (at most 1h30), Claude rereads the notes, finds real connections and tests ideas outside vault/, then only proposes in vault/memory/corner/. A request made before leaving is done in full first. Use for "I'm heading out", "back at X", "vou sair". Not for a leave of minutes, a specific task to run, or deciding between two paths.
+description: Claude's corner - when the user says they are leaving (at most 1h30), Claude rereads the notes, finds real connections and tests ideas outside vault/, then only proposes in vault/memory/corner/. A request made before leaving is done in full first. TRIGGERS - "vou sair", "volto às X", "I'm heading out", "back at X". Do NOT trigger for a leave of a few minutes, a specific task to run, nor deciding between paths.
 ---
 
 # cf-claude-corner: the time away becomes a proposal
