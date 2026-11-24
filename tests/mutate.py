@@ -519,7 +519,7 @@ PIECES = {
         ("the whole phrase has no word boundary", 'if _word_at(hay, i, len(n)):', 'if True:'),
         ("the whole phrase is compared with NFKC", 'unicodedata.normalize("NFC", s)).casefold().strip()', 'unicodedata.normalize("NFKC", s)).casefold().strip()'),
         ("the whole phrase is not casefolded", '.casefold().strip()', '.strip()'),
-        ("whitespace is not collapsed", 'return re.sub(r"\s+", " ", unicodedata.normalize("NFC", s)).casefold().strip()', 'return unicodedata.normalize("NFC", s).casefold().strip()'),
+        ("whitespace is not collapsed", 'return re.sub(r"\\s+", " ", unicodedata.normalize("NFC", s)).casefold().strip()', 'return unicodedata.normalize("NFC", s).casefold().strip()'),
         ("a boundary letter is not a boundary", 'not (before and (before.isalnum() or before == "_"))', 'True'),
         ("the pieces need no order", 'pos = i + len(p) + 1', 'pos = 0'),
         ("a one-word piece is dropped", 'ps = [p for p in (norm(x) for x in CUT.split(quote)) if p]', 'ps = [p for p in (norm(x) for x in CUT.split(quote)) if len(p.split()) >= 3]'),
