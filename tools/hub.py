@@ -124,7 +124,8 @@ def missing_from_index(vault: Path, projects: list[Path]) -> list[str]:
 
 def run(vault: Path, check: bool, dry: bool) -> int:
     base = vault / "projects"
-    projects = sorted(p for p in base.iterdir() if p.is_dir()) if base.is_dir() else []
+    # a hidden folder (.old, .trash) is not a project: Obsidian does not index it
+    projects = sorted(p for p in base.iterdir() if p.is_dir() and not p.name.startswith(".")) if base.is_dir() else []
     bad = 0
     for p in projects:
         st = process(p, vault, check, dry)

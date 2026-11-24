@@ -199,3 +199,22 @@ def test_hidden_folders_are_not_listed(tmp_path):
     text = (d / "instructions.md").read_text()
     assert "[[projects/p/a|a]]" in text
     assert "x]]" not in text and "y]]" not in text and ".drafts" not in text and ".git" not in text
+
+
+def test_a_note_whose_own_name_starts_with_a_dot_is_not_listed(tmp_path):
+    d = project(tmp_path, extras=["a.md", ".hidden.md", "sub/.also.md"])
+    assert hub(tmp_path).returncode == 0
+    text = (d / "instructions.md").read_text()
+    assert "[[projects/p/a|a]]" in text and "hidden" not in text and "also" not in text
+
+
+def test_a_project_folder_that_starts_with_a_dot_is_not_a_project(tmp_path):
+    project(tmp_path, "real", extras=["a.md"])
+    old = tmp_path / "projects" / ".old"
+    (old).mkdir()
+    (old / "instructions.md").write_text("# old\n")
+    (old / "z.md").write_text("z")
+    r = hub(tmp_path, "--check")
+    assert ".old" not in r.stdout and "NO ROOT" not in r.stdout
+    assert hub(tmp_path).returncode == 0 and hub(tmp_path, "--check").returncode == 0
+    assert "hub:start" not in (old / "instructions.md").read_text()
