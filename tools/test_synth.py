@@ -2,6 +2,7 @@
 import hashlib
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -60,8 +61,14 @@ def test_the_vault_passes_its_own_checkers(vault):
     for script, args in (("gate.py", []), ("ring.py", ["--gate"])):
         r = subprocess.run([sys.executable, str(CORE / script), "--vault", str(vault), *args], capture_output=True, text=True)
         assert r.returncode == 0, r.stdout[-500:]
-    r = subprocess.run([sys.executable, str(CORE / "leak.py"), str(vault)], capture_output=True, text=True,
-                       env={**os.environ, "LEAK_BLOCKLIST": str(vault / "absent.txt")})  # HOME stays: Windows needs it
+    # leak.py reads the git index (a tracked settings.local.json), so outside a repo it says NOT_VERIFIED, never "0 finding(s)":
+    # give the vault a repo of its own for this run, and take it away after
+    subprocess.run(["git", "init", "-q", str(vault)], check=True, capture_output=True)
+    try:
+        r = subprocess.run([sys.executable, str(CORE / "leak.py"), str(vault)], capture_output=True, text=True,
+                           env={**os.environ, "LEAK_BLOCKLIST": str(vault / "absent.txt")})  # HOME stays: Windows needs it
+    finally:
+        shutil.rmtree(vault / ".git", ignore_errors=True)
     assert r.stdout.startswith("0 finding(s)")
 
 
