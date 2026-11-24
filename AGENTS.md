@@ -25,6 +25,12 @@ Obsidian opens `vault/`; you run at the repo root.
 10. **If `graphify-out/GRAPH_REPORT.md` exists, read it before looking for connections.** It is generated: do not edit it, do not commit it.
 11. **A check that touched nothing is not OK.** If you could not verify something, say `NOT_VERIFIED` and why, instead of saying it is clean.
 
+## Memory: read it first
+
+Agents that do not follow `@` imports (everything except Claude Code) must, at the start of every session and
+before anything else, read `vault/memory/profile.md`, `vault/memory/patterns.md` and `vault/memory/decisions.md`
+(in shared mode also your own `vault/people/<handle>/memory/` files). Rule 2 applies to them.
+
 ## Layout of `vault/`
 
 `inbox/` raw capture (fallback, not the main door) · `notes/<area>/` processed notes; the folder is the

@@ -1,5 +1,7 @@
 # How the memory works in this repo
 
+Claude Code loads the three files through the `@` import lines in the root `CLAUDE.md`; other agents load them because `AGENTS.md` tells them to read the files first.
+
 ## The files
 
 Three files in `vault/memory/` load at the start of every session, so they are the memory a new session has:

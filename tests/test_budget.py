@@ -18,6 +18,9 @@ def put(root, rel, text):
     return p
 
 
+IMPORTS = "".join(f"@vault/memory/{m}.md\n" for m in ("profile", "patterns", "decisions"))
+
+
 def blob(n):
     return "x" * n
 
@@ -37,7 +40,7 @@ def measure(root):
 
 @pytest.fixture
 def root(tmp_path):
-    put(tmp_path, "CLAUDE.md", blob(1000))
+    put(tmp_path, "CLAUDE.md", IMPORTS + blob(1000 - len(IMPORTS)))   # 1000 bytes, the memory comes in by import
     put(tmp_path, "vault/CLAUDE.md", blob(2000))
     for name, n in (("profile", 100), ("patterns", 200), ("decisions", 300)):
         put(tmp_path, f"vault/memory/{name}.md", blob(n))
@@ -225,3 +228,53 @@ def test_the_empty_skeleton_of_this_repo_stays_under_its_own_cap():
     m = budget.measure(repo / "vault", repo)
     assert m["always"] > 0, "nothing was measured: NOT_VERIFIED, not OK"
     assert m["always"] <= SKELETON_MAX, f"the skeleton loads {m['always']} bytes in every session (cap {SKELETON_MAX})"
+
+
+def test_an_import_line_adds_the_imported_file_to_the_total(root):
+    before = measure(root)["always"]
+    put(root, "vault/extra.md", blob(700))
+    put(root, "CLAUDE.md", (root / "CLAUDE.md").read_text() + "\n@vault/extra.md\n")
+    m = measure(root)
+    assert m["always"] == before + 700 + len("\n@vault/extra.md\n") and m["files"]["vault/extra.md"] == 700
+
+
+def test_a_file_imported_twice_counts_once(root):
+    put(root, "vault/extra.md", blob(100))
+    put(root, "CLAUDE.md", (root / "CLAUDE.md").read_text() + "\n@vault/extra.md\n@vault/extra.md\n")
+    put(root, "vault/CLAUDE.md", "@extra.md\n" + blob(100))
+    assert [p.name for p in budget.loaded_files(root / "vault", root)].count("extra.md") == 1
+
+
+def test_the_memory_files_are_counted_once_even_if_two_files_import_them(root):
+    put(root, "vault/CLAUDE.md", "@memory/profile.md\n" + blob(100))
+    assert [p.name for p in budget.loaded_files(root / "vault", root)].count("profile.md") == 1
+
+
+def test_an_import_of_a_missing_file_is_reported_as_missing(root):
+    put(root, "CLAUDE.md", (root / "CLAUDE.md").read_text() + "\n@vault/nope.md\n")
+    r = run(root)
+    assert "vault/nope.md" in r.stdout and "missing" in r.stdout
+
+
+def test_an_import_cycle_does_not_hang_and_counts_each_file_once(root):
+    put(root, "vault/a.md", "@b.md\n")
+    put(root, "vault/b.md", "@a.md\n")
+    put(root, "CLAUDE.md", (root / "CLAUDE.md").read_text() + "\n@vault/a.md\n")
+    names = [p.name for p in budget.loaded_files(root / "vault", root)]
+    assert names.count("a.md") == 1 and names.count("b.md") == 1
+
+
+def test_imports_stop_at_5_levels_and_outside_the_repo(root, tmp_path_factory):
+    outside = tmp_path_factory.mktemp("outside") / "secret.md"
+    outside.write_text("x" * 50)
+    for i in range(1, 8):
+        put(root, f"vault/l{i}.md", f"@l{i + 1}.md\n")
+    put(root, "CLAUDE.md", (root / "CLAUDE.md").read_text() + f"\n@vault/l1.md\n@{outside}\n")
+    names = [p.name for p in budget.loaded_files(root / "vault", root)]
+    assert "l5.md" in names and "l6.md" not in names and "secret.md" not in names
+
+
+def test_an_import_inside_a_code_fence_is_not_followed(root):
+    put(root, "vault/extra.md", blob(10))
+    put(root, "CLAUDE.md", (root / "CLAUDE.md").read_text() + "\n```\n@vault/extra.md\n```\n")
+    assert "extra.md" not in [p.name for p in budget.loaded_files(root / "vault", root)]
