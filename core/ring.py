@@ -29,7 +29,7 @@ import unicodedata
 from pathlib import Path
 from urllib.parse import unquote
 
-from gate import Index, mask, wikilinks
+from gate import GATE_KEYS, Index, mask, wikilinks
 
 DEPOSITS = ("inbox", "tasks")  # quick capture and the TaskNotes plugin: blocking here makes people uninstall
 PEOPLE_INBOX = re.compile(r"^people/[^/]+/inbox(/|$)")  # team mode: each person's quick capture is exempt too
@@ -162,10 +162,10 @@ def orphan_mode(vault):
         if not line:
             continue
         key, sep, value = line.partition(":")
-        if key.strip() == "target" and sep:
-            continue  # the `target:` line belongs to core/target.py
+        if sep and key.strip() in GATE_KEYS and key.strip() != "orphan":
+            continue  # the other known keys belong to core/target.py and core/memory.py
         if key.strip() != "orphan" or not sep:
-            raise ValueError(f"vault/gate.txt line {n}: expected `orphan: block` or `orphan: warn`")
+            raise ValueError(f"vault/gate.txt line {n}: expected `orphan: block` or `orphan: warn` (known keys: {', '.join(GATE_KEYS)})")
         mode = value.strip()
         if mode not in ORPHAN_MODES:
             raise ValueError(f"vault/gate.txt line {n}: unknown orphan value '{mode}' (use block or warn)")

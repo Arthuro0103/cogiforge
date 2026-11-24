@@ -41,6 +41,9 @@ CHECKS = [
     ("broken-link", "`[[` opens and closes on the same line"),
     ("dead-target", "target: points to something that exists"),
 ]
+# vault/gate.txt is read by three scripts, each one only its own keys (ring.py: orphan, target.py: target,
+# memory.py: memory-source and memory-reach). A key outside this set is a typo and an error in all three.
+GATE_KEYS = ("orphan", "target", "memory-source", "memory-reach")
 DEFAULT_AREAS = {"learning": "learning", "technology": "technology", "life": "life"}
 IGNORE_DIRS = {".git", ".obsidian", ".trash", "node_modules", "__pycache__", ".venv", "venv", ".pytest_cache"}
 EXTS = (".md", ".canvas", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".pdf", ".txt", ".json",

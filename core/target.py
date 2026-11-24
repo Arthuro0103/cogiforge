@@ -29,7 +29,7 @@ MODES = ("warn", "block")
 
 
 def target_mode(vault: Path) -> str:
-    """`warn` (default) or `block`, from the `target:` line of vault/gate.txt. Other lines belong to ring.py."""
+    """`warn` (default) or `block`, from the `target:` line of vault/gate.txt. The other known keys belong to ring.py and memory.py; an unknown key is an error."""
     f = vault / "gate.txt"
     if not f.exists():
         return "warn"
@@ -39,8 +39,13 @@ def target_mode(vault: Path) -> str:
         raise ValueError(f"vault/gate.txt exists but cannot be read ({type(e).__name__})")
     mode = "warn"
     for n, raw in enumerate(lines, 1):
-        key, sep, value = raw.split("#", 1)[0].strip().partition(":")
-        if key.strip() == "target" and sep:
+        line = raw.split("#", 1)[0].strip()
+        if not line:
+            continue
+        key, sep, value = line.partition(":")
+        if not sep or key.strip() not in gate.GATE_KEYS:
+            raise ValueError(f"vault/gate.txt line {n}: unknown key (known keys: {', '.join(gate.GATE_KEYS)})")
+        if key.strip() == "target":
             mode = value.strip()
             if mode not in MODES:
                 raise ValueError(f"vault/gate.txt line {n}: unknown target value '{mode}' (use warn or block)")
