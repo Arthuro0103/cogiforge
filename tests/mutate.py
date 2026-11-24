@@ -160,7 +160,7 @@ PIECES = {
         ("memory.py missing passes", 'core/conflicts.py core/target.py core/budget.py core/memory.py; do', 'core/conflicts.py core/target.py core/budget.py; do'),
         ("the memory check does not block", 'sed \'s/^/     /\' "$out" | head -24\n    blocked=1\nelse\n    grep -E', 'sed \'s/^/     /\' "$out" | head -24\n    blocked=0\nelse\n    grep -E'),
         ("the memory check passes on rc other than 0", 'if [ "$rc" -ne 0 ]; then\n    echo ""\n    case "$rc" in', 'if [ "$rc" -eq 1 ] || [ "$rc" -eq 2 ] || [ "$rc" -eq 3 ]; then\n    echo ""\n    case "$rc" in'),
-        ("the memory rc is not named", '(killed, crashed or missing): it only passes on rc 0', '(killed, crashed or missing)'),
+        ("the memory rc is not named", 'the memory check exited with rc=$rc', 'the memory check exited with rc=?'),
         ("the memory check does not run", 'python3 core/memory.py --vault vault --root . --staged >"$out" 2>&1', 'true >"$out" 2>&1'),
         ("the memory warnings vanish", "grep -E '^(NOT_VERIFIED|WARNING)' \"$out\" | head -12 | sed 's/^/  /' || true", 'true'),
         ("ring does not run", 'python3 core/ring.py --vault vault --gate --stage', 'true'),

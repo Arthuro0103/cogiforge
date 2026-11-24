@@ -1388,3 +1388,19 @@ def test_an_absolute_link_is_never_read_as_a_relative_one(tmp_path):
     put(tmp_path, ".gemini/.cursor/real/x.md", "# x\n")
     (tmp_path / ".gemini/r").symlink_to("/.cursor/real")  # a broken link for the OS, a fine one for a careless parser
     assert run(tmp_path).returncode == 1
+
+
+def test_a_link_to_a_place_outside_the_repo_is_refused_without_a_crash(tmp_path):
+    repo_dir = tmp_path / "repo"
+    put(repo_dir, "vault/memory/profile.md", HEAD)
+    put(tmp_path, "outside/.cursor/real/x.md", "# x\n")
+    (repo_dir / ".gemini").mkdir()
+    (repo_dir / ".gemini/r").symlink_to("../../outside/.cursor/real")
+    r = run(repo_dir)
+    assert r.returncode == 1 and "Traceback" not in out(r) and ".gemini/r" in out(r)
+
+
+def test_quote_pieces_are_whole_words_in_order():
+    import quote as q
+    assert q.found_ordered("push to main", "you pushed to maintain it") is False
+    assert q.found_ordered("push to main", "you push to main") is True
