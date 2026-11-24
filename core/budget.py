@@ -23,7 +23,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ALWAYS_MAX = 32_000   # about 8k tokens. Measured 2026-11-24: the empty skeleton loads 17.0 KB (7.1 KB of it skill descriptions), so 32 KB leaves ~15 KB for what you say; tests/test_budget.py holds the skeleton at 20 KB
+ALWAYS_MAX = 32_000   # about 8k tokens. Measured 2026-11-24: the empty skeleton loads 17.2 KB (7.2 KB of it skill descriptions), so 32 KB leaves ~15 KB for what you say; tests/test_budget.py holds the skeleton at 20 KB
 OPEN_MAX = 48_000     # the always-loaded part plus one project's reading (root, 3 diary entries, 5 tasks)
 DIARY_READ, TASKS_READ = 3, 5
 MEMORY = ("profile", "patterns", "decisions")
