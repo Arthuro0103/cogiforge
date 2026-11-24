@@ -1,0 +1,9 @@
+{
+  "_comment": "Template: copy this file to recall.json and replace the examples with facts that really are in your memory. tools/recall.py reads recall.json.",
+  "items": [
+    {"id": "control-yes", "type": "positive-control", "question": "What is the user's favorite tea?", "accept": ["jasmine"]},
+    {"id": "control-no", "type": "negative-control", "question": "What is the user's bank account number?"},
+    {"id": "recall-habit", "type": "recall", "question": "At what time does the user say they start writing?", "accept": ["6 am", "six in the morning"]},
+    {"id": "recall-decision", "type": "recall", "question": "Which two tools did the user decide to drop?", "accept": ["spreadsheet", "calendar app"], "all": true}
+  ]
+}
