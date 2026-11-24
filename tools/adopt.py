@@ -54,7 +54,11 @@ THREAT MODEL (7 lines)
 `--apply` runs only after the plan was printed, and needs `--confirm SHA` or an interactive "yes". The dry run ends with
 `plan-sha256: <hex>`: the hash of the operations `--apply` would do plus the hash of the bytes of every file they touch.
 `--apply --confirm <hex>` recomputes the plan and refuses (rc 5, nothing written) if it no longer matches, and checks the
-touched files once more right before writing. So you can only apply the exact plan you previewed. It writes only what the
+touched files once more right before writing. The hash covers the resolved path of the vault, every operation with the sha256 of the content it writes (so a new note
+changes the baseline and the hash), and the bytes today of every file it touches (`.git/config` included): a plan
+previewed on another vault, or before a note was added, is refused. The last check runs right before the first write;
+if a write then fails, what this run wrote is undone (rc 5). A note changed in the few ms between that check and the
+write is not covered. It writes only what the
 plan listed and never touches an existing note. It never runs `git init`: a vault that is not a git repository
 (or sits inside a bigger one) is reported as pending and `--apply` writes nothing (rc 1).
 
@@ -64,7 +68,7 @@ st_blocks 0 with st_size > 0), unreadable or non-UTF-8 notes, and symlinks. A va
 numbers are information.
 
 rc: 0 plan ok (or applied) and nothing pending · 1 something is pending (not a git repo, conflict, skipped
-file, nothing to adopt) · 2 usage, or `--apply` without confirmation · 3 vault unreadable · 5 the plan changed since the preview
+file, nothing to adopt) · 2 usage, or `--apply` without confirmation · 3 vault unreadable · 5 the plan changed since the preview, or a write failed and was undone
 """
 import argparse
 import collections
@@ -617,24 +621,59 @@ def file_sha(path):
         return "unreadable"
 
 
+def sha_text(text):
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def plan_contents(plan, created):
+    """What `--apply` writes into each file, exactly. `created` is the baseline timestamp (the only part that is not
+    a function of the vault, so the digest uses a fixed placeholder for it)."""
+    d = plan["debt"]
+    baseline = None
+    if d is not None:
+        baseline = {"created": created,
+                    "notes": d["notes"], "orphans": d["orphans"], "dead_links": d["dead_links"],
+                    "area_missing": d["area_missing"], "frontmatter_errors": d["frontmatter_errors"],
+                    "skipped": [{"path": r, "reason": w} for r, w in plan["skipped"]]}
+    return {
+        AREAS: "# proposed by tools/adopt.py from your top-level folders; edit freely\n"
+               + "".join(f"{f}: {a}\n" for f, a in plan["areas"].items()),
+        HOOK: HOOK_TEXT,
+        BASELINE: json.dumps(baseline, ensure_ascii=True, indent=2) + "\n",
+    }
+
+
 def plan_ops(plan):
-    """The operations `--apply` would do, as a sorted list of [kind, relative path]."""
+    """The operations `--apply` would do, as a sorted list of [kind, relative path, sha256 of what it writes or None].
+    The content hash is what makes the plan hash depend on the notes of THIS vault: a new note changes the baseline
+    and the areas, so it changes the hash."""
+    contents = plan_contents(plan, "-")
     ops = []
     for i in plan["items"]:
         kind = {"create": "create", "set": "set", "unset": "unset", "identical (kept)": "chmod"}.get(i["status"])
-        if kind:
-            ops.append([kind, i["path"]])
-    return sorted(ops)
+        if not kind:
+            continue
+        if i["path"] == "git config cogiforge.home":
+            what = sha_text(ROOT.as_posix())
+        elif i["path"] in contents:
+            what = sha_text(contents[i["path"]])
+        else:
+            what = None
+        ops.append([kind, i["path"], what])
+    return sorted(ops, key=lambda o: (o[0], o[1]))
 
 
 def touched_state(vault, ops):
     """{relative path: sha256 or None} of every file an operation touches (a git config key means .git/config)."""
-    paths = {".git/config" if p.startswith("git config") else p for _, p in ops}
+    paths = {".git/config" if o[1].startswith("git config") else o[1] for o in ops}
     return {p: file_sha(Path(vault) / p) for p in sorted(paths)}
 
 
 def plan_digest(plan):
-    blob = json.dumps({"ops": plan["ops"], "state": plan["state"]}, sort_keys=True, separators=(",", ":"))
+    """One hash for: the vault (resolved path), every operation with the hash of its content, and the bytes today of
+    each file touched."""
+    blob = json.dumps({"vault": plan["vault"], "ops": plan["ops"], "state": plan["state"]},
+                      sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
@@ -681,6 +720,7 @@ def build_plan(vault):
     plan = {"vault": str(vault), "git": state, "notes": len(s["notes"]), "skipped": s["skipped"], "areas": areas,
             "items": items, "debt": debt, "pending": pending, "conflicts": conflicts, "blocking": blocking,
             "existing_hook": g["existing_hook"], "hook_text": HOOK_TEXT, "migrate": g["migrate"]}
+    plan["vault"] = str(vault.resolve())
     plan["ops"] = plan_ops(plan)
     plan["state"] = touched_state(vault, plan["ops"])
     plan["plan_sha256"] = plan_digest(plan)
@@ -735,47 +775,76 @@ class Blocked(Exception):
     pass
 
 
+class Changed(Exception):
+    """The files the plan touches are not what the plan hashed."""
+
+
+def rollback(vault, created_files, created_dirs, set_keys):
+    """Undo what THIS run wrote: the files it created with mode `x`, the folders it made, the config keys it set."""
+    for p in reversed(created_files):
+        try:
+            p.unlink()
+        except OSError:
+            pass
+    for d in created_dirs:
+        try:
+            d.rmdir()
+        except OSError:
+            pass
+    for key in reversed(set_keys):
+        try:
+            write_local_config(vault, key, None)
+        except (subprocess.CalledProcessError, OSError):
+            pass
+
+
 def apply(plan, vault):
-    """Writes exactly the plan's `create`/`set` items. Returns the list written."""
+    """Writes exactly the plan's `create`/`set` items. Returns the list written. Raises Blocked (the vault now fails
+    its checks), Changed (a touched file differs from the plan) or the write error, after undoing what it wrote."""
     vault = Path(os.path.abspath(vault))
     again = guard(vault)  # the disk may have changed since the plan was printed
     if again["blocking"]:
         raise Blocked(again["blocking"])
-    written = []
-    d = plan["debt"]
-    baseline = {"created": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "notes": d["notes"], "orphans": d["orphans"], "dead_links": d["dead_links"],
-                "area_missing": d["area_missing"], "frontmatter_errors": d["frontmatter_errors"],
-                "skipped": [{"path": r, "reason": w} for r, w in plan["skipped"]]}
-    contents = {
-        AREAS: "# proposed by tools/adopt.py from your top-level folders; edit freely\n"
-               + "".join(f"{f}: {a}\n" for f, a in plan["areas"].items()),
-        HOOK: HOOK_TEXT,
-        BASELINE: json.dumps(baseline, ensure_ascii=True, indent=2) + "\n",
-    }
+    # LAST check, right before the first write and AFTER the slow guard(): nothing is between it and the writes
+    fresh = touched_state(vault, plan["ops"])
+    if fresh != plan["state"]:
+        raise Changed(plan_digest({**plan, "state": fresh}))
+    written, created_files, created_dirs, set_keys = [], [], [], []
+    contents = plan_contents(plan, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
     # order: the config key first (if git fails, nothing else was written), the files, and the activation LAST
-    for i in plan["items"]:
-        if i["path"] == "git config cogiforge.home" and i["status"] == "set":
-            write_local_config(vault, "cogiforge.home", ROOT.as_posix())
-            written.append("git config cogiforge.home")
-    for i in plan["items"]:
-        rel = i["path"]
-        if i["status"] != "create" or rel not in contents:
-            continue
-        p = vault / rel
-        p.parent.mkdir(parents=True, exist_ok=True)
-        with open(p, "x", encoding="utf-8", newline="\n") as fh:  # "x": refuses to overwrite even if it appeared meanwhile
-            fh.write(contents[rel])
-        if rel == HOOK:
-            p.chmod(0o755)  # in .git/hooks: git never versions it, so a pull cannot add or replace it
-        written.append(rel)
-    for i in plan["items"]:
-        if i["path"] == HOOK and i["status"] == "identical (kept)":
-            (vault / HOOK).chmod(0o755)  # same bytes as ours; only makes sure git can run it
-    for i in plan["items"]:
-        if i["path"] == "git config core.hooksPath" and i["status"] == "unset":  # migration, LAST: the new hook is in place
-            write_local_config(vault, "core.hooksPath", None)
-            written.append("git config --unset core.hooksPath (the old .githooks is no longer read)")
+    try:
+        for i in plan["items"]:
+            if i["path"] == "git config cogiforge.home" and i["status"] == "set":
+                set_keys.append("cogiforge.home")  # recorded before the call: a half-done write is undone too
+                write_local_config(vault, "cogiforge.home", ROOT.as_posix())
+                written.append("git config cogiforge.home")
+        for i in plan["items"]:
+            rel = i["path"]
+            if i["status"] != "create" or rel not in contents:
+                continue
+            p = vault / rel
+            missing, d = [], p.parent
+            while not d.exists():
+                missing.append(d)
+                d = d.parent
+            p.parent.mkdir(parents=True, exist_ok=True)
+            created_dirs.extend(missing)
+            with open(p, "x", encoding="utf-8", newline="\n") as fh:  # "x": refuses to overwrite even if it appeared meanwhile
+                created_files.append(p)
+                fh.write(contents[rel])
+            if rel == HOOK:
+                p.chmod(0o755)  # in .git/hooks: git never versions it, so a pull cannot add or replace it
+            written.append(rel)
+        for i in plan["items"]:
+            if i["path"] == HOOK and i["status"] == "identical (kept)":
+                (vault / HOOK).chmod(0o755)  # same bytes as ours; only makes sure git can run it
+        for i in plan["items"]:
+            if i["path"] == "git config core.hooksPath" and i["status"] == "unset":  # migration, LAST: the new hook is in place
+                write_local_config(vault, "core.hooksPath", None)
+                written.append("git config --unset core.hooksPath (the old .githooks is no longer read)")
+    except BaseException:
+        rollback(vault, created_files, created_dirs, set_keys)
+        raise
     return written
 
 
@@ -817,19 +886,17 @@ def run(args):
         if answer != "yes":
             emit("NOT APPLIED: no confirmation. Nothing was written.", file=sys.stderr)
             return 2
-    # right before writing: the touched files must still be what the plan hashed
-    now = plan_digest({"ops": plan["ops"], "state": touched_state(vault, plan["ops"])})
-    if now != plan["plan_sha256"]:
-        return refuse(plan["plan_sha256"], now)
     try:
         written = apply(plan, vault)
+    except Changed as e:
+        return refuse(plan["plan_sha256"], e.args[0])
     except Blocked as e:
         emit("\nNOT APPLIED, the vault changed since the plan and now fails: " + "; ".join(e.args[0]), file=sys.stderr)
         return 1
     except (subprocess.CalledProcessError, OSError) as e:
-        emit(f"\nAPPLY FAILED ({type(e).__name__}); some files may have been written, see `git status` in the vault. "
-             "Nothing was activated unless it is listed above.", file=sys.stderr)
-        return 1
+        emit(f"\nAPPLY FAILED ({type(e).__name__}); what this run had written was undone: nothing was left in the vault.",
+             file=sys.stderr)
+        return 5
     after = guard(vault)  # what was just written must still pass: catches a vault that changed during the apply
     if after["blocking"]:
         emit("\nWARNING: the vault changed while adopt was writing and now fails its checks: " + "; ".join(after["blocking"]),

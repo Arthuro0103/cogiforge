@@ -15,7 +15,9 @@ every round and runs with PYTHONDONTWRITEBYTECODE=1.
     python3 tests/mutate.py --dry           only checks that each mutant applies (seconds, no suite)
 Each suite run has a time limit (SUITE_TIMEOUT, 300 s) and never inherits the terminal's stdin. A mutant whose
 suite does not finish in time (a hang is a suite that did not stay green) counts as DEAD and is reported as
-`killed (timeout)` with the mutant's name; the whole process group is killed so no child is left behind.
+`killed (timeout)` with the mutant's name; the whole process group is killed so no child is left behind (a mutant that only makes the suite slow shows up as
+`killed (timeout)`, not as a survivor). Ctrl-C, SIGTERM and SIGHUP kill the suite that is running before mutate.py exits.
+Without `os.killpg` (Windows) only the suite process itself is killed.
 The baseline run (no mutation) that times out is "already red": rc 2.
 rc: 0 every mutant dead · 1 a mutant survived · 2 suite already red / inapplicable mutant
 """
@@ -340,8 +342,12 @@ PIECES = {
         ("foreign pre-commit does not block", 'blocking.append(f"{HOOK} exists and is NOT', '(f"{HOOK} exists and is NOT'),
         ("other hook in .git/hooks passes", '            if not n.endswith(".sample") or kind(g / "hooks" / n, False):', '            if False:'),
         ("a wrong plan sha is accepted", 'if args.confirm.strip().lower() != plan["plan_sha256"]:', 'if False:'),
-        ("the files are not rechecked before writing", '    if now != plan["plan_sha256"]:\n        return refuse(plan["plan_sha256"], now)', '    if False:\n        return refuse(plan["plan_sha256"], now)'),
         ("the file contents are not in the plan sha", 'return {p: file_sha(Path(vault) / p) for p in sorted(paths)}', 'return {p: None for p in sorted(paths)}'),
+        ("the config is not in the touched state", 'paths = {".git/config" if o[1].startswith("git config") else o[1] for o in ops}', 'paths = {o[1] for o in ops if not o[1].startswith("git config")}'),
+        ("the vault is not in the plan sha", 'blob = json.dumps({"vault": plan["vault"], "ops"', 'blob = json.dumps({"ops"'),
+        ("the written content is not in the plan sha", 'ops.append([kind, i["path"], what])', 'ops.append([kind, i["path"], None])'),
+        ("the recheck runs but changes are ignored", 'if fresh != plan["state"]:', 'if False:'),
+        ("a failed write is not undone", '        rollback(vault, created_files, created_dirs, set_keys)\n        raise', '        raise'),
         ("plain hook text not identical", 'if data == HOOK_TEXT.encode("utf-8"):', 'if False:'),
     ]),
     "hub": dict(file="tools/hub.py", suite=["tools/test_hub.py"], texts=[
@@ -355,6 +361,8 @@ PIECES = {
         ("a dry run writes the overflow list", 'side = None if dry else sync_overflow(folder, vault, check)', 'side = sync_overflow(folder, vault, check)'),
         ("a stale overflow list is not reported", 'if side == "STALE":\n        return "STALE"', 'if False:\n        return "STALE"'),
         ("a hidden folder is listed", 'and not any(part.startswith(".") for part in p.relative_to(folder).parts))', ')'),
+        ("only the folders are checked, not the file name", 'for part in p.relative_to(folder).parts', 'for part in p.relative_to(folder).parent.parts'),
+        ("a hidden project folder is a project", 'if p.is_dir() and not p.name.startswith(".")', 'if p.is_dir()'),
         ("the root has no pointer to the list", 'lines.append(f"- [[{rel}|all {len(files)} files of this project]]")', 'pass'),
     ]),
     "target": dict(file="core/target.py", suite=["tests/test_target.py"], texts=[
@@ -657,7 +665,37 @@ def mutate_text(source, old, new):
     return source.replace(old, new)
 
 
+CURRENT = None  # the suite process that is running, so a signal can kill its whole group
+
+
+def kill_group(proc):
+    """Kills the suite and every child it started (a group of its own). Windows has no killpg: only the process."""
+    try:
+        if hasattr(os, "killpg"):
+            os.killpg(proc.pid, signal.SIGKILL)
+        else:
+            proc.kill()
+    except (ProcessLookupError, PermissionError):
+        try:
+            proc.kill()
+        except OSError:
+            pass
+
+
+def _on_signal(signum, frame):
+    if CURRENT is not None:
+        kill_group(CURRENT)
+    sys.exit(128 + signum)
+
+
+def install_handlers():
+    for name in ("SIGTERM", "SIGHUP", "SIGINT"):
+        if hasattr(signal, name):
+            signal.signal(getattr(signal, name), _on_signal)
+
+
 def run_suite(suite):
+    global CURRENT
     for d in ROOT.rglob("__pycache__"):
         shutil.rmtree(d, ignore_errors=True)
     env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
@@ -665,15 +703,18 @@ def run_suite(suite):
                              "-p", "no:cacheprovider", "-W", "ignore"],
                             stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
                             cwd=ROOT, env=env, start_new_session=True)
+    CURRENT = proc
     try:
         out, _ = proc.communicate(timeout=SUITE_TIMEOUT)
     except subprocess.TimeoutExpired:
-        try:
-            os.killpg(proc.pid, signal.SIGKILL)
-        except (ProcessLookupError, PermissionError):
-            proc.kill()
+        kill_group(proc)
         proc.communicate()
         return TIMEOUT_RC, []
+    except BaseException:  # KeyboardInterrupt or anything else: never leave the suite running
+        kill_group(proc)
+        raise
+    finally:
+        CURRENT = None
     class r:  # noqa: N801  (same shape the lines below read)
         stdout, returncode = out, proc.returncode
     failed = sorted(set(re.findall(r"^FAILED\s+\S*::(\S+)", r.stdout, re.M)))
@@ -712,6 +753,7 @@ def dry(targets):
 
 
 def main():
+    install_handlers()
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     targets = args or list(PIECES)
     if "--dry" in sys.argv:
