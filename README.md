@@ -64,7 +64,7 @@ cogiforge came out of using Claude on a real vault. Three decisions shaped it:
 
 | Piece | What it does |
 |---|---|
-| `vault/` | The workbench: `inbox/` for quick capture, `notes/` for processed notes, `projects/` with one root file per project, `memory/` for what *you* told it, `tasks/` for tasks. Open this folder in Obsidian. |
+| `vault/` | The workbench: `inbox/` for quick capture, `notes/` for processed notes, `projects/` with one root file per project, `memory/` for what *you* told it, `tasks/` for tasks. Open this folder in Obsidian. Claude Code loads the three memory files (`profile.md`, `patterns.md`, `decisions.md`) by itself, through the `@` import lines in `CLAUDE.md`; other agents read them because `AGENTS.md` tells them to. See [docs/MEMORY.md](docs/MEMORY.md). |
 | `/cf-onboard` | Onboarding. Asks one question at a time, each following your last answer, and writes what **you said**, dated and quoted. It never guesses. |
 | `/cf-open-session <project>` | Starts work on a project: reads its root file, the last diary entries and the open tasks, and tells you where you stopped. |
 | `/cf-close-session` | Ends the day: diary, a briefing per session, the **pains you voiced** collected in one file, tasks opened for what is pending. It commits only if you say so and never pushes. |
@@ -80,6 +80,9 @@ cogiforge came out of using Claude on a real vault. Three decisions shaped it:
 | `/cf-import-knowledge` | Brings an existing base (another vault, a folder, documents, chat exports) into the inbox and walks you through the triage, target first. See *Bringing an existing knowledge base*. |
 | `/cf-brand <mode>` | Keeps your brand in your words, one question at a time: your voice rules (and a project's, which inherits yours), a project's DNA, messaging and design system (no default colors), and a manual that assembles them and marks what is empty. Checks texts with `tools/voice_check.py` and previews colors with `tools/brand_preview.py`, offline. See [docs/BRAND.md](docs/BRAND.md). |
 | `/cf-adapt-skill` | Helps you write **your own** skill from a worksheet in `vault/skill-worksheets/`. One question at a time; Claude never writes it for you, and "this is not for me" is a valid answer that gets recorded. |
+| `/cf-ask` | Answers a question using **only your own notes**, citing every claim with `[[path#Heading]]` that `tools/ask.py` checks (local, no API). When nothing supports it, it says the vault does not cover it. |
+| `/cf-adopt` | Applies the workbench to an Obsidian vault you **already have**, in place, copying nothing: it dry-runs `tools/adopt.py`, explains the plan and the debt in plain words, and applies only after your clear "yes". |
+| `/cf-study <topic>` | Helps you learn what you want, your way: interviews you one question at a time, writes a study plan, explains a block, asks recall questions and logs proof. "Mastered" only after a retest on another day; it never invents sources. |
 | `/cf-new-rule` | Turns one real mistake of yours into a rule that can be checked: one question at a time (what happened, when, the number), then a pair of inputs, a test you see red, the rule, a mutation and a `WHY.md` entry. No dated mistake, no rule; nothing outside `vault/` is written without your "yes". |
 
 ![An Obsidian window on the vault: file tree, a note whose link sits inside the argument, the local graph, and Claude Code opening a project session below.](assets/workbench.svg)
@@ -123,6 +126,8 @@ nothing changes: solo mode is identical.
 - [docs/USING-OTHER-MODELS.md](docs/USING-OTHER-MODELS.md): use the vault with agents other than Claude Code, and what you lose without its skills.
 - [docs/SYNC.md](docs/SYNC.md): keep the vault in sync without duplicates or conflicts, and what the commit guard catches.
 - [docs/STUDENTS.md](docs/STUDENTS.md): study what you want, the way you want, with `/cf-study <topic>`: recall questions, a mastery log and retests on another day.
+- [docs/MEMORY.md](docs/MEMORY.md): how the memory works: the three files, cooling, recall, stale lines, and the memory gate with its threat model.
+- [docs/TEAMS.md](docs/TEAMS.md): the shared-mode rules (who is talking, whose folder, roles) that `vault/CLAUDE.md` points to.
 
 ## Context, worksheets and pains
 
@@ -144,6 +149,11 @@ This is the foundation under the workbench. It is deliberately small and runs on
 - **Link check** (`core/gate.py`). Dead links, broken links, a path that only matches by file name, a bad `area:`, unreadable files (reported as "could not read", never as OK).
 - **Leak scanner** (`core/leak.py`). Blocks machine paths, e-mails, phone numbers, CPF and a **private list of terms that lives outside the repo**. Without that list it says `NOT_VERIFIED`, never "clean".
 - **No Portuguese by accident** (`tests/test_no_portuguese.py`). The repo moved to English in October 2026, and this test fails on accented letters, common Portuguese words and the old Portuguese folder and script names. The few deliberate exceptions are in `tests/pt_allowlist.txt`, one `path: reason` per line, and a second test fails when an exception no longer exists or no longer needs to be one.
+- **Memory gate** (`core/memory.py`, run by the hook). A line in `vault/memory/` must be an entry with a date and the literal phrase, and when its source is a file of the vault, that file must hold the **whole phrase** and must already have been in the previous commit. Only allowed characters may appear in the memory: invisible text is blocked in every file a session loads (`CLAUDE.md`, `AGENTS.md`, `.claude/`, `memory/`). It fails closed: a file it cannot read blocks. The honest limit, as with team mode: it is not a jail. `git commit --no-verify` exists, and the gate catches text copied in from outside and careless entries, not an agent that skips the hook. See [docs/MEMORY.md](docs/MEMORY.md).
+- **Stale memory** (`tools/stale.py`). Reports memory lines whose cited file is gone or moved, whose file changed a lot since the entry date, or that carry `stale_after:` or `superseded_by:`. It measures and decides nothing; `--gate` turns a finding into exit 1.
+- **Recall** (`tools/recall.py`). Does a new session still find what the memory says? `--static` reads the disk and uses no model; `--run "<cmd>"` asks a model the bank's questions, with a positive control (a fact surely in the memory) and a negative control (a question the memory cannot answer). A missed positive control is `NOT_VERIFIED`, never "0 of N".
+- **Rules in sync** (`tests/test_agents_md.py`). Compares the numbered rules of `CLAUDE.md` and `AGENTS.md` and fails when they drift apart.
+- **Per-session budget** (`core/budget.py`). Counts the bytes a session loads before any work, `@` imports and skill descriptions included, and blocks a commit that grows a loaded file while the context is over its ceiling (32 KB every session, 48 KB when a project is opened). Measured on the empty skeleton: 17,899 bytes, 56% of the ceiling.
 - **CI** (`.github/workflows/prova.yml`). Installs from a clean clone, runs the tests and the mutation check, and tries the orphan gate end to end. The step that proves the hook test goes red now insists on that exact failure: a renamed test once made it print "ok" without testing anything.
 
 The hook can be bypassed on purpose with `git commit --no-verify`. Every rule here comes from a real,
@@ -151,11 +161,11 @@ dated failure, and each one has a test that fails without it: see [WHY.md](WHY.m
 
 ## What is verified, and what is not
 
-Measured on 2026-10-07, after team mode, the importers, the sync guard, `/cf-adopt`, `/cf-study`, private folders and the `cf-` skill names were merged, on one machine (macOS):
+Measured at the commit named below, on one machine (macOS):
 
-- Tests: after `sh install.sh` and `python3 -m pip install pytest`, `python3 -m pytest -q` gave **543 passed, 2 skipped** (commit `79ecad2`). Run before `sh install.sh`, one test fails on purpose: it checks that the hook is active.
-- Mutation: `python3 tests/mutate.py` breaks every check one at a time and gave **236 of 236 mutants killed, 0 alive, 0 inapplicable** (commit `2d54a04`; the later commit `79ecad2` changed only `tools/adopt.py`, its tests and its skill, which the mutation check does not cover). `python3 tests/mutate.py --dry` only checks, in seconds, that every mutant still applies (all 236 apply), so a rename that breaks one is caught before the long run.
-- CI: the run for commit `2d54a04` ([run 37642244068](https://github.com/Arthuro0103/cogiforge/actions/runs/37642244068), 2026-10-07) had **8 of 8 jobs green**, on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. Each job starts from a clean checkout, runs `install.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end.
+- Tests: after `sh install.sh` and `python3 -m pip install pytest`, `python3 -m pytest -q` gave **TESTS_PASSED passed, 2 skipped** (commit COMMIT_SHA). Run before `sh install.sh`, one test fails on purpose: it checks that the hook is active.
+- Mutation: `python3 tests/mutate.py` breaks every check one at a time, and a mutant that no test notices is a failure. The long run is not repeated by hand for this page: `python3 tests/mutate.py --dry` lists the mutants and checks in seconds that every one still applies (698 apply, 0 inapplicable), so a rename that breaks one is caught early, and the CI (`.github/workflows/prova.yml`, step `python tests/mutate.py`) runs all of them on every push.
+- CI: each job starts from a clean checkout, runs `install.sh`, the tests, the mutation check and the leak scan, and proves the orphan gate end to end, on ubuntu and macOS with Python 3.10, 3.11, 3.12 and 3.13. The badge at the top shows the latest run.
 - Windows: the first `windows-latest` run (same commit, informational job) installed fine with `install.ps1` (hook active, ring selftest passed), then **468 tests passed and 67 failed**. The failures sit mostly in the tests of the leak scanner and of `adopt`; they were fixed on 2026-10-08 (the job passed in CI on the branch at `b319264`, merged in `7f41ac7`; the tests that are skipped there check POSIX-only behavior). It has not been tried by hand on a real Windows machine, so Windows is still **not** claimed as supported.
 - Two tests compare this link checker with the author's private vault, which is not in this repo. They are **skipped** (reported as skipped, not as passed).
 - **It is new.** If something breaks or you get stuck, tell us where: that is the most useful thing you can send.

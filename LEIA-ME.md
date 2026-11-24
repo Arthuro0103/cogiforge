@@ -52,7 +52,7 @@ O cogiforge saiu de usar o Claude num cofre de verdade. Três decisões o moldar
 
 | Peça | O que faz |
 |---|---|
-| `vault/` | A bancada: `inbox/` para captura rápida, `notes/` para notas processadas, `projects/` com um arquivo-raiz por projeto, `memory/` para o que *você* disse, `tasks/` para tarefas. Abra esta pasta no Obsidian. |
+| `vault/` | A bancada: `inbox/` para captura rápida, `notes/` para notas processadas, `projects/` com um arquivo-raiz por projeto, `memory/` para o que *você* disse, `tasks/` para tarefas. Abra esta pasta no Obsidian. O Claude Code carrega sozinho os três arquivos de memória (`profile.md`, `patterns.md`, `decisions.md`) pelas linhas de `@` import do `CLAUDE.md`; os outros agentes os leem porque o `AGENTS.md` manda. Veja [docs/MEMORY.md](docs/MEMORY.md). |
 | `/cf-onboard` | Apresentação. Faz uma pergunta de cada vez, cada uma seguindo a sua última resposta, e escreve o que **você disse**, com data e entre aspas. Nunca adivinha. |
 | `/cf-open-session <projeto>` | Começa o trabalho num projeto: lê a raiz, as últimas entradas do diário e as tarefas abertas, e diz onde você parou. |
 | `/cf-close-session` | Encerra o dia: diário, um resumo por sessão, as **dores que você falou** juntas num arquivo, tarefas abertas para o que ficou pendente. Só faz commit se você mandar e nunca dá push. |
@@ -106,6 +106,8 @@ Os guias estão em inglês. Cada um diz, em uma linha, para que serve:
 - [docs/USING-OTHER-MODELS.md](docs/USING-OTHER-MODELS.md): usar o cofre com outros agentes, e o que se perde sem as skills do Claude Code.
 - [docs/SYNC.md](docs/SYNC.md): manter o cofre sincronizado sem duplicatas nem conflitos.
 - [docs/STUDENTS.md](docs/STUDENTS.md): estudar o que você quer, do jeito que você quer.
+- [docs/MEMORY.md](docs/MEMORY.md): como a memória funciona: os três arquivos, o esfriamento, a lembrança, as linhas velhas e o portão da memória com o seu modelo de ameaça.
+- [docs/TEAMS.md](docs/TEAMS.md): as regras do modo compartilhado (quem fala, de quem é a pasta, papéis) para as quais o `vault/CLAUDE.md` aponta.
 - [docs/CONTEXT.md](docs/CONTEXT.md), [docs/PRODUCT-AND-PAINS.md](docs/PRODUCT-AND-PAINS.md) e [docs/BRAND.md](docs/BRAND.md): contexto, produto e dores, marca.
 
 ## O que o mantém saudável
@@ -116,6 +118,11 @@ Esta é a base sob a bancada. É pequena de propósito e roda só com a bibliote
 - **Checagem de links** (`core/gate.py`). Links mortos, links quebrados, um caminho que só casa pelo nome do arquivo, um `area:` inválido, arquivos ilegíveis (relatados como "não deu para ler", nunca como OK).
 - **Detector de vazamento** (`core/leak.py`). Bloqueia caminhos de máquina, e-mails, telefones, CPF e uma **lista privada de termos que mora fora do repo**. Sem essa lista ele diz `NOT_VERIFIED`, nunca "limpo".
 - **Nada em português por acidente** (`tests/test_no_portuguese.py`). O repo migrou para o inglês em outubro de 2026; as exceções deliberadas, como este arquivo, estão em `tests/pt_allowlist.txt`, uma por linha, com o motivo.
+- **Portão da memória** (`core/memory.py`, rodado pelo hook). Uma linha em `vault/memory/` precisa ser uma entrada com data e a frase literal, e, quando a fonte é um arquivo do cofre, esse arquivo tem de conter a **frase inteira** e já estar no commit anterior. Só caracteres permitidos entram na memória: texto invisível é barrado em todo arquivo que uma sessão carrega (`CLAUDE.md`, `AGENTS.md`, `.claude/`, `memory/`). Falha fechada: um arquivo que ele não consegue ler bloqueia. O limite honesto, como no modo equipe: não é uma jaula. O `git commit --no-verify` existe, e o portão pega texto copiado de fora e entrada descuidada, não um agente que pula o hook. Veja [docs/MEMORY.md](docs/MEMORY.md).
+- **Memória velha** (`tools/stale.py`). Lista as linhas de memória cujo arquivo citado sumiu ou mudou de pasta, cujo arquivo mudou muito depois da data da entrada, ou que têm `stale_after:` ou `superseded_by:`. Ele mede e não decide; com `--gate`, um achado vira saída 1.
+- **Lembrança** (`tools/recall.py`). Uma sessão nova ainda acha o que a memória diz? `--static` lê o disco e não usa modelo; `--run "<cmd>"` faz as perguntas do banco a um modelo, com um controle positivo (um fato que com certeza está na memória) e um controle negativo (uma pergunta que a memória não sabe responder). Controle positivo errado é `NOT_VERIFIED`, nunca "0 de N".
+- **Regras em sincronia** (`tests/test_agents_md.py`). Compara as regras numeradas do `CLAUDE.md` e do `AGENTS.md` e falha quando elas se afastam.
+- **Orçamento por sessão** (`core/budget.py`). Conta os bytes que uma sessão carrega antes de qualquer trabalho, com os `@` imports e as descrições das skills, e bloqueia um commit que aumenta um arquivo carregado com o contexto acima do teto (32 KB em toda sessão, 48 KB ao abrir um projeto). Medido no esqueleto vazio: 17.899 bytes, 56% do teto.
 - **CI** (`.github/workflows/prova.yml`). Instala de um clone limpo, roda os testes e a checagem de mutação, e experimenta o portão de órfãs de ponta a ponta.
 
 O hook pode ser burlado de propósito com `git commit --no-verify`. Toda regra daqui vem de uma falha real e
@@ -124,7 +131,12 @@ datada, e cada uma tem um teste que falha sem ela: veja o [WHY.md](WHY.md).
 ## O que está verificado, e o que não está
 
 As medições com número, comando e commit estão no [README.md](README.md), seção *What is verified, and what is
-not*. Não copiei os números para cá de propósito: uma cópia envelhece sozinha. Em resumo: macOS e Linux são provados
+not*. Não copiei todos os números para cá de propósito: uma cópia envelhece sozinha. Os dois que mais importam:
+
+- Testes: `python3 -m pytest -q` deu **TESTS_PASSED passed, 2 skipped** (commit COMMIT_SHA), depois de `sh install.sh` e `python3 -m pip install pytest`.
+- Mutação: cada checagem é quebrada uma por vez e uma mutação que nenhum teste percebe é uma falha. `python3 tests/mutate.py --dry` lista 698 mutantes e confere em segundos que todos ainda se aplicam; o CI (`.github/workflows/prova.yml`) roda todos a cada push.
+
+Em resumo: macOS e Linux são provados
 pelo CI; o Windows **não** é declarado como suportado; dois testes que comparam o verificador de links com o cofre
 privado do autor ficam **pulados**. **É novo.** Se algo quebrar ou você travar, diga onde: é o que há de mais útil
 que você pode mandar.
