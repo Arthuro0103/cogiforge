@@ -335,7 +335,8 @@ PIECES = {
     ]),
     "hook-sync": dict(file=".githooks/pre-commit", suite=["tests/test_conflicts.py"], texts=[
         ("sync guard does not run", 'python3 core/conflicts.py --staged', 'true'),
-        ("sync guard passes on any rc", 'if [ "$rc" -ne 0 ]; then', 'if false; then'),
+        ("sync guard passes on any rc", 'core/conflicts.py --staged >"$out" 2>&1\nrc=$?\nif [ "$rc" -ne 0 ]; then',
+         'core/conflicts.py --staged >"$out" 2>&1\nrc=$?\nif false; then'),
         ("sync guard does not teach", 'How to fix: compare', 'Fix: compare'),
         ("sync guard does not block", '    fi\n    blocked=1\nfi\n\n# 5. the target', '    fi\nfi\n\n# 5. the target'),
         ("conflicts.py missing passes", 'core/people.py core/conflicts.py core/target.py', 'core/people.py core/target.py'),
