@@ -329,6 +329,9 @@ PIECES = {
         ("old .githooks with extra files migrated", 'if legacy_dir.is_symlink() or legacy_state != "ours" or others:', 'if False:'),
         ("foreign pre-commit does not block", 'blocking.append(f"{HOOK} exists and is NOT', '(f"{HOOK} exists and is NOT'),
         ("other hook in .git/hooks passes", '            if not n.endswith(".sample") or kind(g / "hooks" / n, False):', '            if False:'),
+        ("a wrong plan sha is accepted", 'if args.confirm.strip().lower() != plan["plan_sha256"]:', 'if False:'),
+        ("the files are not rechecked before writing", '    if now != plan["plan_sha256"]:\n        return refuse(plan["plan_sha256"], now)', '    if False:\n        return refuse(plan["plan_sha256"], now)'),
+        ("the file contents are not in the plan sha", 'return {p: file_sha(Path(vault) / p) for p in sorted(paths)}', 'return {p: None for p in sorted(paths)}'),
         ("plain hook text not identical", 'if data == HOOK_TEXT.encode("utf-8"):', 'if False:'),
     ]),
     "hub": dict(file="tools/hub.py", suite=["tools/test_hub.py"], texts=[

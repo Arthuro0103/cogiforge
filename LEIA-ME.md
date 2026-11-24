@@ -153,7 +153,7 @@ trabalha no lugar:
 
 ```sh
 python3 tools/adopt.py ~/meu-cofre                  # ensaio (o padrão): imprime o plano, não escreve nada
-python3 tools/adopt.py ~/meu-cofre --apply --yes    # escreve só o que o plano listou
+python3 tools/adopt.py ~/meu-cofre --apply --confirm <sha>   # escreve só o plano que você viu (<sha> = a linha `plan-sha256:` no fim do ensaio)
 ```
 
 O plano lista as áreas que ele deduz das suas pastas, o que instalaria (um hook de pre-commit e uma pequena

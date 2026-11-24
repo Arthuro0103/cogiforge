@@ -20,7 +20,7 @@ and the old ones are not touched.**
 4. **Say what is pending first.** Not a git repository (the tool never runs `git init`; tell the user to run it themselves and try again), a CONFLICT (an existing file is kept as it is), skipped notes (iCloud placeholders not downloaded, unreadable, symlinks: they were NOT measured, which is not the same as fine), or "nothing to adopt". A DIFFERENT `.git/hooks/pre-commit` (or any other hook in `.git/hooks`) is code that already runs on git operations: the tool never overwrites nor chains it and applies nothing. Show the user the lines the plan prints, tell them to read that hook and decide; never delete, replace or activate it for them.
    A BLOCKING item about `.git/config`, a symlink, extra files in `.githooks` while `core.hooksPath = .githooks` is active (an older install), a global `core.hooksPath`, or a `.git` file means the vault may not be trusted or the hook would not run: report the listed keys as they are, do not edit that file yourself, and let the user decide.
    Also read the full hook text the plan prints and tell the user it will run on every commit.
-5. **Ask, then apply.** Only after a clear "yes" to "do you want to apply this?" run `python3 tools/adopt.py <vault> --apply --yes`. A "maybe" or silence is a no.
+5. **Ask, then apply.** Only after a clear "yes" to "do you want to apply this?" run `python3 tools/adopt.py <vault> --apply --confirm <sha>`, where `<sha>` is the `plan-sha256:` line that the dry run you showed the user ended with (never a sha from an older run). A "maybe" or silence is a no.
 6. **The tool writes, you do not.** Do not edit the user's notes, `areas.txt`, hooks or baseline by hand. Never touch an existing note.
 7. **No invented links, nothing about the person.** Do not propose links to lower the debt unless the user asks and you can point at the sentence that justifies each one. Do not infer who they are from their folder names.
 8. **Talk to the user in the language they write in.** Fixed tokens (paths, `areas.txt`, rc codes) stay as they are.
@@ -49,10 +49,10 @@ python3 tools/adopt.py <vault> --json   # same data, for you to read
 ### 4. Apply (you, only after yes)
 
 ```bash
-python3 tools/adopt.py <vault> --apply --yes
+python3 tools/adopt.py <vault> --apply --confirm <plan-sha256 of the dry run the user saw>
 ```
 
-Read its output and report what was written. Exit codes: `0` ok · `1` something pending · `2` usage or no confirmation · `3` vault unreadable.
+Read its output and report what was written. Exit codes: `0` ok · `1` something pending · `2` usage or no confirmation · `3` vault unreadable · `5` the plan changed since the preview (nothing was written: run the dry run again, show the user the new plan, ask again).
 Suggest a test: add a note with no link and run `git commit`; the hook should block it. Commit nothing yourself unless asked.
 
 ## Threat model
