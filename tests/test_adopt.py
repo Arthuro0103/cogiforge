@@ -1036,7 +1036,7 @@ def test_if_git_fails_the_config_is_written_first_so_nothing_else_is(tmp_path, m
     monkeypatch.setattr(m, "write_local_config", boom)
     before = tree(v)
     rc = m.run(m.parser().parse_args([str(v), "--apply", "--confirm", m.build_plan(v)["plan_sha256"]]))
-    assert rc == 1 and tree(v) == before
+    assert rc == 5 and tree(v) == before
 
 
 def test_a_vault_that_changes_during_the_apply_is_reported(tmp_path, monkeypatch):
@@ -1128,3 +1128,85 @@ def test_confirm_without_apply_is_a_usage_error_and_yes_is_gone(tmp_path):
     assert adopt(tmp_path, "--confirm", preview_sha(tmp_path)).returncode == 2
     assert adopt(tmp_path, "--apply", "--yes").returncode == 2
     assert tree(tmp_path) == before
+
+
+def test_the_plan_sha_depends_on_the_vault_and_on_its_notes(tmp_path):
+    a, b = tmp_path / "a", tmp_path / "b"
+    for v in (a, b):
+        build(v, MINI)
+        git_init(v)
+    assert preview_sha(a) != preview_sha(b)  # same notes, another path
+    sha_a = preview_sha(a)
+    r = adopt(b, "--apply", "--confirm", sha_a)  # the plan of A is not a plan for B
+    assert r.returncode == 5 and "REFUSED" in r.stderr and not (b / "areas.txt").exists()
+    build(b, {"Ideas/new.md": "---\narea: ideas\n---\nsee [[a]]\n"})
+    assert preview_sha(b) != preview_sha(a)
+    c = tmp_path / "c"
+    build(c, {**MINI, "Ideas/extra.md": "[[a]]\n"})
+    git_init(c)
+    assert preview_sha(c) not in (sha_a, preview_sha(b))  # different notes: different hash
+
+
+def test_a_note_created_after_the_preview_is_refused(tmp_path):
+    build(tmp_path, MINI)
+    git_init(tmp_path)
+    sha = preview_sha(tmp_path)
+    build(tmp_path, {"Work/late.md": "no link, made after the preview\n"})
+    before = tree(tmp_path)
+    r = adopt(tmp_path, "--apply", "--confirm", sha)
+    assert r.returncode == 5 and "REFUSED" in r.stderr
+    assert tree(tmp_path) == before and not (tmp_path / ".git" / "hooks" / "pre-commit").exists()
+    assert adopt(tmp_path, "--apply", "--confirm", preview_sha(tmp_path)).returncode == 0  # the new preview applies
+
+
+def test_a_change_to_git_config_after_the_preview_is_refused(tmp_path):
+    build(tmp_path, MINI)
+    git_init(tmp_path)
+    sha = preview_sha(tmp_path)
+    subprocess.run(["git", "-C", str(tmp_path), "config", "--local", "user.name", "Outro"], check=True)
+    r = adopt(tmp_path, "--apply", "--confirm", sha)
+    assert r.returncode == 5 and "REFUSED" in r.stderr
+    assert local_cfg(tmp_path, "cogiforge.home") == "" and not (tmp_path / "areas.txt").exists()
+
+
+def test_a_change_after_the_guard_is_refused_and_nothing_is_written(tmp_path, monkeypatch):
+    """The recheck runs AFTER the slow guard(): a change in that window must not leave a partial write."""
+    v = tmp_path / "v"
+    build(v, MINI)
+    git_init(v)
+    m = load_module()
+    sha = m.build_plan(v)["plan_sha256"]
+    real, calls = m.guard, [0]
+
+    def guard_then_tamper(vault):
+        out = real(vault)
+        calls[0] += 1
+        if calls[0] == 2:  # 1 = build_plan inside run, 2 = the guard of apply()
+            with open(Path(vault) / ".git" / "config", "a") as fh:
+                fh.write("[user]\n\tname = Outro\n")
+        return out
+    monkeypatch.setattr(m, "guard", guard_then_tamper)
+    assert m.run(m.parser().parse_args([str(v), "--apply", "--confirm", sha])) == 5
+    assert calls[0] == 2
+    assert not (v / "areas.txt").exists() and not (v / ".git" / "hooks" / "pre-commit").exists()
+    assert not (v / ".cogiforge").exists() and local_cfg(v, "cogiforge.home") == ""
+
+
+def test_a_write_that_fails_halfway_is_undone_and_says_so(tmp_path, monkeypatch, capsys):
+    v = tmp_path / "v"
+    build(v, MINI)
+    git_init(v)
+    m = load_module()
+    sha = m.build_plan(v)["plan_sha256"]
+    real_chmod = Path.chmod
+
+    def chmod_fails_on_the_hook(self, *a, **k):  # areas.txt, the hook and the config key are already written
+        if self.name == "pre-commit":
+            raise PermissionError("injected")
+        return real_chmod(self, *a, **k)
+    monkeypatch.setattr(Path, "chmod", chmod_fails_on_the_hook)
+    before = tree(v)
+    assert m.run(m.parser().parse_args([str(v), "--apply", "--confirm", sha])) == 5
+    assert "undone" in capsys.readouterr().err
+    assert tree(v) == before and not (v / ".git" / "hooks" / "pre-commit").exists()
+    assert not (v / ".cogiforge").exists() and local_cfg(v, "cogiforge.home") == ""
