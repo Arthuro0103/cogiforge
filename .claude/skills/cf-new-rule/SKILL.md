@@ -72,7 +72,7 @@ suite and report the counts as they appear.
 
 ### 5. The mutation (you)
 
-Add an entry in `tests/mutate.py` that breaks the new check, and run `python3 tests/mutate.py --dry` and then the
+(After the user's yes, rule 6.) Add an entry in `tests/mutate.py` that breaks the new check, and run `python3 tests/mutate.py --dry` and then the
 mutation of that piece. A mutant that stays alive means the test is not good enough: go back to step 3.
 
 ### 6. The record (you, with the user's "yes")

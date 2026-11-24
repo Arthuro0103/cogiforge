@@ -36,8 +36,8 @@ graphify. Os dois estão no [tutorial](TUTORIAL.md).
 
 | Você | Comece por aqui |
 |---|---|
-| **Só você** | `/cf-onboard`, depois `/cf-open-session <projeto>` e `/cf-close-session`. |
-| **Estudando** | `/cf-study <tema>`: você escolhe como aprende, a lembrança vem primeiro, e "dominado" exige um reteste em outro dia. Veja [docs/STUDENTS.md](docs/STUDENTS.md). |
+| **Só você** | `/cf-onboard`, depois `/cf-open-session <nome>` e `/cf-close-session`. |
+| **Estudando** | `/cf-study <tema>`: você escolhe como aprende, cada bloco é explicado do seu jeito e depois você responde uma pergunta de lembrança sem o material, e "dominado" exige um reteste em outro dia. Veja [docs/STUDENTS.md](docs/STUDENTS.md). |
 | **Uma equipe ou uma escola** | `sh install.sh --team <seu-handle>`, uma pasta por pessoa, papéis de admin e membro. Veja *Equipes e escolas*, [docs/SYNC.md](docs/SYNC.md) e [docs/WINDOWS.md](docs/WINDOWS.md). |
 
 ## Por que existe
@@ -50,26 +50,26 @@ O cogiforge saiu de usar o Claude num cofre de verdade. Três decisões o moldar
 
 ## O que você recebe
 
-| Peça | O que faz |
-|---|---|
-| `vault/` | A bancada: `inbox/` para captura rápida, `notes/` para notas processadas, `projects/` com um arquivo-raiz por projeto, `memory/` para o que *você* disse, `tasks/` para tarefas. Abra esta pasta no Obsidian. O Claude Code carrega sozinho os três arquivos de memória (`profile.md`, `patterns.md`, `decisions.md`) pelas linhas de `@` import do `CLAUDE.md`; os outros agentes os leem porque o `AGENTS.md` manda. Veja [docs/MEMORY.md](docs/MEMORY.md). |
-| `/cf-onboard` | Apresentação. Faz uma pergunta de cada vez, cada uma seguindo a sua última resposta, e escreve o que **você disse**, com data e entre aspas. Nunca adivinha. |
-| `/cf-open-session <projeto>` | Começa o trabalho num projeto: lê a raiz, as últimas entradas do diário e as tarefas abertas, e diz onde você parou. |
-| `/cf-close-session` | Encerra o dia: diário, um resumo por sessão, as **dores que você falou** juntas num arquivo, tarefas abertas para o que ficou pendente. Só faz commit se você mandar e nunca dá push. |
-| `/cf-ask` | Responde só a partir das suas notas, com citações que o `tools/ask.py cite` consegue conferir. |
-| `/cf-task-observer` | Observa como você trabalha e **só propõe** melhorias (uma skill que falta, um passo repetido três vezes, uma correção feita duas vezes). Você decide. |
-| `/cf-claude-corner` | Quando você diz que vai sair, o Claude usa o tempo para reler suas notas, achar conexões reais e testar ideias num lugar descartável. **Só propõe**, num arquivo. |
-| `/cf-new-project <nome>` | Cria um projeto: pergunta o nome, depois o que existe no mundo quando der certo (a sua frase, copiada palavra por palavra), mostra um ensaio e só cria depois do seu "sim". |
-| `/cf-new-rule` | Transforma um erro real seu numa regra que dá para checar: o erro primeiro (o que houve, quando, o número), depois um par de entradas, um teste que você vê vermelho, a regra, uma mutação e uma entrada no `WHY.md`. Sem erro datado não há regra; nada fora de `vault/` é escrito sem o seu "sim". |
-| `/cf-whats-real` | Guarda, por projeto, o que **funciona (com prova)**, o que é **simulado ou demo** e o que é **desconhecido**. Um item só vai para "funciona" com prova rodada de novo. |
-| `/cf-know-my-product` | Entrevista você sobre o seu produto e junta as suas dores com as palavras literais e a data. Você aprova antes de salvar. |
-| `/cf-brainstorm` | Brainstorming para qualquer produto, projeto, estudo ou ideia solta. Confere o que o cofre já diz, propõe **três caminhos realmente diferentes**, recomenda um **sem escolher por você** e para num resumo que você aprova. |
-| `/cf-extract-routine` | Tira uma rotina real da sua cabeça por entrevista. O que você não sabe fica `[CONFIRM]`; o Claude nunca inventa um passo. |
-| `/cf-import-knowledge` | Traz uma base existente (outro cofre, pasta, documentos, exportações de chat) para o inbox e guia a triagem, alvo primeiro. |
-| `/cf-adopt` | Adota um cofre que você já tem, no lugar, sem copiar nada. |
-| `/cf-brand <modo>` | Guarda a sua marca nas suas palavras: regras de voz, DNA, mensagem e design system de um projeto, sem cores padrão. Veja [docs/BRAND.md](docs/BRAND.md). |
-| `/cf-study <tema>` | Ajuda a aprender do jeito que você quer; "dominado" exige reteste em outro dia. |
-| `/cf-adapt-skill` | Ajuda você a escrever a **sua própria** skill a partir de uma ficha em `vault/skill-worksheets/`. O Claude nunca a escreve por você. |
+| Peça | O que faz | Grava |
+|---|---|---|
+| `vault/` | A bancada: `inbox/` para captura rápida, `notes/` para notas processadas, `projects/` com um arquivo-raiz por projeto, `memory/` para o que *você* disse, `tasks/` para tarefas. Abra esta pasta no Obsidian. O Claude Code carrega sozinho os três arquivos de memória (`profile.md`, `patterns.md`, `decisions.md`) pelas linhas de `@` import do `CLAUDE.md`; os outros agentes os leem porque o `AGENTS.md` manda. Veja [docs/MEMORY.md](docs/MEMORY.md). | Tudo o que as skills abaixo gravam mora aqui. |
+| `/cf-onboard` | Apresentação. Faz uma pergunta de cada vez, cada uma seguindo a sua última resposta, e escreve o que **você disse**, com data e entre aspas. Nunca adivinha. | `vault/_questions_about_me.md` e linhas aprovadas em `vault/memory/profile.md`, só depois do seu sim. |
+| `/cf-open-session <nome>` | Começa o trabalho num projeto: lê a raiz, as últimas entradas do diário e as tarefas abertas, e diz onde você parou. | Nada (só lê). |
+| `/cf-close-session` | Encerra o dia: diário, um resumo por sessão, as **dores que você falou** juntas num arquivo, tarefas abertas para o que ficou pendente. Roda os verificadores (`core/gate.py`, `core/ring.py`, `tools/usage.py`, `tools/stale.py`). Só faz commit se você mandar e nunca dá push. | Resumo em `vault/memory/briefings/`, diário em `vault/memory/diary/`, dores acrescentadas em `vault/memory/ideas/_pains.md`, tarefas em `vault/tasks/`. Commit só se você mandar. |
+| `/cf-ask` | Responde só a partir das suas notas, com citações que o `tools/ask.py cite` consegue conferir. Modo opcional `--try-first`: você escreve o que lembra antes de ele mostrar qualquer coisa. | Nada nas suas notas; com `--log`, uma linha (data e notas citadas, sem a pergunta) em `vault/memory/ask-log.jsonl`. |
+| `/cf-task-observer` | Observa como você trabalha e **só propõe** melhorias (uma skill que falta, um passo repetido três vezes, uma correção feita duas vezes). Você decide. | Só acrescenta em `vault/memory/observations.md`, no máximo 3 por sessão. |
+| `/cf-claude-corner` | Quando você diz que vai sair, o Claude usa o tempo para reler suas notas, achar conexões reais e testar ideias num lugar descartável. **Só propõe**, num arquivo. Sem prazo seu, para em 1h30, e o que você pediu antes de sair é feito primeiro. | Só `vault/memory/corner/`; os testes rodam numa pasta descartável fora de `vault/`. |
+| `/cf-new-project <nome>` | Cria um projeto: pergunta o nome, depois o que existe no mundo quando der certo (a sua frase, copiada palavra por palavra), mostra um ensaio e só cria depois do seu "sim". | Depois do seu sim: `vault/projects/<nome>/instructions.md` e uma linha em `vault/projects/_index.md`, depois o bloco do hub. |
+| `/cf-new-rule` | Transforma um erro real seu numa regra que dá para checar: o erro primeiro (o que houve, quando, o número), depois um par de entradas, um teste que você vê vermelho, a regra, uma mutação e uma entrada no `WHY.md`. Sem erro datado não há regra; nada fora de `vault/` é escrito sem o seu "sim". | Nada até o seu "sim, escreve lá"; depois o teste, `tests/mutate.py`, `WHY.md`, `CLAUDE.md` e `AGENTS.md`. |
+| `/cf-whats-real` | Guarda, por projeto, o que **funciona (com prova)**, o que é **simulado ou demo** e o que é **desconhecido**. Um item só vai para "funciona" com prova rodada de novo. | `vault/projects/<nome>/whats-real.md` e `diary.md`. |
+| `/cf-know-my-product <nome>` | Entrevista você sobre o seu produto e junta as suas dores com as palavras literais e a data. Você aprova antes de salvar. | `vault/projects/<nome>/product.md` depois do seu sim; só as dores que você aprovar vão para `vault/memory/ideas/_pains.md`. |
+| `/cf-brainstorm` | Brainstorming para qualquer ideia solta. Confere o que o cofre já diz, propõe **três caminhos realmente diferentes**, recomenda um **sem escolher por você** e para num resumo que você aprova. | Rascunho em `vault/projects/<nome>/brief.md`, só depois de você aceitar ver; `approved` só quando você disser "approve". |
+| `/cf-extract-routine` | Tira uma rotina real da sua cabeça por entrevista. O que você não sabe fica `[CONFIRM]`; o Claude nunca inventa um passo. Só chega a `ready-for-human-review`; `validated` exige uma segunda pessoa que siga a ordem sem adivinhar. | `vault/projects/<nome>/routines/<rotina>.md`, só depois do seu sim. |
+| `/cf-import-knowledge` | Traz uma base existente (outro cofre, pasta, documentos, exportações de chat) para o inbox e guia a triagem, alvo primeiro. | `vault/inbox/imported/<nome>/` (com `_import-report.md`), ou `vault/inbox/chats/` para exportações de chat; notas só vão para `vault/notes/` em lotes que você aprovar. |
+| `/cf-adopt` | Adota um cofre que você já tem, no lugar, sem copiar nada. Só aplica com o sha do ensaio que você viu e o seu sim claro. | Só depois do seu sim e do sha do ensaio, no cofre que você indicar: `areas.txt`, `.cogiforge/baseline.json` e o hook de pre-commit em `.git/hooks`. Nunca uma nota que já existe. |
+| `/cf-brand <modo> <nome>` | Modos: `voice --person`, `voice --project <nome>`, `dna <nome>`, `messaging <nome>`, `design <nome>`, `manual <nome>`. Guarda a sua marca nas suas palavras: regras de voz, DNA, mensagem e design system de um projeto, sem cores padrão. Veja [docs/BRAND.md](docs/BRAND.md). | Depois do seu sim: `vault/memory/voice.md` e, em `vault/projects/<nome>/brand/`, `voice.md`, `dna.md`, `messaging.md`, `design.md`, `tokens.json`, `manual.md` (e `preview.html`), depois o bloco do hub. |
+| `/cf-study <tema>` | Ajuda a aprender do jeito que você quer: explica cada bloco do jeito escolhido e depois faz uma pergunta de lembrança, sem o material à vista; "dominado" exige reteste em outro dia. | `vault/projects/<tema>/study-plan.md` (você aprova o plano antes) e `mastery.md`. |
+| `/cf-adapt-skill` | Ajuda você a escrever a **sua própria** skill a partir de uma ficha em `vault/skill-worksheets/`. O Claude monta o `SKILL.md` com você, a partir das suas respostas, mostra inteiro e só salva depois do seu sim. | Depois do seu sim: `.claude/skills/<nome>/SKILL.md`; uma linha em `vault/memory/skills-reviewed.md`. |
 
 As tarefas são notas em `vault/tasks/`, gerenciadas pelo plugin público [TaskNotes](https://github.com/callumalpass/tasknotes) do Obsidian (MIT). O mapa de conexões opcional usa o [graphify](https://github.com/Graphify-Labs/graphify) (Apache-2.0), que você instala por conta própria.
 
