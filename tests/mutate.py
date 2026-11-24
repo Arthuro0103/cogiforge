@@ -13,16 +13,23 @@ every round and runs with PYTHONDONTWRITEBYTECODE=1.
     python3 tests/mutate.py                 all pieces
     python3 tests/mutate.py leak ring       only these
     python3 tests/mutate.py --dry           only checks that each mutant applies (seconds, no suite)
+Each suite run has a time limit (SUITE_TIMEOUT, 300 s) and never inherits the terminal's stdin. A mutant whose
+suite does not finish in time (a hang is a suite that did not stay green) counts as DEAD and is reported as
+`killed (timeout)` with the mutant's name; the whole process group is killed so no child is left behind.
+The baseline run (no mutation) that times out is "already red": rc 2.
 rc: 0 every mutant dead · 1 a mutant survived · 2 suite already red / inapplicable mutant
 """
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+SUITE_TIMEOUT = 300  # seconds per suite run
+TIMEOUT_RC = -999   # run_suite's return code when the time ran out
 
 PIECES = {
     "leak": dict(file="core/leak.py", suite=["tests/test_leak.py"], texts=[
@@ -584,9 +591,21 @@ def run_suite(suite):
     for d in ROOT.rglob("__pycache__"):
         shutil.rmtree(d, ignore_errors=True)
     env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
-    r = subprocess.run([sys.executable, "-m", "pytest", *suite, "-q", "--no-header", "-x",
-                        "-p", "no:cacheprovider", "-W", "ignore"],
-                       capture_output=True, text=True, cwd=ROOT, env=env)
+    proc = subprocess.Popen([sys.executable, "-m", "pytest", *suite, "-q", "--no-header", "-x",
+                             "-p", "no:cacheprovider", "-W", "ignore"],
+                            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                            cwd=ROOT, env=env, start_new_session=True)
+    try:
+        out, _ = proc.communicate(timeout=SUITE_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            proc.kill()
+        proc.communicate()
+        return TIMEOUT_RC, []
+    class r:  # noqa: N801  (same shape the lines below read)
+        stdout, returncode = out, proc.returncode
     failed = sorted(set(re.findall(r"^FAILED\s+\S*::(\S+)", r.stdout, re.M)))
     return r.returncode, failed
 
@@ -654,6 +673,8 @@ def main():
                 if rc == 0:
                     alive.append(f"{piece}/{name}")
                     print(f"  SURVIVED    {name}")
+                elif rc == TIMEOUT_RC:
+                    print(f"  killed (timeout) {name}")
                 else:
                     print(f"  dead        {name:45} {', '.join(failed[:2]) or '(no name captured)'}")
         finally:
