@@ -1,6 +1,6 @@
 ---
 name: cf-new-rule
-description: Turns ONE real mistake of the user's into a rule that is justified, checked and tested. Interviews one question at a time (what happened, the date, the number), asks which check should have caught it, then builds in order - a pair of inputs (one that must fail, one plausible that must pass), a test that goes RED without the rule, the rule, a mutation entry, and a WHY.md entry. Refuses a rule with no dated mistake behind it and a test that has never been seen red. Writes outside vault/ only after the user says yes in this session. TRIGGERS - "/cf-new-rule", "turn this mistake into a rule", "this keeps happening, make it a rule", "add a rule for", "it passed and it should not have". Do NOT trigger for a mistake that has not happened yet ("it could happen": that is not enough), to record a preference of the user (that is cf-task-observer, which only proposes), to write a skill (that is cf-adapt-skill), nor to find out whether something works (that is cf-whats-real).
+description: Turns ONE real, dated mistake into a rule that is justified, checked and tested - interviews one question at a time, builds a failing/passing input pair, a test seen RED, the rule, a mutation entry and a WHY.md entry. Refuses a rule with no real mistake behind it. Use for "turn this mistake into a rule", "it passed and it should not have", "this keeps happening". Not for hypothetical mistakes, preferences, or writing a skill.
 ---
 
 # cf-new-rule: a mistake in, a rule with a test out

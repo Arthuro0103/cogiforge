@@ -155,3 +155,17 @@ def test_a_skill_of_500_lines_fails_and_499_passes(tmp_path):
     d = tmp_path / "cf-long"
     (d / "SKILL.md").write_text(head + "l\n" * (500 - 4), encoding="utf-8")
     assert spec_errors(d)
+
+
+MAX_DESC_BYTES = 450   # every description loads in EVERY session; the spec allows 1024 characters, the budget does not
+
+
+def test_every_description_stays_within_the_byte_budget():
+    dirs = require_skills()
+    too_long = []
+    for d in dirs:
+        desc = parse_frontmatter((d / "SKILL.md").read_text(encoding="utf-8")).get("description") or ""
+        n = len(desc.encode("utf-8"))
+        if n > MAX_DESC_BYTES:
+            too_long.append(f"{d.name}: {n} bytes (max {MAX_DESC_BYTES})")
+    assert not too_long, too_long

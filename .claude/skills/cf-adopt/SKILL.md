@@ -1,6 +1,6 @@
 ---
 name: cf-adopt
-description: Applies the cogiforge to an Obsidian vault the person ALREADY has, in place, copying nothing into an inbox. Runs tools/adopt.py as a dry run, reads the plan in plain words (areas inferred from their folders, what would be installed, the debt measured today, and that the hook only judges notes in the commit), asks "want to apply?", and only then runs it with --apply --confirm <plan-sha256>. It invents no link and states nothing about the person. TRIGGERS - "/cf-adopt <vault>", "use this on my existing vault", "I already have an Obsidian vault", "start from my current notes", "I do not want to start from zero", "move from my old tool without copying". Do NOT trigger to bring loose files or another folder INTO this vault (that is cf-import-knowledge), to capture one idea, to open or close a session, nor to fix the old debt note by note without being asked.
+description: Applies the workbench to an Obsidian vault the person ALREADY has, in place, copying nothing - dry-runs tools/adopt.py, explains the plan and the debt in plain words, applies only after a clear yes. Use for "I already have an Obsidian vault", "start from my current notes", "do not start from zero". Not for bringing loose files into this vault (cf-import-knowledge) nor for opening or closing a session.
 ---
 
 # cf-adopt: put the gate on the vault you already have

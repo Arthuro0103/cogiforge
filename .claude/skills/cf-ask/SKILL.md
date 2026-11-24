@@ -1,6 +1,6 @@
 ---
 name: cf-ask
-description: Answers a question about the user's own workbench using ONLY what the notes say, and cites every claim with [[path#Heading]] that a script then checks exists. Rewrites the question into 3-5 short queries, retrieves passages with tools/ask.py (local BM25, no API, no network), discards the irrelevant ones saying why, answers from what is left. If no passage supports the answer it says "the vault does not cover this". TRIGGERS - "ask the vault", "what do my notes say about X", "what do I know about X", "/cf-ask <question>". Do NOT trigger for questions about code or the world outside the vault, for writing or editing notes, for deciding between paths, nor to get to know the user (that is onboard). OPTIONAL MODE - "/cf-ask --try-first <question>" (or "let me try first"): it asks for the user's own attempt before showing the answer.
+description: Answers a question about the user's own notes using ONLY what they say, citing every claim with [[path#Heading]] checked by tools/ask.py (local, no API). Says "the vault does not cover this" when nothing supports it. Use for "what do my notes say about X", "ask the vault". Not for code or world questions, writing notes, or deciding between paths. Mode --try-first asks for the user's own attempt first.
 ---
 
 # cf-ask: answer from the notes, and prove the citations exist

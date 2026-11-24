@@ -1,6 +1,6 @@
 ---
 name: cf-onboard
-description: Workbench onboarding. Asks questions that follow what the user answered, one at a time, and the output comes from their own words - fills vault/_questions_about_me.md and proposes lines for vault/memory/profile.md with a date and a verbatim quote. Deduces nothing the user did not say; a short answer is a valid answer, and so is "prefer not to say". TRIGGERS - "/cf-onboard", "primeira vez aqui", "atualiza meu perfil", "get to know me", "how do I use this workbench". May be suggested (never imposed) when vault/memory/profile.md is empty or missing. Do NOT trigger to open a project session (that is cf-open-session), to get to know anyone other than the person using it, nor to research the user outside their own files.
+description: Workbench onboarding - asks questions that follow the user's answers, one at a time, fills vault/_questions_about_me.md and proposes dated lines for vault/memory/profile.md with verbatim quotes. Deduces nothing; "prefer not to say" is valid. Use for first time here, "get to know me", "update my profile". Not for opening a project session (cf-open-session) or researching the user outside their files.
 ---
 
 # cf-onboard: the workbench learns who uses it
