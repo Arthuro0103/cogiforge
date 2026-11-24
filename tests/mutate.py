@@ -462,7 +462,7 @@ PIECES = {
         ("memory files are not listed", 'for f in memory.memory_files(vault):', 'for f in []:'),
         ("a commit on the entry day counts", 'since = (day + timedelta(days=1)).isoformat()', 'since = day.isoformat()'),
         ("not verified is OK", 'return 3 if nv else 0', 'return 0'),
-        ("a line suffix is kept", 'p = re.sub(r":\d+(?:-\d+)?$", "", p)\n        if EXT', 'if EXT'),
+        ("a line suffix is kept", 'p = re.sub(r":\\d+(?:-\\d+)?$", "", p)\n        if EXT', 'if EXT'),
     ]),
     "recall": dict(file="tools/recall.py", suite=["tools/test_recall.py"], texts=[
         ("the pointer is not required", 'has_pointer(read(vault / "memory" / f"{stem}.md"), stem):', 'True:'),
