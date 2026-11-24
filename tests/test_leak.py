@@ -138,7 +138,7 @@ def test_with_a_private_list_finds_the_term(tmp_path):
     (tmp_path / "x.md").write_text("talks about Zeta-Quux here\n", encoding="utf-8")
     r = run(["x.md"], tmp_path, blocklist=blocklist)
     assert r.returncode == 1 and "blocklist" in r.stdout
-    assert "NOT_VERIFIED" not in r.stdout
+    assert "NOT_VERIFIED: private blocklist" not in r.stdout  # the git-index line outside a repo is a separate check
 
 
 @pytest.mark.parametrize("name", ["blocklist.txt", "negra.txt"])
@@ -425,7 +425,7 @@ def test_old_name_negra_txt_is_read_with_a_warning(tmp_path):
     r = run(["x.md"], tmp_path, env={"HOME": home})
     assert r.returncode == 1 and "x.md:1: blocklist" in r.stdout
     assert "WARNING" in r.stdout and "renamed" in r.stdout and "negra.txt" in r.stdout
-    assert "NOT_VERIFIED" not in r.stdout
+    assert "NOT_VERIFIED: private blocklist" not in r.stdout  # the git-index line outside a repo is a separate check
 
 
 def test_old_name_with_a_plausible_input_passes_but_still_warns(tmp_path):
@@ -477,3 +477,71 @@ def test_leak_never_reads_gate_txt_and_blocks_whatever_it_says(tmp_path):
         r = subprocess.run([sys.executable, str(Path(__file__).resolve().parent.parent / "core" / "leak.py"), str(tmp_path)],
                            capture_output=True, text=True, env={**__import__("os").environ, "LEAK_BLOCKLIST": str(tmp_path / "none.txt")})
         assert r.returncode == 1, setting
+
+
+# ---- the git index check: not looking is never "clean" ----------------------
+
+def _init_repo(path, rel=None):
+    path.mkdir(parents=True, exist_ok=True)
+
+    def git(*a):
+        return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a],
+                              cwd=path, capture_output=True, text=True)
+    git("init", "-q")
+    if rel:
+        t = path / rel
+        t.parent.mkdir(parents=True, exist_ok=True)
+        t.write_text("{}\n", encoding="utf-8")
+        assert git("add", "-f", rel).returncode == 0
+    return git
+
+
+def test_unreadable_git_index_is_not_verified_and_never_clean(tmp_path):
+    _init_repo(tmp_path)
+    (tmp_path / "a.txt").write_text("hi\n", encoding="utf-8")
+    (tmp_path / ".git" / "index").write_bytes(b"garbage")
+    r = run([], tmp_path)
+    assert r.returncode == 2, r.stdout
+    assert "NOT_VERIFIED: could not read the git index" in r.stdout
+    assert "settings.local.json may be missed" in r.stdout
+
+
+def test_git_missing_from_path_is_not_verified(tmp_path):
+    (tmp_path / "a.txt").write_text("hi\n", encoding="utf-8")
+    r = run([], tmp_path, env={"LEAK_BLOCKLIST": str(tmp_path / "absent.txt"), "PATH": str(tmp_path / "nobin")})
+    assert r.returncode == 2 and "NOT_VERIFIED: could not read the git index (git is not installed)" in r.stdout
+
+
+def test_plain_folder_says_the_index_check_was_not_verified(tmp_path):
+    (tmp_path / "a.txt").write_text("hi\n", encoding="utf-8")
+    r = run([], tmp_path)
+    assert "NOT_VERIFIED: could not read the git index (" in r.stdout and "not inside a git repo" in r.stdout
+
+
+def test_scanning_repo_b_from_repo_a_finds_the_file_of_b(tmp_path):
+    a, b = tmp_path / "a", tmp_path / "b"
+    _init_repo(a)
+    _init_repo(b, ".claude/settings.local.json")
+    r = run([str(b)], a)
+    assert r.returncode == 1 and "settings-local-tracked" in r.stdout
+
+
+def test_lookalike_folder_name_is_not_a_settings_local_finding(tmp_path):
+    _init_repo(tmp_path, "foo.claude/settings.local.json")
+    r = run([], tmp_path)
+    assert "settings-local-tracked" not in r.stdout and r.returncode == 0
+    assert not v.is_settings_local("foo.claude/settings.local.json")
+
+
+def test_count_when_deleted_from_disk_but_in_the_index(tmp_path):
+    _commit_settings_local(tmp_path, ".claude/settings.local.json")
+    (tmp_path / ".claude" / "settings.local.json").unlink()
+    r = run([], tmp_path)
+    assert "1 finding(s) in 1 file(s), of 1 scanned" in r.stdout, r.stdout
+
+
+def test_a_file_on_disk_and_in_the_index_counts_once(tmp_path):
+    git = _commit_settings_local(tmp_path, ".claude/settings.local.json")
+    (tmp_path / ".claude" / "settings.local.json").write_text("/" + "Users/someone/x\n", encoding="utf-8")
+    r = run([], tmp_path)
+    assert "in 1 file(s), of 1 scanned" in r.stdout, r.stdout

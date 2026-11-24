@@ -182,24 +182,54 @@ def is_settings_local(name):
     return n == SETTINGS_LOCAL or n.endswith("/" + SETTINGS_LOCAL)
 
 
-def tracked_settings_local():
-    """Every settings.local.json in the git INDEX, as paths from the repo top.
+def tracked_settings_local(roots=None, why=None):
+    """Every settings.local.json in the git INDEX of the scanned path(s), as (name, key) pairs:
+    `name` is the path from the repo top (for the report), `key` the absolute path (to count a
+    file once, whatever found it).
 
     Read from git itself, not from the disk walk: a file deleted from disk but still in the
     index is still committed, a committed file that did not change is not in the staged diff,
-    and the disk (NFD on macOS) and git (NFC) spell accented folders differently.
-    Empty outside a git repo or without git."""
-    try:
-        top = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True)
+    and the disk (NFD on macOS) and git (NFC) spell accented folders differently. Git runs in
+    the repo of each scanned path (default: the current folder), never in the folder we stand in.
+
+    Returns None when it could not look (git missing, unreadable index, no repo at all) and
+    appends the reason to `why`: not looking never becomes "clean"."""
+    found, seen_tops = [], set()
+    for root in (roots or ["."]):
+        d = root if os.path.isdir(root) else (os.path.dirname(root) or ".")
+        try:
+            top = subprocess.run(["git", "-C", d, "rev-parse", "--show-toplevel"], capture_output=True)
+        except FileNotFoundError:
+            if why is not None:
+                why.append("git is not installed")
+            return None
         if top.returncode != 0:
-            return []
-        r = subprocess.run(["git", "-C", top.stdout.decode("utf-8", "replace").rstrip("\n"),
-                            "ls-files", "-z"], capture_output=True)
-    except FileNotFoundError:
-        return []
-    if r.returncode != 0:
-        return []
-    return [c for c in r.stdout.decode("utf-8", "replace").split("\0") if c and is_settings_local(c)]
+            if why is not None:
+                if b"not a git repository" in top.stderr:
+                    why.append(f"{shown(root)} is not inside a git repo")
+                else:
+                    why.append("git rev-parse failed")
+            return None
+        raw = top.stdout[:-1] if top.stdout.endswith(b"\n") else top.stdout  # bytes: no decode round trip
+        if raw in seen_tops:
+            continue
+        seen_tops.add(raw)
+        arg = raw if os.name != "nt" else raw.decode("utf-8", "replace")
+        try:
+            r = subprocess.run(["git", "-C", arg, "ls-files", "-z"], capture_output=True)
+        except FileNotFoundError:
+            if why is not None:
+                why.append("git is not installed")
+            return None
+        if r.returncode != 0:
+            if why is not None:
+                why.append("git ls-files failed")
+            return None
+        base = os.fsdecode(raw)
+        for c in r.stdout.decode("utf-8", "replace").split("\0"):
+            if c and is_settings_local(c):
+                found.append((c, os.path.normpath(os.path.join(base, c))))
+    return found
 
 
 def shown(name):
@@ -248,24 +278,36 @@ def main(argv=None):
         print(f"ERROR: could not list the git stage ({e})", file=sys.stderr)
         return 2
 
-    total, with_findings, exempted = 0, 0, []
+    total, exempted = 0, []
+    flagged = set()  # absolute paths with a finding: a file counts once, whoever found it
+    scanned = {os.path.abspath(n) for n, _ in sources}
     # repo-wide and read from the git index, in both modes: .leakignore never exempts it
-    for name in tracked_settings_local():
+    why = []
+    index_hits = tracked_settings_local(None if args.staged else args.paths, why)
+    if index_hits is None:
+        print(f"NOT_VERIFIED: could not read the git index ({why[0]}), so a tracked "
+              f"settings.local.json may be missed")
+        index_failed = bool(why) and not why[0].endswith("is not inside a git repo")
+    else:
+        index_failed = False
+    for name, key in index_hits or []:
         # a public repo with this file leaks whatever the user approved with "don't ask again"
         print(f"{name}:0: settings-local-tracked")
         print("  Claude Code stores approved commands (sometimes with secrets) in this file; it must stay "
               f"local. Fix: git rm --cached {shlex.quote(':/' + name)} and add "
               f"`{SETTINGS_LOCAL_IGNORE}` to .gitignore.")
         total += 1
-        with_findings += 1
+        flagged.add(key)
+        scanned.add(key)
 
     versioned = set() if args.staged else tracked()
     for name, text in sources:
+        key = os.path.abspath(name)
         if Path(name).name in BLOCKLIST_NAMES and (args.staged or os.path.normpath(name) in versioned):
             # the private list can never be in a commit; only the local copy, outside git, is ignored
             print(f"{shown(name)}:0: {'blocklist-staged' if args.staged else 'blocklist-in-repo'}")
             total += 1
-            with_findings += 1
+            flagged.add(key)
             continue
         if text is None or Path(name).name in BLOCKLIST_NAMES:
             continue
@@ -276,11 +318,13 @@ def main(argv=None):
         for n, kind in found:
             print(f"{shown(name)}:{n}: {kind}")
         total += len(found)
-        with_findings += bool(found)
+        if found:
+            flagged.add(key)
+    with_findings = len(flagged)
 
     for name in exempted:
         print(f"exempt ({IGNORE_FILE}): {shown(name)}")
-    print(f"{total} finding(s) in {with_findings} file(s), of {len(sources)} scanned")
+    print(f"{total} finding(s) in {with_findings} file(s), of {len(scanned)} scanned")
     for name in unreadable:
         print(f"{shown(name)}: unreadable")
     if unreadable:
@@ -292,7 +336,7 @@ def main(argv=None):
             return 3
     else:
         print(f"private list: {len(terms)} term(s) checked")
-    return 1 if total else (2 if unreadable else 0)
+    return 1 if total else (2 if (unreadable or index_failed) else 0)
 
 
 if __name__ == "__main__":
