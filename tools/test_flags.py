@@ -181,3 +181,15 @@ def test_a_legacy_console_encoding_does_not_crash_the_output(tmp_path):
     env = {**os.environ, "PYTHONIOENCODING": "cp1252"}
     r = subprocess.run([sys.executable, FLAGS, str(script)], capture_output=True, env=env, timeout=60)
     assert b"UnicodeEncodeError" not in r.stderr, r.stderr.decode("cp1252", "replace")
+
+
+def test_a_legacy_console_encoding_does_not_crash_a_message_on_stderr():
+    # stderr under cp1252 with errors=strict: only _safe_stdio keeps "→" from raising
+    code = ("import sys; sys.path.insert(0, sys.argv[1]); import flags as m; m._safe_stdio(); "
+            "sys.stderr.write('error → message\\n'); sys.stderr.flush()")
+    env = {**__import__("os").environ, "PYTHONIOENCODING": "cp1252:strict"}
+    r = subprocess.run([sys.executable, "-B", "-c", code, str(Path(__file__).resolve().parent)],
+                       capture_output=True, env=env, timeout=60)
+    assert r.returncode == 0, r.stderr.decode("cp1252", "replace")
+    assert b"UnicodeEncodeError" not in r.stderr
+    assert "error ? message".encode("cp1252") in r.stderr

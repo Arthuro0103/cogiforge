@@ -170,3 +170,15 @@ def test_a_legacy_console_encoding_does_not_crash_the_report(tmp_path):
     r = subprocess.run([sys.executable, "-B", REPEAT, "--vault", str(v), "--json"], capture_output=True, env=env)
     assert r.returncode == 0, r.stderr.decode("cp1252", "replace")
     assert b"UnicodeEncodeError" not in r.stderr
+
+
+def test_a_legacy_console_encoding_does_not_crash_a_message_on_stderr():
+    # stderr under cp1252 with errors=strict: only _safe_stdio keeps "→" from raising
+    code = ("import sys; sys.path.insert(0, sys.argv[1]); import repeat as m; m._safe_stdio(); "
+            "sys.stderr.write('error → message\\n'); sys.stderr.flush()")
+    env = {**__import__("os").environ, "PYTHONIOENCODING": "cp1252:strict"}
+    r = subprocess.run([sys.executable, "-B", "-c", code, str(Path(__file__).resolve().parent)],
+                       capture_output=True, env=env, timeout=60)
+    assert r.returncode == 0, r.stderr.decode("cp1252", "replace")
+    assert b"UnicodeEncodeError" not in r.stderr
+    assert "error ? message".encode("cp1252") in r.stderr
