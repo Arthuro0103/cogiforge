@@ -229,3 +229,10 @@ def test_selftest_fails_when_the_gate_lies(monkeypatch, capsys):
     monkeypatch.setattr(ring, "gate", lambda *a, **k: 0)   # a gate that always says OK
     assert ring.selftest() == 1
     assert "FAILED" in capsys.readouterr().out
+
+
+def test_a_bom_at_the_start_of_gate_txt_is_ignored(tmp_path):
+    (tmp_path / "gate.txt").write_bytes("﻿# comment\norphan: warn\n".encode("utf-8"))
+    assert ring.orphan_mode(tmp_path) == "warn"
+    (tmp_path / "gate.txt").write_bytes("﻿orphan: warn\nmemory-reach: block\n".encode("utf-8"))
+    assert ring.orphan_mode(tmp_path) == "warn"

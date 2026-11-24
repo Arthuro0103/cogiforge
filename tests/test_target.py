@@ -177,3 +177,11 @@ def test_an_invented_key_in_gate_txt_is_an_error_and_the_other_known_keys_are_no
     put(repo, "gate.txt", "orphan: warn\nmemory-sauce: block\n")
     r = target(repo)
     assert r.returncode == 2 and "unknown key" in r.stdout
+
+
+def test_a_bom_at_the_start_of_gate_txt_is_ignored_by_target(tmp_path):
+    import target as target_mod
+    (tmp_path / "gate.txt").write_bytes("﻿target: block\n".encode("utf-8"))
+    assert target_mod.target_mode(tmp_path) == "block"
+    (tmp_path / "gate.txt").write_bytes("﻿# c\norphan: warn\ntarget: block\n".encode("utf-8"))
+    assert target_mod.target_mode(tmp_path) == "block"

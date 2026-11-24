@@ -34,7 +34,7 @@ def target_mode(vault: Path) -> str:
     if not f.exists():
         return "warn"
     try:
-        lines = f.read_text(encoding="utf-8").splitlines()
+        lines = f.read_text(encoding="utf-8-sig").splitlines()
     except (OSError, UnicodeDecodeError) as e:
         raise ValueError(f"vault/gate.txt exists but cannot be read ({type(e).__name__})")
     mode = "warn"

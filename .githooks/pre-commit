@@ -63,24 +63,19 @@ fi
 grep '^WARNING' "$out" | sed 's/^/  /' || true
 
 # 7. the memory. What every later session obeys has to be what the user said: rc 1 = a rule failed; rc 2 = gate.txt unreadable
-#    or malformed; rc 3 = git did not say what is staged: that BLOCKS too (the gate never passes blind). Runs right after the leak, as the second content guard.
+#    or malformed; ANY rc other than 0 blocks (1, 2, 3, a kill such as 137 or 143): the gate never passes blind. Runs right after the leak, as the second content guard.
 python3 core/memory.py --vault vault --root . --staged >"$out" 2>&1
 rc=$?
-if [ "$rc" -eq 1 ] || [ "$rc" -eq 2 ]; then
+if [ "$rc" -ne 0 ]; then
     echo ""
-    if [ "$rc" -eq 1 ]; then
-        echo "  ⛔ COMMIT BLOCKED — a memory line or a loaded file does not hold up (format, date, source or hidden text)"
-    else
-        echo "  ⛔ COMMIT BLOCKED — the memory check could not run (vault/gate.txt malformed, or usage)"
-    fi
+    case "$rc" in
+        1) echo "  ⛔ COMMIT BLOCKED — a memory line or a loaded file does not hold up (format, date, source or hidden text)" ;;
+        2) echo "  ⛔ COMMIT BLOCKED — the memory check could not run (vault/gate.txt malformed, or usage)" ;;
+        3) echo "  ⛔ COMMIT BLOCKED — memory gate: could not tell what is staged; commit blocked (the memory gate never passes blind)" ;;
+        *) echo "  ⛔ COMMIT BLOCKED — the memory check exited with rc=$rc (killed, crashed or missing): it only passes on rc 0" ;;
+    esac
     echo ""
     sed 's/^/     /' "$out" | head -24
-    blocked=1
-elif [ "$rc" -eq 3 ]; then
-    echo ""
-    echo "  ⛔ COMMIT BLOCKED — memory gate: could not tell what is staged; commit blocked (the memory gate never passes blind)"
-    echo ""
-    sed 's/^/     /' "$out" | head -12
     blocked=1
 else
     grep -E '^(NOT_VERIFIED|WARNING)' "$out" | head -12 | sed 's/^/  /' || true

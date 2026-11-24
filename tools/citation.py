@@ -23,8 +23,8 @@ hundred to open. This tool opens each one and gives one of four states:
 
 --quotes is the offline sibling: a line of the note that has a link to a file of the vault (`[[path]]` or
 `[text](path.md)`) and a quote of 5+ words in double quotes (straight or curly) is checked with core/quote.py
-against THAT file: VERIFIED (every stretch is there; `[brackets]` and `...` are allowed), BROKEN (some stretch
-is not), NOT_VERIFIED (no link on the line, the file does not exist or is outside `--vault` (default `vault`), or nothing in the quote is measurable).
+against THAT file: VERIFIED (every stretch, of any size, is there and in the SAME ORDER; `[brackets]` and `...` are
+allowed between them), BROKEN (some stretch is missing or out of order), NOT_VERIFIED (no link on the line, the file does not exist or is outside `--vault` (default `vault`), or nothing in the quote is measurable).
 
 A number is found only as a WHOLE number: `86` does not match `1986` or `860`; `77,6` and `77.6` are the
 same; a number with `%` needs `%` or the word percent next to it. That the number is on the page does not
@@ -511,7 +511,7 @@ def check_quotes(text: str, note: Path, vault: "Path | None" = None) -> list[dic
                 verdicts = []
                 for f in files:
                     try:
-                        verdicts.append(quotelib.found(q, f.read_bytes().decode("utf-8", errors="replace")))
+                        verdicts.append(quotelib.found_ordered(q, f.read_bytes().decode("utf-8", errors="replace")))
                     except OSError:
                         verdicts.append(None)
                 if any(v is True for v in verdicts):
@@ -519,7 +519,7 @@ def check_quotes(text: str, note: Path, vault: "Path | None" = None) -> list[dic
                 elif any(v is False for v in verdicts):
                     item.update(state=BROKEN, note="a stretch of the quote is not in the linked file")
                 else:
-                    item.update(state=NOT_VERIFIED, note="nothing measurable in the quote (no stretch of 3+ words outside [brackets] and ...) or the file could not be read")
+                    item.update(state=NOT_VERIFIED, note="nothing to compare in the quote (every stretch is inside [brackets] or empty) or the file could not be read")
             results.append(item)
     return results
 
