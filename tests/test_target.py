@@ -168,3 +168,12 @@ def test_real_path_finds_a_decomposed_name_when_the_lookup_is_exact(tmp_path):
 
     got = t.real_path(tmp_path, "notes/life/" + nfc, exists=exists, entries=entries)
     assert got == tmp_path / "notes" / "life" / nfd
+
+
+def test_an_invented_key_in_gate_txt_is_an_error_and_the_other_known_keys_are_not(repo):
+    put(repo, "gate.txt", "orphan: warn\nmemory-source: block\nmemory-reach: warn\ntarget: warn\n")
+    put(repo, "notes/life/n.md", NO_TARGET)
+    assert target(repo).returncode == 0
+    put(repo, "gate.txt", "orphan: warn\nmemory-sauce: block\n")
+    r = target(repo)
+    assert r.returncode == 2 and "unknown key" in r.stdout

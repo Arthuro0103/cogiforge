@@ -4,8 +4,8 @@
 A quote is allowed to be edited in three honest ways: `[an editorial insertion]` in square brackets, an
 ellipsis (`...` or the one-character form) where words were cut, and differences of case, accent or
 punctuation. Everything else has to be there. So the quote is split at the brackets and the ellipses, and
-EVERY remaining piece must appear in the text, as whole words (`ama tudo isso` is not inside
-`reclama tudo isso`). A piece with fewer than 3 words proves nothing (a common word is everywhere), so it is
+EVERY remaining piece must appear in the text, as whole words (`loves all this` is not inside
+`gloves all this`). A piece with fewer than 3 words proves nothing (a common word is everywhere), so it is
 not measured. If no piece can be measured, the answer is "I do not know" (None), never "yes".
 """
 import re
