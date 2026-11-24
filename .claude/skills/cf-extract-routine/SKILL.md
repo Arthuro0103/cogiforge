@@ -1,6 +1,6 @@
 ---
 name: cf-extract-routine
-description: Pulls a real routine out of the user's head by interview and writes it down so someone else can run it. One question at a time, context before options, a short answer is valid. Covers expected result, trigger, inputs, steps in real order, decisions, exceptions, who does it and proof of done. Unknowns are marked [CONFIRM]; the agent never invents a step. States - draft, ready-for-human-review (the most the agent may declare) and validated (only after a SECOND person follows it without guessing, name and date recorded). Output is vault/projects/<name>/routines/<routine>.md. TRIGGERS - "/cf-extract-routine", "write down how I do X", "document this process", "how do I hand this over", "turn this into a checklist". Do NOT trigger to run the routine, to invent a process the user lacks, to choose between ways of working (that is a brainstorm), nor to record a one-off event (that is the diary).
+description: Pulls a real routine out of the user's head by interview and writes it so someone else can run it - result, trigger, inputs, steps, decisions, exceptions, proof of done. One question at a time; unknowns are [CONFIRM]; never invents a step. Output vault/projects/<name>/routines/. TRIGGERS - "document this process", "how do I hand this over". Do NOT trigger to run the routine, choose ways of working, or record one-off events.
 ---
 
 # cf-extract-routine: get the routine out of one head and onto one page

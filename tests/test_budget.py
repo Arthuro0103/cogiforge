@@ -215,3 +215,13 @@ def test_staged_outside_a_git_repo_is_not_verified(root):
     r = subprocess.run([sys.executable, str(SCRIPT), "--vault", str(root / "vault"), "--root", str(root), "--staged"],
                        capture_output=True, text=True, env={"GIT_CEILING_DIRECTORIES": str(root.parent), "PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin"})
     assert r.returncode == 3 and "NOT_VERIFIED" in r.stdout
+
+
+SKELETON_MAX = 20_000   # measured 17,173 on 2026-11-24 (after slimming); the ceiling must not creep back up
+
+
+def test_the_empty_skeleton_of_this_repo_stays_under_its_own_cap():
+    repo = Path(__file__).resolve().parent.parent
+    m = budget.measure(repo / "vault", repo)
+    assert m["always"] > 0, "nothing was measured: NOT_VERIFIED, not OK"
+    assert m["always"] <= SKELETON_MAX, f"the skeleton loads {m['always']} bytes in every session (cap {SKELETON_MAX})"

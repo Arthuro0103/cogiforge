@@ -1,6 +1,6 @@
 ---
 name: cf-know-my-product
-description: Interviews the user about their product, one question at a time, and fills the product brief of ONE project in vault/projects/<name>/product.md using only their own words (who uses it, the problem, what exists, what it is NOT, success metric, constraints). Collects pains voiced during the interview with the literal quote and the date, proposes a ranking by frequency and cost, and links each pain to a project or task. Claude proposes; nothing is written to memory before the user says "yes". TRIGGERS - "/cf-know-my-product <project>", "understand my product", "fill the product brief", "collect my pains", "help me know my users", "what should I build first". Do NOT trigger to get to know the user themselves (that is cf-onboard), to open or close a session (cf-open-session, cf-close-session), to answer a question from the notes (cf-ask), nor to choose between two paths (that is a decision, not an interview).
+description: Interviews the user about their product, one question at a time, and fills vault/projects/<name>/product.md in their own words (users, problem, what it is NOT, metric, constraints). Collects pains with the literal quote and date and proposes a ranking. TRIGGERS - "understand my product", "fill the product brief", "collect my pains". Do NOT trigger to get to know the user (cf-onboard), answer from notes (cf-ask) or choose paths.
 ---
 
 # cf-know-my-product: the workbench learns the product from the person who builds it

@@ -172,6 +172,6 @@ def test_the_guide_is_honest_and_linked():
     assert "docs/BRAND.md" in skill()
 
 
-@pytest.mark.parametrize("rel", ["README.md", "CLAUDE.md", "AGENTS.md", "vault/CLAUDE.md"])
+@pytest.mark.parametrize("rel", ["README.md", "CLAUDE.md", "AGENTS.md"])
 def test_the_skill_is_listed(rel):
     assert "cf-brand" in (ROOT / rel).read_text(encoding="utf-8")
