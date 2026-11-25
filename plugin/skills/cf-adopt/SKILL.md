@@ -93,6 +93,6 @@ Suggest a test: add a note with no link and run `git commit`; the hook should bl
 
 ## Never
 
-- Run `git init`, `--no-verify`, or `--apply` before the plan was read and confirmed.
+- Never run `git init` or `--apply` before the plan was read and confirmed, and never use `--no-verify`.
 - Overwrite or edit an existing note or config file, or activate a hook you did not generate.
 - Call a vault "fine" when notes were skipped, or when it was empty ("nothing to adopt" is not OK).

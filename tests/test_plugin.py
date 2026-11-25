@@ -65,52 +65,100 @@ def test_only_the_two_entry_skills_are_plugin_skills():
     assert not (ROOT / "skills").exists()
 
 
-@pytest.mark.parametrize("name", ENTRY)
-def test_entry_skills_download_the_tag_of_the_plugin_version(name):
+def bash_blocks(body):
+    return [x.strip() for x in re.findall(r"```bash\n(.*?)```", body, re.S)]
+
+
+def expected():
+    """The exact commands the skills must carry, built from the plugin manifest, never from the skills."""
     m = load(PLUGIN)
-    v, url = m["version"], m["repository"] + ".git"
-    body = skill(name)
-    assert f"--branch v{v}" in body and url in body
-    assert "${CLAUDE_PLUGIN_ROOT}" not in body and ".in_use" not in body
-    # every version written in the skill is the plugin's
-    for found in re.findall(r"\bv\d+\.\d+\.\d+\b|cogiforge \d+\.\d+\.\d+", body):
-        assert found.endswith(v), found
+    v, repo = m["version"], m["repository"]
+    clone = ("git clone -q -c advice.detachedHead=false --depth 1 --branch v" + v + " " + repo + ".git ")
+    install = 'cd "$DEST" && git init -q && sh install.sh && git add -A && git commit -qm "workbench from cogiforge ' + v + '"'
+    guards = (
+        "DEST='/absolute/path/to/the/folder' && "
+        '{ case "$DEST" in /*) true ;; *) echo "STOP: not an absolute path"; false ;; esac; } && '
+        '{ [ "${DEST%/}" != "" ] && [ "${DEST%/}" != "${HOME%/}" ] || { echo "STOP: / and the home folder are never used"; false; }; } && '
+        '{ [ ! -e "$DEST" ] || { [ -d "$DEST" ] && [ -r "$DEST" ] && [ -z "$(ls -A "$DEST")" ]; } || '
+        '{ echo "STOP: the folder exists and is not empty"; false; }; } && '
+        '{ git config user.name >/dev/null && git config user.email >/dev/null || '
+        '{ echo "STOP: git has no user.name or user.email"; false; }; } && ')
+    return {
+        "new": guards + clone + '"$DEST" && rm -rf "$DEST/.git" && ' + install,
+        "retry": "cd '/absolute/path/to/the/folder' && " + install.split("&& ", 1)[1],
+        "adopt_fresh": "[ ! -e ~/.cogiforge ] && " + clone + "~/.cogiforge && rm -rf ~/.cogiforge/.git",
+        "adopt_swap": ("[ ! -e ~/.cogiforge/.git ] && rm -rf ~/.cogiforge.new ~/.cogiforge.old && " + clone +
+                       "~/.cogiforge.new && rm -rf ~/.cogiforge.new/.git && mv ~/.cogiforge ~/.cogiforge.old && "
+                       "mv ~/.cogiforge.new ~/.cogiforge && rm -rf ~/.cogiforge.old"),
+        "adopt_dry": 'python3 ~/.cogiforge/tools/adopt.py "/absolute/path/to/vault"',
+        "adopt_apply": 'python3 ~/.cogiforge/tools/adopt.py "/absolute/path/to/vault" --apply --confirm <plan-sha256>',
+    }
+
+
+def test_new_workbench_blocks_are_exactly_the_expected_commands():
+    e = expected()
+    assert bash_blocks(skill("cf-new-workbench")) == [e["new"], e["retry"]]
+
+
+def test_adopt_blocks_are_exactly_the_expected_commands():
+    e = expected()
+    assert bash_blocks(skill("cf-adopt")) == [e["adopt_fresh"], e["adopt_swap"], e["adopt_dry"], e["adopt_apply"]]
+
+
+def plugin_text_files():
+    return [p for p in PDIR.rglob("*") if p.is_file() and p.suffix in {".md", ".json"}]
+
+
+def test_versions_branches_and_urls_in_the_plugin_are_the_manifest_ones():
+    m = load(PLUGIN)
+    v, repo = m["version"], m["repository"]
+    for p in plugin_text_files():
+        text = p.read_text(encoding="utf-8")
+        for found in re.findall(r"(?<![\w.])\d+\.\d+\.\d+(?![\w.]*\w)", text):
+            assert found == v, (p.name, found)
+        for found in re.findall(r"--branch\s+(\S+)", text):
+            assert found == "v" + v, (p.name, found)
+        for found in re.findall(r"github\.com/[^\s)`'\"<>]*", text):
+            url = "https://" + found
+            assert url in {repo, repo + ".git"} or url.startswith(repo + "#"), (p.name, found)
+    for name in ENTRY:
+        body = skill(name)
+        assert "--branch v" + v in body and repo + ".git" in body
+        assert "${CLAUDE_PLUGIN_ROOT}" not in body and ".in_use" not in body
+
+
+def test_the_root_readmes_name_only_the_plugin_tag():
+    v = load(PLUGIN)["version"]
+    for name in ("README.md", "LEIA-ME.md"):
+        text = (ROOT / name).read_text(encoding="utf-8")
+        assert "v" + v in text, name
+        for found in re.findall(r"(?<![\w.])v\d+\.\d+\.\d+(?![\w.]*\w)", text):
+            assert found == "v" + v, (name, found)
+
+
+def test_no_verify_only_appears_in_a_line_that_forbids_it():
+    for p in plugin_text_files():
+        in_code = False
+        for line in p.read_text(encoding="utf-8").splitlines():
+            if line.lstrip().startswith("```"):
+                in_code = not in_code
+            if "--no-verify" in line:
+                assert not in_code, (p.name, "inside a code block", line)
+                assert re.search(r"\b(Never|never|Do not|do not)\b", line), (p.name, line)
 
 
 def test_adopt_runs_from_the_stable_copy_and_asks_before_replacing():
     body = skill("cf-adopt")
     assert "~/.cogiforge/tools/adopt.py" in body
     assert "--confirm" in body and "--yes" not in body
-    blocks = [b.strip() for b in re.findall(r"```bash\n(.*?)```", body, re.S) if "~/.cogiforge.new" in b]
-    assert len(blocks) == 1 and "\n" not in blocks[0]
-    parts = [x.strip() for x in blocks[0].split("&&")]
-    clone = next(i for i, x in enumerate(parts) if x.startswith("git clone") and "~/.cogiforge.new" in x)
-    rm_old = next(i for i, x in enumerate(parts) if x.startswith("rm -rf ~/.cogiforge") and x.split()[-1] == "~/.cogiforge")
-    assert clone < rm_old, "the new copy exists before the old one is deleted"
+    assert "NEVER replaces it" in body and "~/.cogiforge/plugin/.claude-plugin/plugin.json" in body
 
 
 def test_new_workbench_never_overwrites_and_never_skips_the_gate():
     body = skill("cf-new-workbench")
-    assert "Never overwrite" in body and "--no-verify" in body and "install.sh" in body
-    assert f"workbench from cogiforge {load(PLUGIN)['version']}" in body
-
-
-def test_new_workbench_deletes_only_after_a_guarded_download():
-    blocks = [b for b in re.findall(r"```bash\n(.*?)```", skill("cf-new-workbench"), re.S) if "rm -rf" in b]
-    assert len(blocks) == 1
-    cmd = blocks[0].strip()
-    assert "\n" not in cmd, "the download and the rm must be one command, not two lines"
-    guards = ['[ -n "$DEST" ]', '[ "$DEST" != "/" ]', '[ "$DEST" != "$HOME" ]']
-    parts = [x.strip() for x in cmd.split("&&")]
-    for g in guards:
-        assert g in parts, g
-    assert any("-z \"$(ls -A \"$DEST\")\"" in x for x in parts), "empty-folder guard"
-    clone = next(i for i, x in enumerate(parts) if x.startswith("git clone"))
-    rm = next(i for i, x in enumerate(parts) if x.startswith("rm -rf"))
-    assert all(parts.index(g) < clone for g in guards), "every guard comes before the download"
-    assert clone < rm, "the rm comes after the clone, joined by &&"
-    for gone in (".git", "plugin", ".claude-plugin"):
-        assert f'"$DEST/{gone}"' in parts[rm], gone
+    assert "Never overwrite" in body and "Never use `--no-verify`" in body and "install.sh" in body
+    assert "NEVER deletes it" in body
+    assert 'rm -rf "$DEST/plugin"' not in body and ".claude-plugin\"" not in bash_blocks(body)[0]
 
 
 def test_the_version_is_in_the_readme_plugin_section():
@@ -142,12 +190,22 @@ ALLOWED_SUFFIXES = {".md", ".txt", ".json", ".yaml", ".yml", ".png", ".jpg", ".j
 FORBIDDEN_NAMES = {"claude.md", "claude.local.md", "agents.md"}
 
 
+TEXT_SUFFIXES = {".md", ".txt", ".json", ".yaml", ".yml", ".svg"}
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico"}
+
+
 def plugin_files(base=PDIR):
-    r = subprocess.run(["git", "-C", str(base), "ls-files", "-z", "--", "."], capture_output=True)
-    if r.returncode == 0 and r.stdout:
-        names = [n for n in r.stdout.decode("utf-8", "surrogateescape").split("\0") if n]
-        return [Path(n) for n in names]
-    return [p.relative_to(base) for p in base.rglob("*") if p.is_file() or p.is_symlink()]
+    """Tracked files plus untracked-but-not-ignored ones (a new file counts before it is committed)."""
+    out = []
+    for args in (["ls-files"], ["ls-files", "--others", "--exclude-standard"]):
+        r = subprocess.run(["git", "-C", str(base), *args, "-z", "--", "."], capture_output=True)
+        if r.returncode != 0:
+            out = None
+            break
+        out += [n for n in r.stdout.decode("utf-8", "surrogateescape").split("\0") if n]
+    if out is None:
+        return [p.relative_to(base) for p in base.rglob("*") if p.is_file() or p.is_symlink()]
+    return [Path(n) for n in dict.fromkeys(out) if (base / n).exists() or (base / n).is_symlink()]
 
 
 def allowlist_errors(base, files, icon):
@@ -156,10 +214,11 @@ def allowlist_errors(base, files, icon):
         p = base / rel
         parts = [x.casefold() for x in rel.parts]
         tag = str(rel)
+        suffix = rel.suffix.lower()
         if p.is_symlink():
             errs.append(f"{tag}: symlink")
             continue
-        if rel.as_posix() != icon and rel.suffix.lower() not in ALLOWED_SUFFIXES:
+        if rel.as_posix() != icon and suffix not in ALLOWED_SUFFIXES:
             errs.append(f"{tag}: type not allowed")
         if rel.name.casefold() in FORBIDDEN_NAMES:
             errs.append(f"{tag}: forbidden file name")
@@ -170,14 +229,14 @@ def allowlist_errors(base, files, icon):
         if p.stat().st_size > SIZE_LIMIT:
             errs.append(f"{tag}: above 5 MiB")
         data = p.read_bytes()
-        if data.startswith(b"#!"):
+        if data.removeprefix(b"\xef\xbb\xbf").startswith(b"#!"):
             errs.append(f"{tag}: starts with #!")
-        if b"\0" in data:
+        if suffix in TEXT_SUFFIXES and b"\0" in data:
             errs.append(f"{tag}: NUL byte")
         try:
             data.decode("utf-8")
         except UnicodeDecodeError:
-            if rel.suffix.lower() not in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico"}:
+            if suffix not in IMAGE_SUFFIXES:
                 errs.append(f"{tag}: not UTF-8")
     return errs
 
@@ -189,6 +248,16 @@ def test_the_plugin_folder_passes_the_directory_allow_list():
     assert allowlist_errors(PDIR, files, load(PLUGIN)["icon"].removeprefix("./")) == []
 
 
+PNG_1X1 = bytes.fromhex(
+    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
+    "0000000d49444154789c6360f8cfc0f01f0005000201a5f645400000000049454e44ae426082")
+
+
+def git(base, *args):
+    subprocess.run(["git", "-C", str(base), "-c", "user.name=t", "-c", "user.email=t@t", *args],
+                   check=True, capture_output=True)
+
+
 def test_the_allow_list_check_rejects_what_the_directory_rejects(tmp_path):
     bad = {"x.py": "print(1)\n", "CLAUDE.md": "x\n", "sub/agents.md": "x\n", "run.md": "#!/bin/sh\n",
            "nul.md": "a\0b", ".claude/skills/a.md": "x\n", "node_modules/a.md": "x\n",
@@ -197,9 +266,26 @@ def test_the_allow_list_check_rejects_what_the_directory_rejects(tmp_path):
         f = tmp_path / name
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text(body, encoding="utf-8")
+    (tmp_path / "bom.md").write_bytes(b"\xef\xbb\xbf#!/bin/sh\n")
     (tmp_path / "link.md").symlink_to(tmp_path / "run.md")
     (tmp_path / "latin.md").write_bytes(b"a\xe7\xe3o")
     (tmp_path / "ok.md").write_text("fine\n", encoding="utf-8")
-    errs = allowlist_errors(tmp_path, plugin_files(tmp_path), "icon.svg")
+    (tmp_path / "pixel.png").write_bytes(PNG_1X1)   # a real PNG has NUL bytes and is not UTF-8: it must pass
+    errs = allowlist_errors(tmp_path, plugin_files(tmp_path), "icon.svg")   # no git here: the fallback listing
     flagged = {e.split(":")[0] for e in errs}
-    assert flagged == set(bad) | {"link.md", "latin.md"}
+    assert flagged == set(bad) | {"link.md", "latin.md", "bom.md"}
+
+
+def test_the_allow_list_check_through_git_lists_tracked_and_untracked_files(tmp_path):
+    git(tmp_path, "init", "-q")
+    (tmp_path / ".gitignore").write_text("ignored.py\n", encoding="utf-8")
+    for name, body in {"x.py": "print(1)\n", "CLAUDE.md": "x\n", "ok.md": "fine\n"}.items():
+        (tmp_path / name).write_text(body, encoding="utf-8")
+    (tmp_path / "pixel.png").write_bytes(PNG_1X1)
+    git(tmp_path, "add", "x.py", "CLAUDE.md", "ok.md", "pixel.png", ".gitignore")
+    (tmp_path / "run.py").write_text("print(2)\n", encoding="utf-8")        # not tracked: still counts
+    (tmp_path / "ignored.py").write_text("print(3)\n", encoding="utf-8")    # ignored: git does not ship it
+    files = {f.as_posix() for f in plugin_files(tmp_path)}
+    assert files == {"x.py", "CLAUDE.md", "ok.md", "pixel.png", ".gitignore", "run.py"}
+    flagged = {e.split(":")[0] for e in allowlist_errors(tmp_path, plugin_files(tmp_path), "icon.svg")}
+    assert flagged == {"x.py", "CLAUDE.md", "run.py", ".gitignore"}   # .gitignore has no allowed type either
