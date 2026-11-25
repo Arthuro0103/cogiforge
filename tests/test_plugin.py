@@ -74,9 +74,9 @@ def code_in(body):
     """Every piece of code in a Markdown text, in order: (kind, raw_opening_line, text, line numbers).
 
     kind is "fence" for a ``` or ~~~ block (any indentation, any info text, so "```bash " and "~~~bash" count)
-    and "indented" for a 4-space or tab block outside a list. A fence that never closes is reported too."""
+    and "indented" for a block indented by 4 spaces or a tab (even inside a list). A fence that never closes is reported too."""
     lines = body.split("\n")
-    out, i, prev_blank, list_width = [], 0, True, None
+    out, i, prev_blank = [], 0, True
     while i < len(lines):
         line = lines[i]
         m = FENCE.match(line)
@@ -94,14 +94,10 @@ def code_in(body):
             i += 1
             continue
         li = LIST_ITEM.match(line)
-        if li:
-            list_width = len(li.group(0))   # indent + marker + spaces: where the item text starts
-        elif not line.startswith((" ", "\t")):
-            list_width = None
-        indent = len(line) - len(line.lstrip(" \t"))
         tab = line.startswith("\t") or line.startswith("    ")
-        needs = 4 if list_width is None else list_width + 4
-        if tab and prev_blank and not li and (indent >= needs or line.startswith("\t")):
+        # stricter than CommonMark on purpose: 4 spaces or a tab after a blank line is code even inside a list
+        # (a model may run it), and no legitimate line of these skills is indented that much
+        if tab and prev_blank and not li:
             j = i
             while j < len(lines) and (lines[j].strip() == "" or lines[j].startswith(("    ", "\t"))):
                 j += 1
@@ -214,13 +210,16 @@ SAFETY = {
         "Never split it into lines or into separate calls.", "this skill NEVER deletes it",
         "This retry command is only for the folder the main command just downloaded",
         "If git says `nothing to commit`, the first commit already happened",
-        "never guess which step failed",
+        "never guess which step failed", "Or the person deletes the folder themselves and the skill runs again.",
+        "If the folder exists and is not empty, stop and say so.",
     ],
     "cf-adopt": [
         "Never replace it without a yes.", "this skill NEVER replaces it",
         "**Dry run first, always.**", "Do not run `--apply` before the user has seen the plan.",
         "Only after a clear \"yes\"", "(never a sha from an older run)", "A \"maybe\" or silence is a no.",
-        "run `mv ~/.cogiforge.old ~/.cogiforge` to go back",
+        "If the second `mv` fails, run `mv ~/.cogiforge.old ~/.cogiforge` to go back",
+        "a swap stopped in the middle: run `mv ~/.cogiforge.old ~/.cogiforge` to go back",
+        "treat it as another version",
         "This skill never deletes `~/.cogiforge.old` or `~/.cogiforge.new` by itself",
         "Never run `git init` or `--apply` before the plan was read and confirmed, and never use `--no-verify`.",
         "ask the person to rename the folder or give another path",
