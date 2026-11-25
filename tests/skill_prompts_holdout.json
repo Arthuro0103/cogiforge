@@ -1,0 +1,12 @@
+[
+ {"id": "ask-h1", "prompt": "What did I write down about the pricing call with Marta? Point me to the notes.", "expect": "cf-ask"},
+ {"id": "ask-h2", "prompt": "Look through my notes and tell me whether I ever decided anything about hiring a second designer.", "expect": "cf-ask"},
+ {"id": "brainstorm-h1", "prompt": "I keep thinking about a small service for neighbors to lend each other ladders and drills, but I'm not sure what shape it should take. Can you help me explore?", "expect": "cf-brainstorm"},
+ {"id": "brainstorm-h2", "prompt": "Rough thought - something that turns my voice memos into a weekly newsletter. What are my options for approaching it?", "expect": "cf-brainstorm"},
+ {"id": "newrule-h1", "prompt": "Last Tuesday a draft with a wrong date went out and the review missed it. Make sure the system can catch that kind of slip from now on, and prove it works.", "expect": "cf-new-rule"},
+ {"id": "newrule-h2", "prompt": "We merged a file with a stale TODO marker again. Let's add a guard against it and test the guard.", "expect": "cf-new-rule"},
+ {"id": "open-h1", "prompt": "I'm sitting down to work on the garden-app project. Where did we leave off and what is still open there?", "expect": "cf-open-session"},
+ {"id": "open-h2", "prompt": "Brief me on the podcast project before I dive in - recent entries and open to-dos.", "expect": "cf-open-session"},
+ {"id": "observer-h1", "prompt": "Keep an eye on how I work during this session and suggest what we should streamline or automate afterwards.", "expect": "cf-task-observer"},
+ {"id": "observer-h2", "prompt": "Looking back over my last few sessions, which things do I keep redoing by hand?", "expect": "cf-task-observer"}
+]
