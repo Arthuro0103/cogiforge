@@ -11,6 +11,10 @@ please fix it. A test (`tests/test_agents_md.py`) fails when the rules drift apa
 You are at the **repo root**. The workbench (the user's notes, projects and memory) lives in `vault/`.
 Obsidian opens `vault/`; you run at the repo root.
 
+## Installed as a plugin?
+
+If Cogiforge came as a Claude Code plugin, the plugin holds only two skills: `/cf-new-workbench` (builds a workbench in a folder you choose) and `/cf-adopt` (puts the gate on an existing vault). The 17 working skills live inside each workbench, in `.claude/skills/` (also reachable as `.agents/skills`), because they work on that folder's files with relative paths; Claude Code loads them when it is opened in the workbench, so they never appear in unrelated projects. Do not look for them in the plugin folder. Details: the README section "Install as a Claude Code plugin".
+
 ## The rules
 
 1. **Read and write only inside `vault/`.** `core/`, `tools/`, `tests/` and `.githooks/` change only if the user asks.

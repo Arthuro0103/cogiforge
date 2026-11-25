@@ -32,6 +32,35 @@ exemplo `vault/projects/example-my-first-project/` mostra o formato. As tarefas 
 TaskNotes (instale pela loja de plugins da comunidade do Obsidian); o mapa de conexões opcional precisa do
 graphify. Os dois estão no [tutorial](TUTORIAL.md).
 
+## Instalar como plugin do Claude Code
+
+Se você usa o Claude Code, dá para instalar o Cogiforge como plugin (versão 0.1.0). Dois comandos no terminal:
+
+```sh
+claude plugin marketplace add Arthuro0103/cogiforge
+claude plugin install cogiforge@cogiforge
+```
+
+Dentro do Claude Code é o mesmo: `/plugin marketplace add Arthuro0103/cogiforge` e depois `/plugin install cogiforge@cogiforge`. Reinicie o Claude Code depois de instalar. Você ganha duas skills:
+
+| Skill | O que faz |
+|---|---|
+| `/cf-new-workbench` | Pergunta uma pasta e monta um workbench novo nela: uma cópia deste repo, o portão de commit ligado e um primeiro commit. Nunca escreve numa pasta que não esteja vazia. |
+| `/cf-adopt` | Põe o portão de commit num vault do Obsidian que você já tem, sem mover nenhuma nota. Mostra o plano primeiro e só aplica depois do seu sim. |
+
+Só macOS e Linux; no Windows use "Use this template" no GitHub e o `install.ps1`.
+
+### Por que o plugin instala só duas skills
+
+Este repo tem 17 skills, e o plugin instala só duas de propósito. Se você ou a sua IA se perguntarem por quê, é isto.
+
+1. **O plugin é a porta.** Ele faz dois trabalhos: criar um workbench (`/cf-new-workbench`) ou pôr o portão num vault que já existe (`/cf-adopt`). O resto acontece dentro de um workbench.
+2. **As 17 skills moram dentro de cada workbench**, em `.claude/skills/`. Elas trabalham nos arquivos daquela pasta (`vault/`, `core/`, `tools/`), com caminhos relativos a ela. Fora de um workbench não teriam o que fazer.
+3. **O Claude Code carrega as skills da pasta em que é aberto.** Por isso elas aparecem só onde funcionam e nunca nos seus outros projetos.
+4. **Um hook de git precisa de um caminho fixo, e o caminho de um plugin muda a cada versão.** Por isso cada workbench leva o próprio `core/`, e o `/cf-adopt` guarda uma cópia estável em `~/.cogiforge` e aponta o hook do vault para lá.
+5. **Outros agentes (Codex, Cursor e outros) acham as mesmas skills dentro do workbench**, pelo `AGENTS.md` e por `.agents/skills`. Eles não precisam do plugin.
+6. **Atualizar.** Uma versão nova do plugin cria workbenches novos já atualizados. Um workbench que já existe não se atualiza sozinho. Para trazer um conserto, copie `core/` e `tools/` de uma versão nova por cima (ou rode `git pull`, se for um clone). Num vault adotado, rode o `/cf-adopt` de novo: ele oferece trocar o `~/.cogiforge` pela versão nova, e todo vault adotado recebe o conserto de uma vez.
+
 ## Para quem é
 
 | Você | Comece por aqui |
