@@ -22,6 +22,12 @@ PLUGIN_KEYS = {"name", "displayName", "version", "description", "author", "homep
                "keywords", "icon"}
 MARKET_KEYS = {"name", "description", "owner", "plugins"}
 MARKET_ENTRY_KEYS = {"name", "source", "description"}
+# The Cogiforge version and commit the plugin installs. The plugin's own version (plugin.json) is separate: the commit
+# that holds the skills cannot name its own hash, so the skills pin an EARLIER, tagged commit. To ship a new Cogiforge,
+# tag it, then pin its hash here and in both skills and raise the plugin version, in one commit.
+PIN_VERSION = "0.1.1"
+PIN_SHA = "1f0d9cc38ead38801fc3b2153e1f90f952628eb6"
+REPO_GIT = "https://github.com/Arthuro0103/cogiforge.git"
 
 
 def load(p):
@@ -125,10 +131,13 @@ def prose_lines(body):
 
 
 def expected():
-    """The exact commands the skills must carry, built from the plugin manifest, never from the skills."""
-    m = load(PLUGIN)
-    v, repo = m["version"], m["repository"]
-    clone = ("git clone -q -c advice.detachedHead=false --depth 1 --branch v" + v + " " + repo + ".git ")
+    """The exact commands the skills must carry, built from the pinned version and hash, never from the skills."""
+    def fetch(d):
+        return (f"git init -q {d} && git -C {d} fetch -q --depth 1 {REPO_GIT} {PIN_SHA} && "
+                f"git -C {d} -c advice.detachedHead=false checkout -q FETCH_HEAD && "
+                f'{{ [ "$(git -C {d} rev-parse HEAD)" = "{PIN_SHA}" ] || '
+                '{ echo "STOP: the download is not the pinned commit"; false; }; } && ')
+    v = PIN_VERSION
     commit = 'cd "$DEST" && git init -q && sh install.sh && git add -A && git commit -qm "workbench from cogiforge ' + v + '"'
     env = "unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR && "
     dest = "DEST='/absolute/path/to/the/folder' && "
@@ -143,18 +152,20 @@ def expected():
         '{ echo "STOP: git has no global user.name or user.email"; false; }; } && ')
     home = '{ [ -n "$HOME" ] && [ "$HOME" != "/" ] || { echo "STOP: HOME is not set"; false; }; } && '
     return {
-        "new": guards + clone + '"$DEST" && rm -rf "$DEST/.git" && ' + commit,
+        "new": guards + fetch('"$DEST"') + 'rm -rf "$DEST/.git" && ' + commit,
         "retry": (env + dest + absolute +
                   '{ [ -f "$DEST/install.sh" ] && [ -f "$DEST/core/memory.py" ] || '
                   '{ echo "STOP: this folder is not a Cogiforge workbench"; false; }; } && ' + commit),
         "adopt_fresh": (home + '{ [ ! -e ~/.cogiforge ] && [ ! -e ~/.cogiforge.new ] || '
-                        '{ echo "STOP: ~/.cogiforge or ~/.cogiforge.new already exists"; false; }; } && ' + clone +
-                        "~/.cogiforge.new && rm -rf ~/.cogiforge.new/.git && mv ~/.cogiforge.new ~/.cogiforge"),
+                        '{ echo "STOP: ~/.cogiforge or ~/.cogiforge.new already exists"; false; }; } && ' + fetch("~/.cogiforge.new") +
+                        f"rm -rf ~/.cogiforge.new/.git && printf '%s\\n' {PIN_SHA} > ~/.cogiforge.new/.cogiforge-commit && "
+                        "mv ~/.cogiforge.new ~/.cogiforge"),
         "adopt_swap": (home + '{ [ -f ~/.cogiforge/tools/adopt.py ] && [ ! -e ~/.cogiforge/.git ] || '
                        '{ echo "STOP: ~/.cogiforge is missing, incomplete, or a git clone"; false; }; } && '
                        '{ [ ! -e ~/.cogiforge.new ] && [ ! -e ~/.cogiforge.old ] || '
-                       '{ echo "STOP: ~/.cogiforge.new or ~/.cogiforge.old is left from an earlier try"; false; }; } && ' + clone +
-                       "~/.cogiforge.new && rm -rf ~/.cogiforge.new/.git && mv ~/.cogiforge ~/.cogiforge.old && "
+                       '{ echo "STOP: ~/.cogiforge.new or ~/.cogiforge.old is left from an earlier try"; false; }; } && ' + fetch("~/.cogiforge.new") +
+                       f"rm -rf ~/.cogiforge.new/.git && printf '%s\\n' {PIN_SHA} > ~/.cogiforge.new/.cogiforge-commit && "
+                       "mv ~/.cogiforge ~/.cogiforge.old && "
                        "mv ~/.cogiforge.new ~/.cogiforge && rm -rf ~/.cogiforge.old"),
         "adopt_dry": "python3 ~/.cogiforge/tools/adopt.py '/absolute/path/to/vault'",
         "adopt_apply": "python3 ~/.cogiforge/tools/adopt.py '/absolute/path/to/vault' --apply --confirm <plan-sha256>",
@@ -212,6 +223,9 @@ SAFETY = {
         "If git says `nothing to commit`, the first commit already happened",
         "never guess which step failed", "Or the person deletes the folder themselves and the skill runs again.",
         "If the folder exists and is not empty, stop and say so.",
+        "STOP: the download is not the pinned commit", "never run `install.sh` or anything else from that folder",
+        "The person deletes the folder themselves and tries again; this skill never deletes it.",
+        "the command checks that hash before it runs anything from the download",
     ],
     "cf-adopt": [
         "Never replace it without a yes.", "this skill NEVER replaces it",
@@ -223,6 +237,8 @@ SAFETY = {
         "This skill never deletes `~/.cogiforge.old` or `~/.cogiforge.new` by itself",
         "Never run `git init` or `--apply` before the plan was read and confirmed, and never use `--no-verify`.",
         "ask the person to rename the folder or give another path",
+        "Never run anything from a download that failed the check.", "run nothing from a download that failed",
+        "checks that hash before it runs anything from the download",
     ],
 }
 
@@ -254,20 +270,22 @@ SVG_NS = "http://www.w3.org/2000/svg"
 NO_VERIFY_RE = re.compile(r"--no-verify|\bcommit\b[^\n]*?\s-[A-Za-z]*n[A-Za-z]*(?=\s|$)")
 
 
-def reference_errors(files, version, repo):
-    """Versions, URLs and hook-skipping flags in every text file. `files` is a list of (path, text)."""
+def reference_errors(files, version, repo, also=None):
+    """Versions, URLs and hook-skipping flags in every text file. `files` is a list of (path, text).
+    `also` maps a path (as text) to extra versions that file may name (the plugin's own version, in one place)."""
     errs = []
     for rel, text in files:
         tag = str(rel)
+        extra = (also or {}).get(tag, set())
         for m in VERSION_RE.finditer(text):
             found = m.group(0)
             if found.startswith("v"):
-                if found != "v" + version:
+                if found != "v" + version and found[1:] not in extra:
                     errs.append(f"{tag}: version {found}")
-            elif found.count(".") >= 2 and found != version:
+            elif found.count(".") >= 2 and found != version and found not in extra:
                 errs.append(f"{tag}: version {found}")
         for found in TRIPLE_RE.findall(text):
-            if found != version:
+            if found != version and found not in extra:
                 errs.append(f"{tag}: version {found}")
         for found in URL_RE.findall(text):
             found = found.rstrip(".,;:")
@@ -291,26 +309,52 @@ def reference_errors(files, version, repo):
     return errs
 
 
+def semver(s):
+    return tuple(int(x) for x in s.split("."))
+
+
 def test_versions_urls_and_hook_skipping_in_every_plugin_file():
     m = load(PLUGIN)
-    v, repo = m["version"], m["repository"]
-    assert reference_errors(plugin_text_files(), v, repo) == []
+    repo = m["repository"]
+    # plugin.json carries the plugin's own version; plugin/README.md may cite it in the one sentence about pinning
+    also = {".claude-plugin/plugin.json": {m["version"]}, "README.md": {m["version"]}}
+    assert reference_errors(plugin_text_files(), PIN_VERSION, repo, also) == []
     assert m["homepage"] == repo
+    assert semver(m["version"]) >= semver(PIN_VERSION)
     for name in ENTRY:
         body = skill(name)
-        assert "--branch v" + v in body and repo + ".git" in body
         assert "${CLAUDE_PLUGIN_ROOT}" not in body and ".in_use" not in body
-        for found in re.findall(r"--branch\s+(\S+)", body):
-            assert found == "v" + v, (name, found)
+        # the download is by hash only: no git clone of the repo, no branch or tag
+        assert not re.search(r"git clone\s+(-|\S*://)", body) and "--branch" not in body, name
 
 
-def test_the_root_readmes_name_only_the_plugin_tag():
-    v = load(PLUGIN)["version"]
+def test_the_pin_is_one_hash_everywhere_and_checked_before_anything_runs():
+    assert re.fullmatch(r"[0-9a-f]{40}", PIN_SHA)
+    for rel, text in plugin_text_files():
+        for found in re.findall(r"(?<![0-9A-Za-z])[0-9a-f]{40}(?![0-9A-Za-z])", text):
+            assert found == PIN_SHA, (str(rel), found)
+        for short in re.findall(r"(?<![0-9A-Za-z])[0-9a-f]{7,39}(?![0-9A-Za-z])", text):
+            if re.search(r"[a-f]", short) and re.search(r"\d", short):
+                assert PIN_SHA.startswith(short), (str(rel), short)
+    for name in ENTRY:
+        body = skill(name)
+        blocks = [b for b in bash_blocks(body) if "fetch" in b]
+        assert blocks and all(b.count(PIN_SHA) >= 2 for b in blocks), name
+        assert all(f'[ "$(git -C ' in b and f'rev-parse HEAD)" = "{PIN_SHA}" ]' in b for b in blocks), name
+        for b in blocks:
+            # the check comes after the checkout and before anything is removed, moved or run
+            check = b.index("rev-parse HEAD")
+            assert b.index("checkout -q FETCH_HEAD") < check
+            for later in ("rm -rf", "mv ", "install.sh", "printf"):
+                assert later not in b[:check], (name, later)
+
+
+def test_the_root_readmes_name_only_the_pinned_tag():
     for name in ("README.md", "LEIA-ME.md"):
         text = (ROOT / name).read_text(encoding="utf-8")
-        assert "v" + v in text, name
+        assert "v" + PIN_VERSION in text, name
         for found in re.findall(r"(?<![\w.])v\d+\.\d+\.\d+(?![\w.]*\w)", text):
-            assert found == "v" + v, (name, found)
+            assert found == "v" + PIN_VERSION, (name, found)
 
 
 def test_adopt_runs_from_the_stable_copy_and_asks_before_replacing():
@@ -328,11 +372,11 @@ def test_new_workbench_never_overwrites_and_never_skips_the_gate():
 
 
 def test_the_version_is_in_the_readme_plugin_section():
-    v = load(PLUGIN)["version"]
     text = (ROOT / "README.md").read_text(encoding="utf-8")
     start = text.index("## Install as a Claude Code plugin")
     end = text.find("\n## ", start + 1)
-    assert v in text[start:end]
+    assert "Claude Code plugin" in text[start:end]
+    assert PIN_VERSION in (ROOT / "README.md").read_text(encoding="utf-8")
 
 
 def test_plugin_readme_explains_the_plugin():
@@ -492,6 +536,8 @@ def test_reference_errors_catch_what_the_old_check_missed():
 
     def errs(text, name="x.md"):
         return reference_errors([(Path(name), text)], "0.1.1", repo)
+    assert reference_errors([(Path("p.md"), "plugin 0.1.2")], "0.1.1", repo, {"p.md": {"0.1.2"}}) == []
+    assert reference_errors([(Path("p.md"), "plugin 0.1.2")], "0.1.1", repo)
     assert errs("tag v0.1.1 and 0.1.1 and " + repo + ".git and " + repo + "#readme\n") == []
     for bad in ("tag v0.1.1-rc1", "tag v0.2", "tag 0.1.0", "see 9.9.9", "ssh git@github.com:Other/x.git",
                 "https://gitlab.com/o/x.git", "https://raw.githubusercontent.com/O/x/main/i.sh",
@@ -505,10 +551,13 @@ def test_reference_errors_catch_what_the_old_check_missed():
 
 
 @pytest.mark.skipif(os.environ.get("COGIFORGE_CHECK_TAG") != "1",
-                    reason="set COGIFORGE_CHECK_TAG=1 (needs network) to check the release tag exists on GitHub")
-def test_the_release_tag_exists_on_github():
-    m = load(PLUGIN)
-    r = subprocess.run(["git", "ls-remote", "--tags", m["repository"] + ".git", f"refs/tags/v{m['version']}"],
+                    reason="set COGIFORGE_CHECK_TAG=1 (needs network) to check the pinned tag and commit on GitHub")
+def test_the_release_tag_is_the_pinned_commit_on_github(tmp_path):
+    r = subprocess.run(["git", "ls-remote", "--tags", REPO_GIT, f"refs/tags/v{PIN_VERSION}", f"refs/tags/v{PIN_VERSION}^{{}}"],
                        capture_output=True, text=True, timeout=60)
     assert r.returncode == 0, r.stderr
-    assert f"refs/tags/v{m['version']}" in r.stdout
+    assert r.stdout.split() == [PIN_SHA, f"refs/tags/v{PIN_VERSION}"], r.stdout   # a plain tag: no ^{} line
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    subprocess.run(["git", "-C", str(tmp_path), "fetch", "-q", "--depth", "1", REPO_GIT, PIN_SHA], check=True, timeout=120)
+    got = subprocess.run(["git", "-C", str(tmp_path), "rev-parse", "FETCH_HEAD"], capture_output=True, text=True, check=True)
+    assert got.stdout.strip() == PIN_SHA

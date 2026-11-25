@@ -34,7 +34,7 @@ graphify. Os dois estão no [tutorial](TUTORIAL.md).
 
 ## Instalar como plugin do Claude Code
 
-Se você usa o Claude Code, dá para instalar o Cogiforge como plugin (versão 0.1.1). Dois comandos no terminal:
+Se você usa o Claude Code, dá para instalar o Cogiforge como plugin. Dois comandos no terminal:
 
 ```sh
 claude plugin marketplace add Arthuro0103/cogiforge
@@ -68,7 +68,7 @@ Este repo tem 17 skills, e o plugin instala só duas de propósito. Se você ou 
 4. **Um hook de git precisa de um caminho fixo, e o plugin não leva código.** Por isso cada workbench leva o próprio `core/`, e o `/cf-adopt` guarda uma cópia estável em `~/.cogiforge` e aponta o hook do vault para lá.
 5. **Outros agentes (Codex, Cursor e outros) acham as mesmas skills dentro do workbench**, pelo `AGENTS.md` e por `.agents/skills`. Eles não precisam do plugin.
 6. **Atualizar.** Uma versão nova do plugin aponta para uma tag nova, então os workbenches novos já nascem atualizados. Um workbench que já existe não se atualiza sozinho. Para trazer um conserto, copie `core/` e `tools/` de uma versão nova por cima (ou rode `git pull`, se for um clone). Num vault adotado, rode o `/cf-adopt` de novo: ele oferece trocar o `~/.cogiforge` pela versão nova, e todo vault adotado recebe o conserto de uma vez.
-7. **O plugin é só Markdown.** O diretório de plugins da Anthropic só aceita código de organização verificada, então o plugin leva instruções e nenhum script. As skills baixam este repo do GitHub na tag `v0.1.1` (a versão do plugin) com `git clone`, o que pede `git` e internet.
+7. **O plugin é só Markdown.** O diretório de plugins da Anthropic só aceita código de organização verificada, então o plugin leva instruções e nenhum script. As skills baixam este repo do GitHub numa versão fixa, pelo hash do commit, e conferem o hash antes de rodar qualquer coisa: o plugin 0.1.2 instala o Cogiforge 0.1.1 (commit `1f0d9cc`, tag `v0.1.1`). Para lançar uma versão nova do Cogiforge, marque a tag primeiro; depois, um commit seguinte do plugin fixa o hash dela e sobe a versão do plugin. Pede `git` e internet.
 
 ## Para quem é
 
