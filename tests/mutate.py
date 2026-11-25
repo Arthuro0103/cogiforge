@@ -13,6 +13,14 @@ every round and runs with PYTHONDONTWRITEBYTECODE=1.
     python3 tests/mutate.py                 all pieces
     python3 tests/mutate.py leak ring       only these
     python3 tests/mutate.py --dry           only checks that each mutant applies (seconds, no suite)
+    python3 tests/mutate.py --shard I/N     only the mutants whose index k (per piece, in generation order)
+                                            has k % N == I-1; the N shards together cover each mutant once
+    python3 tests/mutate.py --changed-since REF
+                                            only the pieces touched by `git diff REF...HEAD` (their file, a file
+                                            of their suite, or their PIECES entry); an unknown REF means all pieces
+The flags combine with each other and with an explicit list of pieces. The CI runs the changed pieces in 8
+parallel shards on every push, and the complete round (every mutant) in 8 shards every Monday by schedule
+(and when dispatched by hand).
 Each suite run has a time limit and never inherits the terminal's stdin. A mutant whose
 suite does not finish in time (a hang is a suite that did not stay green) counts as DEAD and is reported as
 `killed (timeout)` with the mutant's name; the whole process group is killed so no child is left behind (a mutant that only makes the suite slow shows up as
@@ -959,7 +967,7 @@ def mutants(piece, source):
         yield f"text:{name}", lambda f, a=old, n=new: mutate_text(f, a, n)
 
 
-def dry(targets):
+def dry(targets, shard=None):
     """Only checks that each mutant applies (the snippet exists ONCE), without running the suite.
 
     Takes seconds. Run it before each commit of a rename: a message or a name that changed
@@ -972,23 +980,154 @@ def dry(targets):
             print(f"[{piece}] {PIECES[piece]['file']} does not exist yet — skipped")
             continue
         original = file.read_text(encoding="utf-8")
-        for name, fn in mutants(piece, original):
+        for name, fn in select_shard(mutants(piece, original), shard):
             try:
                 fn(original)
                 total += 1
             except LookupError as e:
                 inapplicable.append(f"{piece}/{name}")
                 print(f"  INAPPLICABLE {name}: {e}")
-    print(f"{total} mutants apply; {len(inapplicable)} inapplicable")
+    label = f"shard {shard[0]}/{shard[1]}: " if shard else ""
+    print(f"{label}{total} mutants apply; {len(inapplicable)} inapplicable")
     return 2 if inapplicable else 0
+
+
+def shard_of(k, n):
+    """The 1-based shard (of n) that owns the mutant with index k."""
+    return k % n + 1
+
+
+def parse_shard(text):
+    """'I/N' -> (I, N) with 1 <= I <= N; anything else raises ValueError."""
+    m = re.fullmatch(r"(\d+)/(\d+)", text or "")
+    if not m:
+        raise ValueError(f"--shard wants I/N, got {text!r}")
+    i, n = int(m.group(1)), int(m.group(2))
+    if not 1 <= i <= n:
+        raise ValueError(f"--shard needs 1 <= I <= N, got {i}/{n}")
+    return i, n
+
+
+def select_shard(items, shard):
+    """Keeps the items whose position k is owned by the shard (None keeps everything)."""
+    if shard is None:
+        return list(items)
+    i, n = shard
+    return [x for k, x in enumerate(items) if shard_of(k, n) == i]
+
+
+def affected_pieces(changed, old_pieces, new_pieces):
+    """Pieces touched by a change list: their file, a file of their suite, or their PIECES entry.
+    old_pieces None (could not be read) counts every piece as affected."""
+    changed = set(changed)
+    out = []
+    for name, spec in new_pieces.items():
+        if (old_pieces is None or name not in old_pieces or old_pieces[name] != spec
+                or spec["file"] in changed or any(f in changed for f in spec["suite"])):
+            out.append(name)
+    return out
+
+
+def _git(*args):
+    r = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    return r.returncode, r.stdout
+
+
+def _split_pieces(source):
+    """(text outside the PIECES literal, the literal): to tell a runner change from a PIECES change."""
+    a = source.find("\nPIECES = {")
+    b = source.find("\ndef checks(")
+    if a < 0 or b < a:
+        return None, None
+    return source[:a] + source[b:], source[a:b]
+
+
+def load_pieces(source):
+    """Evaluates only the PIECES literal of a mutate.py source, in an isolated namespace."""
+    outside, literal = _split_pieces(source)
+    if literal is None:
+        return None
+    ns = {}
+    try:
+        exec(literal, ns)
+    except Exception:
+        return None
+    return ns.get("PIECES")
+
+
+def changed_selection(ref):
+    """(pieces to mutate, runner_changed). An unknown ref or any failure to read means every piece."""
+    everything = (list(PIECES), False)
+    if not ref or set(ref) == {"0"}:
+        return everything
+    rc, _ = _git("rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
+    if rc != 0:
+        print(f"unknown ref {ref!r}: every piece counts as affected")
+        return everything
+    rc, out = _git("diff", "--name-only", f"{ref}...HEAD")
+    if rc != 0:
+        rc, out = _git("diff", "--name-only", ref, "HEAD")
+    if rc != 0:
+        print(f"git diff failed for {ref!r}: every piece counts as affected")
+        return everything
+    changed = [l for l in out.splitlines() if l]
+    rc, old_source = _git("show", f"{ref}:tests/mutate.py")
+    old_pieces = load_pieces(old_source) if rc == 0 else None
+    runner_changed = False
+    if "tests/mutate.py" in changed:
+        new_outside, _ = _split_pieces((ROOT / "tests" / "mutate.py").read_text(encoding="utf-8"))
+        old_outside, _ = _split_pieces(old_source) if rc == 0 else (None, None)
+        runner_changed = new_outside is None or new_outside != old_outside
+    return affected_pieces(changed, old_pieces, PIECES), runner_changed
+
+
+def parse_args(argv):
+    """-> (pieces, dry, shard, changed_since). Raises ValueError on a bad flag."""
+    pieces, dry_run, shard, since = [], False, None, None
+    it = iter(argv)
+    for a in it:
+        if a == "--dry":
+            dry_run = True
+        elif a == "--shard":
+            shard = parse_shard(next(it, None))
+        elif a == "--changed-since":
+            since = next(it, None)
+            if since is None:
+                raise ValueError("--changed-since wants a REF")
+        elif a.startswith("--"):
+            raise ValueError(f"unknown flag {a}")
+        else:
+            if a not in PIECES:
+                raise ValueError(f"unknown piece {a}")
+            pieces.append(a)
+    return pieces, dry_run, shard, since
 
 
 def main():
     install_handlers()
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    try:
+        args, dry_run, shard, since = parse_args(sys.argv[1:])
+    except ValueError as e:
+        print(f"usage error: {e}")
+        return 2
     targets = args or list(PIECES)
-    if "--dry" in sys.argv:
-        return dry(targets)
+    runner_changed = False
+    if since is not None:
+        affected, runner_changed = changed_selection(since)
+        targets = [p for p in targets if p in affected]
+        if not targets and not runner_changed:
+            print(f"nothing to mutate since {since}")
+            return 0
+        if runner_changed:
+            print("tests/mutate.py itself changed: checking that every mutant applies")
+            rc = dry(list(PIECES), shard)
+            if rc or dry_run:
+                return rc
+        if not targets:
+            return 0
+    if dry_run:
+        return dry(targets, shard)
+    label = f"shard {shard[0]}/{shard[1]}: " if shard else ""
     alive, inapplicable, total = [], [], 0
     for piece in targets:
         spec = PIECES[piece]
@@ -997,6 +1136,9 @@ def main():
             print(f"[{piece}] {spec['file']} does not exist yet — skipped")
             continue
         original = file.read_text(encoding="utf-8")
+        mine = select_shard(mutants(piece, original), shard)
+        if not mine:
+            continue  # no mutant of this piece in the shard: the baseline would be wasted
         started = time.monotonic()
         rc, _ = run_suite(spec["suite"], timeout=BASELINE_TIMEOUT)
         took = time.monotonic() - started
@@ -1009,7 +1151,7 @@ def main():
         limit = mutant_limit(took)
         print(f"[{piece}] baseline green ({took:.0f} s; each mutant gets {limit:.0f} s)")
         try:
-            for name, fn in mutants(piece, original):
+            for name, fn in mine:
                 try:
                     new = fn(original)
                 except LookupError as e:
@@ -1028,7 +1170,7 @@ def main():
                     print(f"  dead        {name:45} {', '.join(failed[:2]) or '(no name captured)'}")
         finally:
             file.write_text(original, encoding="utf-8")
-    print(f"\n{total - len(alive)} of {total} mutants dead; {len(alive)} alive; {len(inapplicable)} inapplicable")
+    print(f"\n{label}{total - len(alive)} of {total} mutants dead; {len(alive)} alive; {len(inapplicable)} inapplicable")
     for v in alive:
         print("  alive:", v)
     return 2 if inapplicable else (1 if alive else 0)
