@@ -6,6 +6,7 @@ The version of plugin.json is written in the README section about the plugin (an
 """
 import json
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -120,3 +121,19 @@ def test_the_icon_is_declared_and_is_a_flat_svg():
     # the directory refuses nested svg, style, script, foreignObject, animation and event handlers
     assert svg.count("<svg") == 1 and "viewBox" in svg
     assert not re.search(r"<(style|script|foreignObject|animate|set)\b|\son\w+=", svg)
+
+
+# The directory refuses the whole plugin when one file in its folder is above 5 MiB ("A file is too large",
+# claude.ai/directory/manage, 2026-11-25). The plugin folder is the repo root, so this covers every tracked file.
+SIZE_LIMIT = 5 * 1024 * 1024
+
+
+def test_no_file_in_the_plugin_folder_is_above_5_mib():
+    r = subprocess.run(["git", "-C", str(ROOT), "ls-files", "-z"], capture_output=True)
+    if r.returncode == 0:
+        names = [n for n in r.stdout.decode("utf-8", "surrogateescape").split("\0") if n]
+    else:
+        names = [str(p.relative_to(ROOT)) for p in ROOT.rglob("*") if ".git" not in p.parts]
+    assert names
+    big = [n for n in names if (ROOT / n).is_file() and (ROOT / n).stat().st_size > SIZE_LIMIT]
+    assert not big, big
