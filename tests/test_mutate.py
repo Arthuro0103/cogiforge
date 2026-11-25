@@ -30,7 +30,7 @@ def wait_for(path, secs=30):
 
 
 @pytest.mark.skipif(not hasattr(os, "killpg"), reason="process groups do not exist on Windows")
-@pytest.mark.parametrize("sig", [signal.SIGINT, signal.SIGTERM, signal.SIGHUP])
+@pytest.mark.parametrize("sig", [getattr(signal, n) for n in ("SIGINT", "SIGTERM", "SIGHUP") if hasattr(signal, n)])
 def test_a_signal_kills_the_suite_and_its_children(tmp_path, sig):
     pidfile = tmp_path / "child.pid"
     suite = tmp_path / "test_slow.py"
@@ -64,7 +64,7 @@ def test_a_signal_kills_the_suite_and_its_children(tmp_path, sig):
         h.kill()
         if pidfile.exists() and pidfile.read_text().strip():
             try:
-                os.kill(int(pidfile.read_text()), signal.SIGKILL)
+                os.kill(int(pidfile.read_text()), getattr(signal, "SIGKILL", signal.SIGTERM))
             except ProcessLookupError:
                 pass
 
@@ -77,3 +77,13 @@ def test_a_mutant_gets_three_times_the_baseline_and_never_less_than_the_floor():
     assert mod.mutant_limit(10) == mod.SUITE_TIMEOUT          # a fast suite keeps the floor
     assert mod.mutant_limit(362) == 3 * 362                   # the hook suite of 2026-11-24 (362 s) gets 1086 s
     assert mod.BASELINE_TIMEOUT > 3 * mod.SUITE_TIMEOUT        # the unmutated run is never cut at the mutant floor
+
+
+def test_mutate_imports_without_sighup(monkeypatch):
+    """Windows has no signal.SIGHUP: importing mutate.py must not touch it."""
+    import importlib.util
+    monkeypatch.delattr(signal, "SIGHUP", raising=False)
+    assert not hasattr(signal, "SIGHUP")
+    spec = importlib.util.spec_from_file_location("mutate_nohup", Path(__file__).parent / "mutate.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
