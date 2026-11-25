@@ -9,7 +9,12 @@
   "homepage": "https://github.com/Arthuro0103/cogiforge",
   "repository": "https://github.com/Arthuro0103/cogiforge",
   "license": "MIT",
-  "keywords": ["obsidian", "second-brain", "agent-memory", "pkm", "claude-code"],
-  "icon": "./assets/icon.svg",
-  "skills": "./plugin-skills/"
+  "keywords": [
+    "obsidian",
+    "second-brain",
+    "agent-memory",
+    "pkm",
+    "claude-code"
+  ],
+  "icon": "./icon.svg"
 }

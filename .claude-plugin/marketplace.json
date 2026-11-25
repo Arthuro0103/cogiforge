@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "cogiforge",
-      "source": "./",
+      "source": "./plugin",
       "description": "A second-brain workbench in Obsidian for coding agents, with a commit gate that checks the agent's memory."
     }
   ]

@@ -69,9 +69,10 @@ This repo has 17 skills, and the plugin installs just two on purpose. If you or 
 1. **The plugin is the door.** It does two jobs: make a workbench (`/cf-new-workbench`) or put the gate on a vault that already exists (`/cf-adopt`). Everything else happens inside a workbench.
 2. **The 17 skills live inside each workbench**, in `.claude/skills/`. They work on the files of that folder (`vault/`, `core/`, `tools/`) with paths relative to it. Outside a workbench they would have nothing to work on.
 3. **Claude Code loads the skills of the folder it is opened in.** So they appear only where they work, and they never show up in your other projects.
-4. **A git hook needs a fixed path, and a plugin's path changes with every version.** That is why each workbench carries its own `core/`, and why `/cf-adopt` keeps one stable copy in `~/.cogiforge` and points the vault's hook there.
+4. **A git hook needs a fixed path, and the plugin carries no code.** That is why each workbench carries its own `core/`, and why `/cf-adopt` keeps one stable copy in `~/.cogiforge` and points the vault's hook there.
 5. **Other agents (Codex, Cursor and others) find the same skills inside the workbench**, through `AGENTS.md` and `.agents/skills`. They do not need the plugin.
-6. **Updating.** A new plugin version makes new workbenches already updated. An existing workbench does not update itself. To bring a fix into one, copy `core/` and `tools/` from a newer version over it (or run `git pull` in a clone). For a vault you adopted, run `/cf-adopt` again: it offers to replace `~/.cogiforge` with the new version, and every adopted vault gets the fix at once.
+6. **Updating.** A new plugin version points at a new tag, so new workbenches are already updated. An existing workbench does not update itself. To bring a fix into one, copy `core/` and `tools/` from a newer version over it (or run `git pull` in a clone). For a vault you adopted, run `/cf-adopt` again: it offers to replace `~/.cogiforge` with the new version, and every adopted vault gets the fix at once.
+7. **The plugin is only Markdown.** The Anthropic plugin directory accepts code only from a verified organization, so the plugin carries instructions and no scripts. The skills download this repo from GitHub at tag `v0.1.0` (the plugin's version) with `git clone`, which needs `git` and an internet connection.
 
 ## Who it is for
 

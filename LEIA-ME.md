@@ -65,9 +65,10 @@ Este repo tem 17 skills, e o plugin instala só duas de propósito. Se você ou 
 1. **O plugin é a porta.** Ele faz dois trabalhos: criar um workbench (`/cf-new-workbench`) ou pôr o portão num vault que já existe (`/cf-adopt`). O resto acontece dentro de um workbench.
 2. **As 17 skills moram dentro de cada workbench**, em `.claude/skills/`. Elas trabalham nos arquivos daquela pasta (`vault/`, `core/`, `tools/`), com caminhos relativos a ela. Fora de um workbench não teriam o que fazer.
 3. **O Claude Code carrega as skills da pasta em que é aberto.** Por isso elas aparecem só onde funcionam e nunca nos seus outros projetos.
-4. **Um hook de git precisa de um caminho fixo, e o caminho de um plugin muda a cada versão.** Por isso cada workbench leva o próprio `core/`, e o `/cf-adopt` guarda uma cópia estável em `~/.cogiforge` e aponta o hook do vault para lá.
+4. **Um hook de git precisa de um caminho fixo, e o plugin não leva código.** Por isso cada workbench leva o próprio `core/`, e o `/cf-adopt` guarda uma cópia estável em `~/.cogiforge` e aponta o hook do vault para lá.
 5. **Outros agentes (Codex, Cursor e outros) acham as mesmas skills dentro do workbench**, pelo `AGENTS.md` e por `.agents/skills`. Eles não precisam do plugin.
-6. **Atualizar.** Uma versão nova do plugin cria workbenches novos já atualizados. Um workbench que já existe não se atualiza sozinho. Para trazer um conserto, copie `core/` e `tools/` de uma versão nova por cima (ou rode `git pull`, se for um clone). Num vault adotado, rode o `/cf-adopt` de novo: ele oferece trocar o `~/.cogiforge` pela versão nova, e todo vault adotado recebe o conserto de uma vez.
+6. **Atualizar.** Uma versão nova do plugin aponta para uma tag nova, então os workbenches novos já nascem atualizados. Um workbench que já existe não se atualiza sozinho. Para trazer um conserto, copie `core/` e `tools/` de uma versão nova por cima (ou rode `git pull`, se for um clone). Num vault adotado, rode o `/cf-adopt` de novo: ele oferece trocar o `~/.cogiforge` pela versão nova, e todo vault adotado recebe o conserto de uma vez.
+7. **O plugin é só Markdown.** O diretório de plugins da Anthropic só aceita código de organização verificada, então o plugin leva instruções e nenhum script. As skills baixam este repo do GitHub na tag `v0.1.0` (a versão do plugin) com `git clone`, o que pede `git` e internet.
 
 ## Para quem é
 

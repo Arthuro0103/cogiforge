@@ -12,7 +12,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS = ROOT / ".claude" / "skills"
-PLUGIN_SKILLS = ROOT / "plugin-skills"   # the two entry skills of the Claude Code plugin; same spec, same budget
+PLUGIN_SKILLS = ROOT / "plugin" / "skills"   # the two entry skills of the Claude Code plugin; same spec, same budget
 MAX_NAME, MAX_DESC, MAX_LINES = 64, 1024, 500
 
 

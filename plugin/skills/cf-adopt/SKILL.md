@@ -14,9 +14,7 @@ and the old ones are not touched.**
 
 ## Why `~/.cogiforge`
 
-The git hook needs a fixed address for Cogiforge, and the plugin's folder changes with every version. So this
-skill keeps one stable copy in `~/.cogiforge`, and `adopt.py` is always run from there: it records its own
-folder as `cogiforge.home` in the vault's local git config.
+The git hook needs a fixed address for Cogiforge, and the plugin carries only instructions (Markdown), no code. So this skill downloads Cogiforge from GitHub, at the tag of the plugin's version, into `~/.cogiforge`, and `adopt.py` is always run from there: it records its own folder as `cogiforge.home` in the vault's local git config. It needs `git` and an internet connection.
 
 ## The rules
 
@@ -35,17 +33,21 @@ folder as `cogiforge.home` in the vault's local git config.
 
 ### 0. A stable copy in `~/.cogiforge` (you, before the dry run)
 
-The copy leaves out `.claude-plugin/` and `plugin-skills/` (they belong to the plugin) any `.git`, and the `.in_use` marker Claude Code leaves in the plugin copy.
+The plugin version is 0.1.0, so the tag is `v0.1.0`. If `git clone` fails (no internet, GitHub down), show its message as it is and stop.
 
-- `~/.cogiforge` does not exist: make it.
+- `~/.cogiforge` does not exist: download it.
 
 ```bash
-mkdir -p ~/.cogiforge && cp -R "${CLAUDE_PLUGIN_ROOT}/." ~/.cogiforge/ && rm -rf ~/.cogiforge/.claude-plugin ~/.cogiforge/plugin-skills ~/.cogiforge/.git ~/.cogiforge/.in_use
+git clone -q --depth 1 --branch v0.1.0 https://github.com/Arthuro0103/cogiforge.git ~/.cogiforge && rm -rf ~/.cogiforge/.git
 ```
 
-It is one chained command on purpose: the `rm` runs only after a copy that worked.
+- It exists and is another version: show the two versions (this plugin's, 0.1.0, against the `version` in `~/.cogiforge/plugin/.claude-plugin/plugin.json`; if that file does not exist, look for `~/.cogiforge/.claude-plugin/plugin.json`, from older copies; if neither exists, say you cannot tell) and ask before replacing it. Never replace it without a yes. Only after a yes, with one chain that does not delete the old copy before the new one exists:
 
-- It exists and is another version: show the two versions (`version` in `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json` against the one the copy was made from; if you cannot tell, say so) and ask before replacing it. Never replace it without a yes. Vaults already adopted keep pointing at `~/.cogiforge`, so replacing it updates their hook too.
+```bash
+rm -rf ~/.cogiforge.new && git clone -q --depth 1 --branch v0.1.0 https://github.com/Arthuro0103/cogiforge.git ~/.cogiforge.new && rm -rf ~/.cogiforge.new/.git && rm -rf ~/.cogiforge && mv ~/.cogiforge.new ~/.cogiforge
+```
+
+  Vaults already adopted keep pointing at `~/.cogiforge`, so replacing it updates their hook too.
 - It exists and is the same version: use it as it is.
 
 ### 1. Dry run (you)
