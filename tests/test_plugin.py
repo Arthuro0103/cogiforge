@@ -107,3 +107,12 @@ def test_adopt_deletes_only_after_a_copy_that_worked():
     cp = next(i for i, x in enumerate(parts) if x.startswith("cp -R"))
     rm = next(i for i, x in enumerate(parts) if x.startswith("rm -rf"))
     assert cp < rm
+
+
+def test_the_icon_is_declared_and_is_a_flat_svg():
+    icon = load(PLUGIN)["icon"]
+    assert icon == "./assets/icon.svg" and (ROOT / icon).is_file()
+    svg = (ROOT / icon).read_text(encoding="utf-8")
+    # the directory refuses nested svg, style, script, foreignObject, animation and event handlers
+    assert svg.count("<svg") == 1 and "viewBox" in svg
+    assert not re.search(r"<(style|script|foreignObject|animate|set)\b|\son\w+=", svg)
