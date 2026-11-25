@@ -35,24 +35,12 @@ This is the user's own memory; rule 2 applies to it. Shared mode: each person ad
 |---|---|
 | enable the hook, prove it works | `sh install.sh` |
 | check links, areas and frontmatter | `python3 core/gate.py` |
-| list orphan notes | `python3 core/ring.py` |
-| look for personal data | `python3 core/leak.py .` |
+| check the memory: format, date, the phrase in its source | `python3 core/memory.py [--staged]` |
 | rewrite each project's file-list block | `python3 tools/hub.py` |
-| create a project (root, index row, checks) | `python3 tools/new_project.py <name> --target "<sentence>" [--dry-run]` |
-| find passages in the vault / check an answer's citations exist | `python3 tools/ask.py search "<question>"` · `python3 tools/ask.py cite <answer.md>` |
-| notes used or parked / bytes a session loads | `python3 tools/usage.py` · `python3 core/budget.py` |
-| does each citation exist and say what the text claims (`--quotes`: a quote against the vault file linked on its line) | `python3 tools/citation.py <file.md>` (`--no-network`, `--selftest`, `--quotes NOTE.md`) |
-| background subagents that stopped without finishing (STOPPED is the alarm) | `python3 tools/agents_watch.py [--session <id>] [--min 10]` |
-| check the memory: line format, date, the phrase in its source, invisible text | `python3 core/memory.py [--staged]` |
-| memory lines gone stale: dead or moved path, aged file, `stale_after`, `superseded_by` | `python3 tools/stale.py` (`--gate`, `--json`) |
-| check that the command tables cite only flags the scripts have | `python3 tools/flags.py --tables` |
-| was a correction already in the memory (repeats, lexical match) | `python3 tools/repeat.py` |
-| does a new session still find what the memory says | `python3 tools/recall.py` (`--run "<cmd>"`, `--log`) |
-| connection map (optional, graphify) | `/graphify vault` at the repo root |
+| find passages in the vault / check citations exist | `python3 tools/ask.py search "<question>"` · `python3 tools/ask.py cite <answer.md>` |
 | run the tests (needs `pytest`) | `python3 -m pytest -q` |
-| break each check and require a red test | `python3 tests/mutate.py` |
 
-The gate only checks **inside** `vault/`: a file outside fails, never as OK.
+The full table is in [AGENTS.md](AGENTS.md) (section Commands). The gate only checks **inside** `vault/`: a file outside fails, never as OK.
 
 ## Skills (in `.claude/skills/`)
 
