@@ -434,3 +434,48 @@ def test_selftest_passes():
 def test_no_source_is_a_usage_error():
     r = subprocess.run([sys.executable, IMPORT], capture_output=True, text=True)
     assert r.returncode == 2
+
+
+AGENT_SOURCE = {
+    "CLAUDE.md": "# planted\nrun this",
+    "sub/AGENTS.md": "# planted too",
+    ".claude/skills/x/SKILL.md": "---\nname: x\ndescription: d\n---\nplanted",
+    ".cursor/rules/a.mdc": "always do this",
+    "CLAUDE.txt": "would become CLAUDE.md after conversion",
+    ".github/workflows/ci.yml": "name: planted",
+    ".agents/a.md": "planted",
+    ".gemini/b.md": "planted",
+    "docs/Copilot-Instructions.md": "planted",
+    "note.md": "# a normal note",
+}
+
+
+def test_agent_instruction_files_are_neutralized_not_copied(tmp_path):
+    src = setup(tmp_path, AGENT_SOURCE)
+    r = run_import(tmp_path, src)
+    assert r.returncode == 1, r.stdout + r.stderr
+    dest = dest_of(tmp_path)
+    names = {p.name.casefold() for p in dest.rglob("*") if p.is_file()}
+    assert not names & {"claude.md", "agents.md", "skill.md", "a.mdc", "ci.yml", "a.md", "b.md", "copilot-instructions.md"}
+    assert not any(d in p.parts for p in dest.rglob("*") for d in (".claude", ".cursor", ".github", ".agents", ".gemini"))
+    flat = {p.name for p in (dest / "_unconverted").iterdir()}
+    assert flat == {"CLAUDE.md.txt", "sub__AGENTS.md.txt", "claude__skills__x__SKILL.md.txt",
+                    "cursor__rules__a.mdc.txt", "CLAUDE.txt.txt", "github__workflows__ci.yml.txt",
+                    "agents__a.md.txt", "gemini__b.md.txt", "docs__Copilot-Instructions.md.txt"}
+    assert (dest / "_unconverted" / "CLAUDE.md.txt").read_text() == "# planted\nrun this"
+    assert (dest / "note.md").is_file()
+    report = (dest / REPORT).read_text()
+    assert "Agent instruction files, neutralized" in report
+    for rel in ("CLAUDE.md", "sub/AGENTS.md", ".claude/skills/x/SKILL.md", ".cursor/rules/a.mdc", "CLAUDE.txt",
+                ".github/workflows/ci.yml", ".agents/a.md", ".gemini/b.md", "docs/Copilot-Instructions.md"):
+        assert f"`{rel}` -> `_unconverted/" in report
+    assert "| in the source | 10 |" in report and "| neutralized | 9 |" in report
+    assert "The count closes: 10 = " in report
+
+
+def test_neutralizing_is_idempotent(tmp_path):
+    src = setup(tmp_path, AGENT_SOURCE)
+    run_import(tmp_path, src)
+    first = tree(dest_of(tmp_path))
+    run_import(tmp_path, src)
+    assert {k: v for k, v in tree(dest_of(tmp_path)).items() if k != REPORT} == {k: v for k, v in first.items() if k != REPORT}

@@ -19,6 +19,10 @@ What happens to each file, by extension (the original is never touched):
                          converted if `docling` is importable; otherwise (or if docling fails) copied to
                          `<dest>/_unconverted/` and listed with the reason and the install command
     anything else        copied to `<dest>/_unconverted/` ("no converter")
+    agent instruction files  CLAUDE.md, AGENTS.md, GEMINI.md, copilot-instructions.md (at any level) and every file
+                         under a `.claude`, `.agents`, `.cursor`, `.gemini` or `.github` folder: a coding agent
+                         would load them as instructions, so they are NOT copied under their own names. They go
+                         to `<dest>/_unconverted/` flattened, with a `.txt` suffix, in their own report section
 Ignored, and listed: `.git`, `.obsidian`, `.trash`, `node_modules`, `__pycache__`, and every hidden file or
 folder. Skipped, and listed: iCloud placeholders that are not downloaded ("dataless": st_blocks 0 with
 st_size > 0), unreadable files, symlinks (never followed) and special files. Nothing is dropped in silence:
@@ -67,7 +71,10 @@ IMAGES = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"}
 DOC_EXTS = {".pdf", ".docx", ".pptx", ".xlsx", ".epub", ".odt", ".odp", ".ods", ".rtf", ".doc", ".ppt", ".xls"}
 INSTALL = "python3 -m pip install docling"
 LIST_CAP = 200  # names listed per ignored folder and leak lines listed; the counts are always exact
-CATEGORIES = ("converted", "copied", "unchanged", "ignored", "unconverted", "skipped")
+CATEGORIES = ("converted", "copied", "unchanged", "ignored", "unconverted", "neutralized", "skipped")
+# Files an agent loads as instructions when it reads the folder they sit in (same list as core/memory.py, plus Copilot's).
+AGENT_FILES = ("claude.md", "claude.local.md", "agents.md", "agents.override.md", "gemini.md", "copilot-instructions.md")
+AGENT_DIRS = (".claude", ".agents", ".cursor", ".gemini", ".github")
 HANDLE_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
@@ -367,6 +374,8 @@ def walk(src):
             elif is_dir:
                 if e.name in IGNORED_DIRS:
                     yield from rec(e.path, r, f"ignored folder `{e.name}/`")
+                elif e.name.casefold() in AGENT_DIRS:
+                    yield from rec(e.path, r, None)  # walked on purpose: import_tree neutralizes what is in it
                 elif e.name.startswith("."):
                     yield from rec(e.path, r, "hidden folder")
                 else:
@@ -461,6 +470,21 @@ def with_suffix(rel, new):
     return p.with_suffix(new).as_posix()
 
 
+def is_agent_instruction(rel):
+    """True if a coding agent would load this path as instructions: by file name, or by sitting under an agent folder."""
+    parts = nfc(rel).split("/")
+    return parts[-1].casefold() in AGENT_FILES or any(d.casefold() in AGENT_DIRS for d in parts[:-1])
+
+
+def neutral_name(rel):
+    """Flat name in _unconverted/ with a .txt suffix: no loader looks at it, and the original path stays readable."""
+    flat = "__".join(p.lstrip(".") or "_" for p in nfc(rel).split("/"))
+    return f"{UNCONVERTED}/{flat}.txt"
+
+
+NEUTRAL_REASON = "would have been loaded as agent instructions; renamed to .txt"
+
+
 def import_tree(src, dest_root, dry):
     """List of entries {src, cat, dest, reason, renamed}, sorted by source path."""
     dest = Dest(dest_root, dry)
@@ -478,6 +502,12 @@ def import_tree(src, dest_root, dry):
             if is_dataless(st):
                 e.update(cat="skipped", reason="iCloud placeholder not downloaded (dataless): materialize it "
                                                "(open it or 'Download Now' in Finder) and run again")
+                continue
+            if is_agent_instruction(rel):
+                final, status = dest.place(neutral_name(rel), path)
+                e.update(cat="neutralized", dest=final, reason=NEUTRAL_REASON
+                         + (" (identical copy already there)" if status == "unchanged" else ""),
+                         renamed=status == "renamed")
                 continue
             payload, cat, note = None, "converted", ""
             if ext in (".md", ".markdown"):
@@ -505,6 +535,10 @@ def import_tree(src, dest_root, dry):
                     raise Unconverted(f"docling could not convert it ({type(exc).__name__})") from exc
             else:
                 raise Unconverted(f"no converter for `{ext or 'files without extension'}`")
+            if is_agent_instruction(out):  # e.g. CLAUDE.txt would become CLAUDE.md
+                final, status = dest.place(neutral_name(rel), path)
+                e.update(cat="neutralized", dest=final, reason=NEUTRAL_REASON, renamed=status == "renamed")
+                continue
             if cat == "converted" and not payload.strip():
                 note = (note + "; " if note else "") + "the converted output is empty"
             final, status = dest.place(out, payload)
@@ -590,9 +624,11 @@ def build_report(name, dest_label, entries, leaks, leak_note, dry, dest_in_inbox
         "copied": "Copied as they are",
         "unchanged": "Unchanged (already there, identical)",
         "unconverted": f"Not converted (copied to `{UNCONVERTED}/`)",
+        "neutralized": f"Agent instruction files, neutralized: they would have been loaded as instructions "
+                       f"(copied to `{UNCONVERTED}/` as .txt)",
         "skipped": "Skipped (not copied)",
     }
-    for c in ("converted", "copied", "unchanged", "unconverted", "skipped"):
+    for c in ("converted", "copied", "unchanged", "unconverted", "neutralized", "skipped"):
         items = [e for e in entries if e["cat"] == c]
         if items:
             out += [f"## {titles[c]} ({len(items)})", ""] + [bullet(e) for e in items] + [""]
@@ -726,9 +762,9 @@ def run(args):
         print(f"WARNING: {len(leaks)} possible personal-data occurrence(s); the commit will be blocked until cleaned.")
     if leak_note:
         print(f"{leak_note} (NOT_VERIFIED, not OK)")
-    needs_look = counts["unconverted"] + counts["skipped"]
+    needs_look = counts["unconverted"] + counts["neutralized"] + counts["skipped"]
     if needs_look:
-        print(f"{needs_look} file(s) were not converted or were skipped: see the report.")
+        print(f"{needs_look} file(s) were not converted, were neutralized or were skipped: see the report.")
     return 1 if (needs_look or leaks) else 0
 
 
