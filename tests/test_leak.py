@@ -166,7 +166,9 @@ def test_binary_and_git_are_skipped(tmp_path):
     (tmp_path / ".git").mkdir()
     (tmp_path / ".git" / "config").write_text(EMAIL, encoding="utf-8")
     (tmp_path / "img.bin").write_bytes(b"\xff\xfe\x00" + EMAIL.encode())
-    assert run(["."], tmp_path).returncode == 0
+    r = run(["."], tmp_path)
+    # the fake `.git` folder is not a readable repo (rc 2, NOT_VERIFIED), but nothing inside it was scanned
+    assert r.returncode in (0, 2) and "0 finding(s)" in r.stdout
 
 
 def test_output_does_not_echo_the_data(tmp_path):
@@ -179,6 +181,36 @@ def test_dot_git_worktree_file_is_skipped(tmp_path):
     (tmp_path / ".git").write_text(f"gitdir: {PATH}/repo/.git/worktrees/x\n", encoding="utf-8")
     assert run(["."], tmp_path).returncode == 0
     assert run([".git"], tmp_path).returncode == 0
+
+
+def _no_git_above(path):
+    return not any((a / ".git").exists() for a in [path, *path.parents])
+
+
+def test_folder_outside_any_repo_is_not_verified_rc0(tmp_path):
+    if not _no_git_above(tmp_path):
+        pytest.skip("tmp_path has a .git in an ancestor")
+    (tmp_path / "x.md").write_text("clean\n", encoding="utf-8")
+    r = run(["."], tmp_path)
+    assert r.returncode == 0 and "not inside a git repo" in r.stdout
+
+
+@pytest.mark.parametrize("kind", ["empty", "junk_head"])
+def test_broken_dot_git_folder_is_rc2(tmp_path, kind):
+    (tmp_path / ".git").mkdir()
+    if kind == "junk_head":
+        (tmp_path / ".git" / "HEAD").write_text("garbage\n", encoding="utf-8")
+    (tmp_path / "x.md").write_text("clean\n", encoding="utf-8")
+    r = run(["."], tmp_path)
+    assert r.returncode == 2 and "git rev-parse failed" in r.stdout
+
+
+def test_dot_git_link_to_existing_non_repo_is_rc2(tmp_path):
+    (tmp_path / "target").mkdir()
+    (tmp_path / "work").mkdir()
+    (tmp_path / "work" / ".git").write_text(f"gitdir: {tmp_path / 'target'}\n", encoding="utf-8")
+    r = run(["."], tmp_path / "work")
+    assert r.returncode == 2 and "git rev-parse failed" in r.stdout
 
 
 # ---- fail-open and normalization (security review of the commit) -------------

@@ -182,6 +182,32 @@ def is_settings_local(name):
     return n == SETTINGS_LOCAL or n.endswith("/" + SETTINGS_LOCAL)
 
 
+def _inside_git_repo(d):
+    """False only when the disk proves there is no repo: no `.git` in any ancestor of `d`, or the
+    nearest `.git` is a file whose `gitdir:` target does not exist (a dangling worktree link).
+    Anything else (a `.git` folder, or a link that resolves) is a real repo that git could not read."""
+    cur = os.path.abspath(d)
+    while True:
+        dot = os.path.join(cur, ".git")
+        if os.path.lexists(dot):
+            if os.path.isdir(dot):
+                return True
+            try:
+                with open(dot, "r", encoding="utf-8", errors="replace") as fh:
+                    head = fh.read(4096)
+            except OSError:
+                return True
+            for line in head.splitlines():
+                if line.startswith("gitdir:"):
+                    target = line[len("gitdir:"):].strip()
+                    return os.path.exists(os.path.join(cur, target))
+            return True
+        parent = os.path.dirname(cur)
+        if parent == cur:
+            return False
+        cur = parent
+
+
 def tracked_settings_local(roots=None, why=None):
     """Every settings.local.json in the git INDEX of the scanned path(s), as (name, key) pairs:
     `name` is the path from the repo top (for the report), `key` the absolute path (to count a
@@ -205,7 +231,8 @@ def tracked_settings_local(roots=None, why=None):
             return None
         if top.returncode != 0:
             if why is not None:
-                if b"not a git repository" in top.stderr:
+                # git's message differs between versions and platforms; the disk does not.
+                if not _inside_git_repo(d):
                     why.append(f"{shown(root)} is not inside a git repo")
                 else:
                     why.append("git rev-parse failed")
