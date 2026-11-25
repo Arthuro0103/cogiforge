@@ -694,6 +694,20 @@ def test_a_new_memory_file_warns_that_its_header_loads_in_every_session(repo):
     assert r.returncode == 0 and "WARNING: vault/memory/new.md: new memory file; its header loads in every session" in out(r)
 
 
+def test_the_first_commit_of_a_new_repo_does_not_warn_about_new_memory_files(tmp_path):
+    git(tmp_path, "init", "-q")
+    put(tmp_path, "vault/memory/profile.md", HEAD)
+    git(tmp_path, "add", "-A")
+    r = run(tmp_path, "--staged")
+    assert r.returncode == 0 and "new memory file" not in out(r), out(r)
+    git(tmp_path, "config", "user.email", "t@example.com")
+    git(tmp_path, "config", "user.name", "t")
+    git(tmp_path, "commit", "-q", "-m", "first")
+    put(tmp_path, "vault/memory/second.md", HEAD)
+    git(tmp_path, "add", "-A")
+    assert "new memory file; its header loads in every session" in out(run(tmp_path, "--staged"))
+
+
 def test_a_memory_file_deleted_in_head_and_recreated_warns_as_new(repo):
     git(repo, "rm", "-q", "vault/memory/profile.md")
     git(repo, "commit", "-q", "-m", "gone")

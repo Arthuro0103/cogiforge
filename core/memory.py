@@ -464,6 +464,10 @@ class Reader:
         except OSError as e:
             raise Unreadable(f"it could not be opened ({type(e).__name__})")
 
+    def has_head(self) -> bool:
+        """False in a repository with no commit yet (the first commit: every file is new, so "new" says nothing)."""
+        return self.git("rev-parse", "--verify", "-q", "HEAD") is not None
+
     def head(self, rel: str) -> str | None:
         e = self.head_entry(rel)
         raw = self.blob(e[2]) if e and e[1] == "blob" else None
@@ -627,6 +631,8 @@ def judge_header(rel: str, text: str, frel: str | None, reader: Reader, modes: d
     """Staged only: the text above (and on) the format line is loaded in every session; a new file or a change deserves a look."""
     old = reader.head(frel) if frel else None
     if old is None:
+        if not reader.has_head():
+            return None, None
         msg = f"{rel}: new memory file; its header loads in every session"
     elif header_of(old) == header_of(text):
         return None, None
