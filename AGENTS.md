@@ -78,7 +78,7 @@ Body with the argument. The link goes here, in the middle:
 | check that the command tables above cite only flags the scripts really have (reads the scripts without running them) | `python3 tools/flags.py --tables` · `python3 tools/flags.py <script.py>` |
 | create a project (root, index row, checks) | `python3 tools/new_project.py <name> --target "<sentence>" [--dry-run]` |
 | connection map (optional, graphify) | `/graphify vault` at the repo root |
-| break each check and require a red test | `python3 tests/mutate.py` |
+| break each check and require a red test | `python3 tests/mutate.py` (`--shard I/N`, `--changed-since REF`) |
 | run the tests (needs `pytest`) | `python3 -m pytest -q` |
 
 Every script prints a non-zero exit code when it fails. Read the output, not only the exit code.
