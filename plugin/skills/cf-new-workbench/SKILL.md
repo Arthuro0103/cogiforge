@@ -9,34 +9,32 @@ The plugin carries only instructions (Markdown); the code comes from GitHub. Thi
 
 ## Rules
 
-1. **One question at a time.** The only question is the folder. Ask for an absolute path and suggest `~/cogiforge-workbench`. Expand `~` yourself before you use it.
-2. **Never overwrite.** If the folder exists and is not empty, stop and say so. Ask for another folder. Do not delete anything to make room. The empty-folder check is made BEFORE the download, in the same command (step 2): if it fails, nothing is downloaded and nothing is deleted.
+1. **One question at a time.** The only question is the folder. Ask for a path and suggest `~/cogiforge-workbench`. You write it as an ABSOLUTE path in `DEST='...'`: expand `~` yourself to the real home folder, with no slash at the end. If the path contains a single quote, ask for another folder.
+2. **Never overwrite.** If the folder exists and is not empty, stop and say so. Ask for another folder. Do not delete anything to make room. The checks run BEFORE the download, in the same command (step 2): if one fails, nothing is downloaded and nothing is deleted.
 3. **Windows is not covered here.** If the system is Windows, say: use "Use this template" on GitHub and run `install.ps1`. Stop.
 4. **Do not skip the gate.** Never use `--no-verify`. If the first commit is blocked, show the hook's message and stop.
 5. Talk to the person in the language they write in, in simple words.
 
 ## Steps
 
-Let `DEST` be the folder.
-
-1. Ask for `DEST`. Check it: it must not exist, or must be an empty folder.
-2. Download and clean, as ONE chained command. It needs `git` and an internet connection. Every `&&` is a guard: `DEST` is not empty, not `/`, not `$HOME`; `DEST` does not exist or is an empty folder; the `rm` runs only after a download that worked, and it removes `.git` (the workbench starts its own history), `plugin/` and `.claude-plugin/` (they belong to the plugin, not to the workbench). Never split it into separate lines:
+1. Ask for the folder.
+2. Run this ONE command, changing only the path between the single quotes. It needs `git` and an internet connection. It is one command on purpose: every Bash call in Claude Code starts a new shell, so nothing here may depend on a variable from an earlier call. Never split it into lines or into separate calls. Each guard prints `STOP: <reason>` and ends the chain; repeat the reason in plain words and ask for another folder (for the git case, tell the person to run `git config --global user.name` and `git config --global user.email`, then try again).
 
 ```bash
-[ -n "$DEST" ] && [ "$DEST" != "/" ] && [ "$DEST" != "$HOME" ] && { [ ! -e "$DEST" ] || { [ -d "$DEST" ] && [ -z "$(ls -A "$DEST")" ]; }; } && git clone -q --depth 1 --branch v0.1.0 https://github.com/Arthuro0103/cogiforge.git "$DEST" && rm -rf "$DEST/.git" "$DEST/plugin" "$DEST/.claude-plugin"
+DEST='/absolute/path/to/the/folder' && { case "$DEST" in /*) true ;; *) echo "STOP: not an absolute path"; false ;; esac; } && { [ "${DEST%/}" != "" ] && [ "${DEST%/}" != "${HOME%/}" ] || { echo "STOP: / and the home folder are never used"; false; }; } && { [ ! -e "$DEST" ] || { [ -d "$DEST" ] && [ -r "$DEST" ] && [ -z "$(ls -A "$DEST")" ]; } || { echo "STOP: the folder exists and is not empty"; false; }; } && { git config user.name >/dev/null && git config user.email >/dev/null || { echo "STOP: git has no user.name or user.email"; false; }; } && git clone -q -c advice.detachedHead=false --depth 1 --branch v0.1.0 https://github.com/Arthuro0103/cogiforge.git "$DEST" && rm -rf "$DEST/.git" && cd "$DEST" && git init -q && sh install.sh && git add -A && git commit -qm "workbench from cogiforge 0.1.0"
 ```
 
-If the command prints nothing and stops, one guard failed: say which one in plain words and ask for another folder. If `git clone` itself fails (no internet, GitHub down), show its message as it is and stop; `git clone` also refuses a folder that is not empty on its own.
+If the command prints nothing and stops, one guard failed: say which one. The chain removes only `.git` (the workbench starts its own history). It keeps `plugin/` and `.claude-plugin/`: the workbench is a copy of the repo, and its `tests/test_plugin.py` reads those folders.
 
-3. Turn the gate on and commit:
+3. If `git clone` fails (no internet, GitHub down), show its message as it is and stop; nothing was deleted.
+4. If something AFTER the clone fails (`install.sh`, or the hook blocked the commit), show the message as it is and stop. The folder already has the files and this skill NEVER deletes it. After the cause is fixed, to try again, run this in the folder (same absolute path as `DEST`):
 
 ```bash
-cd "$DEST" && git init -q && sh install.sh && git add -A && git commit -qm "workbench from cogiforge 0.1.0"
+cd '/absolute/path/to/the/folder' && git init -q && sh install.sh && git add -A && git commit -qm "workbench from cogiforge 0.1.0"
 ```
 
-If `install.sh` fails or the hook blocks the commit, show its message as it is and stop.
-
-4. Tell the person, in plain words:
+   Or the person deletes the folder themselves and the skill runs again.
+5. Tell the person, in plain words:
    - The workbench is in `DEST`, the gate is on, and the first commit passed it.
    - The 17 skills are already inside the workbench, in `.claude/skills/`. They show up when Claude Code is opened IN that folder, not here.
    - Next: close this session, run `cd DEST`, run `claude`, and type `/cf-onboard`.
