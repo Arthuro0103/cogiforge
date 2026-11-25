@@ -12,6 +12,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS = ROOT / ".claude" / "skills"
+PLUGIN_SKILLS = ROOT / "plugin-skills"   # the two entry skills of the Claude Code plugin; same spec, same budget
 MAX_NAME, MAX_DESC, MAX_LINES = 64, 1024, 500
 
 
@@ -96,9 +97,13 @@ def test_an_empty_or_missing_skills_folder_is_a_failure(tmp_path):
         require_skills(tmp_path / "does-not-exist")
 
 
-@pytest.mark.parametrize("d", skill_dirs(), ids=lambda d: d.name)
+@pytest.mark.parametrize("d", skill_dirs() + skill_dirs(PLUGIN_SKILLS), ids=lambda d: d.name)
 def test_every_skill_follows_the_open_spec(d):
     assert spec_errors(d) == []
+
+
+def test_the_plugin_skills_folder_is_not_empty():
+    assert len(require_skills(PLUGIN_SKILLS)) == 2
 
 
 def test_a_valid_skill_passes(tmp_path):
@@ -161,7 +166,7 @@ MAX_DESC_BYTES = 450   # every description loads in EVERY session; the spec allo
 
 
 def test_every_description_stays_within_the_byte_budget():
-    dirs = require_skills()
+    dirs = require_skills() + require_skills(PLUGIN_SKILLS)
     too_long = []
     for d in dirs:
         desc = parse_frontmatter((d / "SKILL.md").read_text(encoding="utf-8")).get("description") or ""
