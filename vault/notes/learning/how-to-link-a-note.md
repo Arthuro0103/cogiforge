@@ -1,5 +1,6 @@
 ---
 area: learning
+target: none
 ---
 # A linked note is worth more than a loose one
 

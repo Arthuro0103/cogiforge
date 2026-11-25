@@ -1,5 +1,6 @@
 ---
 area: life
+target: none
 ---
 # One idea per note makes linking easy
 

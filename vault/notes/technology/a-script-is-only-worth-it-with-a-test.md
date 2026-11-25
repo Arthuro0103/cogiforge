@@ -1,5 +1,6 @@
 ---
 area: technology
+target: none
 ---
 # A script that runs on its own needs a test
 
