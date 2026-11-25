@@ -29,6 +29,14 @@ def test_the_table_marks_a_missing_tool_and_a_failing_one(tmp_path):
     assert "| gate | 1.23 s (0.90 cpu), 20 MB |" in t and "| usage | missing |" in t and "(rc 1)" in t
 
 
+def test_the_table_marks_an_exit_code_other_than_the_expected_one(tmp_path):
+    ok = {100: {"import": {"rc": 1, "ok_rc": 1, "s": 0.5, "cpu": 0.4, "mb": 9.0}}}
+    stopped = {100: {"import": {"rc": 0, "ok_rc": 1, "s": 0.5, "cpu": 0.4, "mb": 9.0}}}
+    assert "(rc" not in bench.table([100], ok)
+    assert "(rc 0)" in bench.table([100], stopped)
+    assert bench.OK_RC == {"import": 1}
+
+
 def test_a_small_end_to_end_run_measures_every_tool_and_all_exit_clean(tmp_path):
     r = subprocess.run([sys.executable, BENCH, "--sizes", "120", "--runs", "1", "--out", str(tmp_path / "t.md")],
                        capture_output=True, text=True, timeout=600)

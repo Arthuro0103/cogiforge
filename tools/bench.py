@@ -145,6 +145,7 @@ def bench_size(n: int, runs: int, work: Path) -> dict:
             result[name] = {"missing": True}
             continue
         result[name] = median_run(cmd, ROOT, runs, e)
+        result[name]["ok_rc"] = OK_RC.get(name, 0)
     (work / f"r{n}").mkdir()
     repo = commit_repo(vault, work / f"r{n}")
     cache = repo / ".git" / "cogiforge-edges.json"
@@ -154,6 +155,12 @@ def bench_size(n: int, runs: int, work: Path) -> dict:
     return result
 
 
+# The exit code each tool is expected to give on the synthetic vault; every other tool is expected to give 0.
+# The vault carries its CLAUDE.md (the context measurement needs it), and import neutralizes agent instruction
+# files into _unconverted/ and says so with rc 1. That is its designed answer here; a 0 would mean it stopped.
+OK_RC = {"import": 1}
+
+
 def table(sizes: list[int], data: dict[int, dict]) -> str:
     names = list(data[sizes[0]])
     lines = ["| tool | " + " | ".join(f"{n:,} notes" for n in sizes) + " |", "|---|" + "---|" * len(sizes)]
@@ -161,7 +168,7 @@ def table(sizes: list[int], data: dict[int, dict]) -> str:
         cells = []
         for n in sizes:
             r = data[n][name]
-            cells.append("missing" if r.get("missing") else f"{r['s']:.2f} s ({r['cpu']:.2f} cpu), {r['mb']:.0f} MB" + ("" if r["rc"] in (0,) else f" (rc {r['rc']})"))
+            cells.append("missing" if r.get("missing") else f"{r['s']:.2f} s ({r['cpu']:.2f} cpu), {r['mb']:.0f} MB" + ("" if r["rc"] == r.get("ok_rc", 0) else f" (rc {r['rc']})"))
         lines.append(f"| {name} | " + " | ".join(cells) + " |")
     return "\n".join(lines)
 
