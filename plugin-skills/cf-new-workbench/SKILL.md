@@ -10,7 +10,7 @@ The plugin carries the whole Cogiforge repo. This skill copies it into a fresh f
 ## Rules
 
 1. **One question at a time.** The only question is the folder. Ask for an absolute path and suggest `~/cogiforge-workbench`. Expand `~` yourself before you use it.
-2. **Never overwrite.** If the folder exists and is not empty, stop and say so. Ask for another folder. Do not delete anything to make room.
+2. **Never overwrite.** If the folder exists and is not empty, stop and say so. Ask for another folder. Do not delete anything to make room. The empty-folder check is made BEFORE the copy, in the same command (step 2): if it fails, nothing is copied and nothing is deleted.
 3. **Windows is not covered here.** If the system is Windows, say: use "Use this template" on GitHub and run `install.ps1`. Stop.
 4. **Do not skip the gate.** Never use `--no-verify`. If the first commit is blocked, show the hook's message and stop.
 5. Talk to the person in the language they write in, in simple words.
@@ -20,12 +20,13 @@ The plugin carries the whole Cogiforge repo. This skill copies it into a fresh f
 Let `DEST` be the folder and `ROOT` be `${CLAUDE_PLUGIN_ROOT}`.
 
 1. Ask for `DEST`. Check it: it must not exist, or must be an empty folder.
-2. Copy and clean. The copy leaves out `.claude-plugin/` and `plugin-skills/` (they belong to the plugin, not to the workbench), and any `.git`:
+2. Copy and clean, as ONE chained command. The copy leaves out `.claude-plugin/` and `plugin-skills/` (they belong to the plugin, not to the workbench), and any `.git`. Every `&&` is a guard: `DEST` is not empty, not `/`, not `$HOME`; the folder is empty before the copy; the `rm` runs only after a copy that worked. Never split it into separate lines:
 
 ```bash
-mkdir -p "$DEST" && cp -R "${CLAUDE_PLUGIN_ROOT}/." "$DEST/"
-rm -rf "$DEST/.claude-plugin" "$DEST/plugin-skills" "$DEST/.git"
+[ -n "$DEST" ] && [ "$DEST" != "/" ] && [ "$DEST" != "$HOME" ] && mkdir -p "$DEST" && [ -z "$(ls -A "$DEST")" ] && cp -R "${CLAUDE_PLUGIN_ROOT}/." "$DEST/" && rm -rf "$DEST/.claude-plugin" "$DEST/plugin-skills" "$DEST/.git"
 ```
+
+If the command prints nothing and stops, one guard failed: say which one in plain words and ask for another folder.
 
 3. Turn the gate on and commit:
 

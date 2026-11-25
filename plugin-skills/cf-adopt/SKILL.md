@@ -40,9 +40,10 @@ The copy leaves out `.claude-plugin/` and `plugin-skills/` (they belong to the p
 - `~/.cogiforge` does not exist: make it.
 
 ```bash
-mkdir -p ~/.cogiforge && cp -R "${CLAUDE_PLUGIN_ROOT}/." ~/.cogiforge/
-rm -rf ~/.cogiforge/.claude-plugin ~/.cogiforge/plugin-skills ~/.cogiforge/.git
+mkdir -p ~/.cogiforge && cp -R "${CLAUDE_PLUGIN_ROOT}/." ~/.cogiforge/ && rm -rf ~/.cogiforge/.claude-plugin ~/.cogiforge/plugin-skills ~/.cogiforge/.git
 ```
+
+It is one chained command on purpose: the `rm` runs only after a copy that worked.
 
 - It exists and is another version: show the two versions (`version` in `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json` against the one the copy was made from; if you cannot tell, say so) and ask before replacing it. Never replace it without a yes. Vaults already adopted keep pointing at `~/.cogiforge`, so replacing it updates their hook too.
 - It exists and is the same version: use it as it is.

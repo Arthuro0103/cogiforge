@@ -76,3 +76,34 @@ def test_the_version_is_in_the_readme_plugin_section():
     end = text.find("\n## ", start + 1)
     assert v in text[start:end]
     assert f"workbench from cogiforge {v}" in (ROOT / "plugin-skills" / "cf-new-workbench" / "SKILL.md").read_text(encoding="utf-8")
+
+
+def bash_blocks(name):
+    body = (ROOT / "plugin-skills" / name / "SKILL.md").read_text(encoding="utf-8")
+    return re.findall(r"```bash\n(.*?)```", body, re.S)
+
+
+def test_new_workbench_deletes_only_after_a_guarded_copy():
+    blocks = [b for b in bash_blocks("cf-new-workbench") if "rm -rf" in b]
+    assert len(blocks) == 1
+    cmd = blocks[0].strip()
+    assert "\n" not in cmd, "the copy and the rm must be one command, not two lines"
+    guards = ['[ -n "$DEST" ]', '[ "$DEST" != "/" ]', '[ "$DEST" != "$HOME" ]', '[ -z "$(ls -A "$DEST")" ]']
+    parts = [x.strip() for x in cmd.split("&&")]
+    for g in guards:
+        assert g in parts, g
+    cp = next(i for i, x in enumerate(parts) if x.startswith("cp -R"))
+    rm = next(i for i, x in enumerate(parts) if x.startswith("rm -rf"))
+    assert all(parts.index(g) < cp for g in guards), "every guard comes before the copy"
+    assert cp < rm, "the rm comes after the cp, joined by &&"
+
+
+def test_adopt_deletes_only_after_a_copy_that_worked():
+    blocks = [b for b in bash_blocks("cf-adopt") if "rm -rf" in b]
+    assert len(blocks) == 1
+    cmd = blocks[0].strip()
+    assert "\n" not in cmd
+    parts = [x.strip() for x in cmd.split("&&")]
+    cp = next(i for i, x in enumerate(parts) if x.startswith("cp -R"))
+    rm = next(i for i, x in enumerate(parts) if x.startswith("rm -rf"))
+    assert cp < rm
