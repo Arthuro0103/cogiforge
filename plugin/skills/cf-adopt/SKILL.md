@@ -50,7 +50,7 @@ The plugin version is 0.1.0, so the tag is `v0.1.0`. If `git clone` fails (no in
 [ ! -e ~/.cogiforge/.git ] && rm -rf ~/.cogiforge.new ~/.cogiforge.old && git clone -q -c advice.detachedHead=false --depth 1 --branch v0.1.0 https://github.com/Arthuro0103/cogiforge.git ~/.cogiforge.new && rm -rf ~/.cogiforge.new/.git && mv ~/.cogiforge ~/.cogiforge.old && mv ~/.cogiforge.new ~/.cogiforge && rm -rf ~/.cogiforge.old
 ```
 
-  The old copy is only renamed after the new one is complete, and only deleted after the new one took its place. If the chain stops before the first `mv`, nothing changed. If the second `mv` fails, run `mv ~/.cogiforge.old ~/.cogiforge` to go back. If only the last `rm` fails, the new copy is already in place and `~/.cogiforge.old` is left for the person to delete.
+  The old copy is only renamed after the new one is complete, and only deleted after the new one took its place. If the chain stops before the first `mv`, nothing changed. If the second `mv` fails, run `mv ~/.cogiforge.old ~/.cogiforge` to go back. If only the last `rm` fails, the new copy is already in place and `~/.cogiforge.old` is left for the person to delete. A `~/.cogiforge.old` or `~/.cogiforge.new` left from an earlier try that cannot be deleted stops the chain at its start, with nothing changed: show the `rm` message and ask the person to delete that folder themselves, then try again.
   Vaults already adopted keep pointing at `~/.cogiforge`, so replacing it updates their hook too.
 
 ### 1. Dry run (you)
