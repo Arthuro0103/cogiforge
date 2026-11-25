@@ -7,8 +7,10 @@ This plugin gives Claude Code two skills for Cogiforge, a second-brain workbench
 
 ## Install
 
-```
-/plugin install cogiforge --marketplace Arthuro0103/cogiforge
+In a terminal:
+
+```sh
+claude plugin install cogiforge --marketplace Arthuro0103/cogiforge
 ```
 
 ## Why only two skills
