@@ -134,7 +134,7 @@ As medições com número, comando e commit estão no [README.md](README.md), se
 not*. Não copiei todos os números para cá de propósito: uma cópia envelhece sozinha. Os dois que mais importam:
 
 - Testes: `python3 -m pytest -q` deu **1504 passed, 2 skipped** (commit `34854ac`, 24/11/2026), depois de `sh install.sh` e `python3 -m pip install pytest`.
-- Mutação: cada checagem é quebrada uma por vez e uma mutação que nenhum teste percebe é uma falha. `python3 tests/mutate.py --dry` lista 774 mutantes e confere em segundos que todos ainda se aplicam; a cada push o CI (`.github/workflows/prova.yml`, job `mutation`) muta só as peças que mudaram, em 8 fatias paralelas; toda segunda (e quando disparado à mão) roda os 774 em 8 fatias.
+- Mutação: cada checagem é quebrada uma por vez e uma mutação que nenhum teste percebe é uma falha. `python3 tests/mutate.py --dry` lista 774 mutantes e confere em segundos que todos ainda se aplicam; o CI (`.github/workflows/prova.yml`) roda a suíte nos 8 jobs da matriz e a mutação num job à parte (`mutation`, ubuntu, Python 3.12, 8 fatias paralelas); um push ou pull request que muda só documentação (README, LEIA-ME, WHY, TUTORIAL, LICENSE, `docs/`, `assets/`) pula a mutação, qualquer outra mudança muta todas as peças; a rodada de segunda e o disparo manual sempre rodam os 774.
 
 Em resumo: macOS e Linux são provados
 pelo CI; o Windows **não** é declarado como suportado; dois testes que comparam o verificador de links com o cofre

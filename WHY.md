@@ -43,7 +43,7 @@ of the time had a test for only 1 of the 8 checks: the other 7 could be deleted 
 
 **The rule.** Every check must have a test that fails when the check is broken.
 
-**Who catches it.** `tests/mutate.py`, which runs in CI as a gate: a surviving mutant fails the build.
+**Who catches it.** `tests/mutate.py`, which runs in CI as a gate in its own job (8 shards, ubuntu, Python 3.12): a surviving mutant fails that job. A push that changes only docs skips it; the Monday run and a manual dispatch always run every mutant.
 **The test.** `mutate.py` itself. Result on Oct 7: **236 of 236 mutants killed, 0 alive**. On Oct 9, after a large merge, the first full run was **361 of 371 killed, 10 alive**: the new pieces came with tests that stayed green with the check broken. Ten tests were added, the eight affected pieces were rerun (**138 of 138 killed**), and the gate went green again. That is the gate doing its job, on the author's own merge.
 
 ### 3. A checker that touched nothing and said OK (Sep 11)

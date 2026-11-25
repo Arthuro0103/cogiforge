@@ -4,8 +4,9 @@ name: proof
 # Each step below exists because a failure of it has already happened (see WHY.md, when it exists).
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # The event is part of the group: a push never cancels the Monday full round or a manual dispatch.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
 
 on:
   push:
@@ -95,12 +96,18 @@ jobs:
           exit $rc
 
   # Mutation runs apart from the matrix: 770+ mutants one at a time took 3 to 4 h in EACH of the 8 proof
-  # jobs (the `memory` piece alone ~2 h, `hook` ~45 min). Here the work is split in 8 parallel shards, and on
-  # push and pull_request only the pieces that changed are mutated. The full round (every mutant) runs
-  # on the Monday schedule and on workflow_dispatch.
+  # jobs (the `memory` piece alone ~2 h, `hook` ~45 min). Here the work is split in 8 parallel shards on
+  # ubuntu / py3.12 only. A push or pull request skips the mutation ONLY when every file changed since the
+  # base is a doc (README.md, LEIA-ME.md, WHY.md, TUTORIAL.md, LICENSE, preview.html, docs/**, assets/**);
+  # any other change mutates every piece. The base of a push is the last green run of this workflow on this
+  # branch (not `event.before`: a red or cancelled push would hide its change from the next one).
+  # The Monday schedule and workflow_dispatch always run every mutant.
   mutation:
     name: mutation shard ${{ matrix.shard }}/8
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -124,20 +131,35 @@ jobs:
       - name: install.sh (the suites expect hooksPath active)
         run: sh install.sh
 
-      - name: mutation — every mutant of the shard has to die
+      - name: base of the diff (last green run on a push; the base branch on a pull request)
+        id: base
         env:
           EVENT: ${{ github.event_name }}
-          BEFORE: ${{ github.event.before }}
           BASE_REF: ${{ github.base_ref }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          extra=""
+          base=""
           case "$EVENT" in
             push)
-              extra="--changed-since $BEFORE" ;;
+              sha=$(gh run list --workflow "${{ github.workflow }}" --branch "${{ github.ref_name }}" \
+                      --status success --limit 1 --json headSha --jq '.[0].headSha' || true)
+              if [ -n "$sha" ] && git cat-file -e "${sha}^{commit}" 2>/dev/null; then
+                base="$sha"
+              else
+                echo "no green run in this clone's history: every piece is mutated"
+              fi ;;
             pull_request)
               git fetch --no-tags origin "$BASE_REF"
-              extra="--changed-since origin/$BASE_REF" ;;
+              base="origin/$BASE_REF" ;;
           esac
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+
+      - name: mutation — every mutant of the shard has to die
+        env:
+          BASE: ${{ steps.base.outputs.base }}
+        run: |
+          extra=""
+          if [ -n "$BASE" ]; then extra="--changed-since $BASE"; fi
           python -u tests/mutate.py --shard ${{ matrix.shard }}/8 $extra
 
   # Windows is INFORMATIONAL: continue-on-error means a red run here does not turn the proof red.
