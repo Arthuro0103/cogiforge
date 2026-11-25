@@ -114,8 +114,8 @@ def test_versions_branches_and_urls_in_the_plugin_are_the_manifest_ones():
     v, repo = m["version"], m["repository"]
     for p in plugin_text_files():
         text = p.read_text(encoding="utf-8")
-        for found in re.findall(r"(?<![\w.])\d+\.\d+\.\d+(?![\w.]*\w)", text):
-            assert found == v, (p.name, found)
+        for found in re.findall(r"(?<![\w.])v?\d+\.\d+\.\d+(?![\w.]*\w)", text):
+            assert found.removeprefix("v") == v, (p.name, found)   # v10.1.0 must not pass as 0.1.0
         for found in re.findall(r"--branch\s+(\S+)", text):
             assert found == "v" + v, (p.name, found)
         for found in re.findall(r"github\.com/[^\s)`'\"<>]*", text):
