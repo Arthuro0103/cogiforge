@@ -50,6 +50,14 @@ Dentro do Claude Code é o mesmo: `/plugin marketplace add Arthuro0103/cogiforge
 
 Só macOS e Linux; no Windows use "Use this template" no GitHub e o `install.ps1`.
 
+### Experimente
+
+Depois de instalar, abra o Claude Code em qualquer pasta e peça com as suas palavras, por exemplo:
+
+1. *"Monta um workbench novo do Cogiforge em ~/cogiforge-workbench."* O Claude roda a `/cf-new-workbench`: cria a pasta, liga o portão e faz o primeiro commit.
+2. *"Põe o portão de commit do Cogiforge no meu vault do Obsidian em ~/Documents/MeuVault."* O Claude roda a `/cf-adopt`: mostra o plano e espera o seu sim antes de mudar qualquer coisa.
+3. Depois abra o workbench novo (`cd ~/cogiforge-workbench && claude`) e diga *"Me conhece primeiro."* O Claude roda a `/cf-onboard` e faz a primeira pergunta.
+
 ### Por que o plugin instala só duas skills
 
 Este repo tem 17 skills, e o plugin instala só duas de propósito. Se você ou a sua IA se perguntarem por quê, é isto.

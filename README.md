@@ -54,6 +54,14 @@ Inside Claude Code the same thing is `/plugin marketplace add Arthuro0103/cogifo
 
 macOS and Linux only; on Windows use "Use this template" on GitHub and `install.ps1`.
 
+### Try it
+
+After installing, open Claude Code in any folder and ask in your own words, for example:
+
+1. *"Make me a new Cogiforge workbench in ~/cogiforge-workbench."* Claude runs `/cf-new-workbench`: it builds the folder, turns the gate on and makes the first commit.
+2. *"Put the Cogiforge commit gate on my Obsidian vault at ~/Documents/MyVault."* Claude runs `/cf-adopt`: it shows the plan and waits for your yes before it changes anything.
+3. Then open the new workbench (`cd ~/cogiforge-workbench && claude`) and say *"Get to know me."* Claude runs `/cf-onboard` and asks its first question.
+
 ### Why the plugin installs only two skills
 
 This repo has 17 skills, and the plugin installs just two on purpose. If you or your AI wonder why, here is the reasoning.
