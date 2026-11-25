@@ -23,21 +23,21 @@
 <text x="78" y="178" class="fb">how to link a note</text>
 <text x="78" y="200" class="f">one note per idea</text>
 <text x="48" y="224" class="f">▾ projects</text>
-<text x="64" y="246" class="f">my-first-project</text>
+<text x="64" y="246" class="f" style="font-size:11px">example-my-first-project</text>
 <text x="48" y="270" class="f">▸ memory</text>
 <text x="48" y="292" class="f">▸ tasks</text>
 <text x="48" y="314" class="f">▸ people</text>
 <!-- note -->
 <text x="228" y="92" class="h">A link lives inside the argument</text>
-<text x="228" y="122" class="f">area: learning · project: my-first-project</text>
+<text x="228" y="122" class="f">area: learning · project: example-my-first-project</text>
 <rect x="228" y="140" width="380" height="8" rx="4" fill="#232323"/>
 <text x="228" y="176" class="b">A note without a link is a file nobody will find.</text>
 <text x="228" y="200" class="b">The link goes in the middle of the sentence, like in</text>
-<text x="228" y="224" class="b"><tspan class="o">[[projects/my-first-project/instructions]]</tspan>,</text>
+<text x="228" y="224" class="b"><tspan class="o">[[projects/example-my-first-project/instructions]]</tspan>,</text>
 <text x="228" y="248" class="b">not in a list at the bottom.</text>
 <rect x="228" y="270" width="340" height="8" rx="4" fill="#232323"/>
 <rect x="228" y="290" width="240" height="8" rx="4" fill="#232323"/>
-<text x="228" y="332" class="f">backlinks: 3  ·  gate: passed</text>
+<text x="228" y="332" class="f">gate: passed</text>
 <!-- local graph -->
 <text x="660" y="86" class="fb">Local graph</text>
 <g stroke="#3a3a3a" stroke-width="1.2">
@@ -51,6 +51,6 @@
 <!-- terminal -->
 <rect x="20" y="368" width="860" height="92" rx="10" fill="#101010" stroke="#2e2e2e" stroke-width="1.5"/>
 <text x="40" y="396" class="m"><tspan fill="#6a6a6a">$</tspan> claude</text>
-<text x="40" y="420" class="m"><tspan class="o">/cf-open-session</tspan> my-first-project</text>
+<text x="40" y="420" class="m"><tspan class="o">/cf-open-session</tspan> example-my-first-project</text>
 <text x="40" y="444" class="m" style="fill:#8a8a8a">reads the root, the last diary entries and the open tasks, then tells you where you stopped</text>
 </svg>

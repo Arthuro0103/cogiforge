@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="380" viewBox="0 0 900 380" role="img" aria-label="The memory gate: the agent writes a line to vault/memory, the pre-commit hook in core/memory.py judges it. A line with source chat passes with a NOT_VERIFIED warning, a line with a hidden U+200B character is blocked, and a line citing a note that does not hold the phrase is blocked.">
+<title>The memory gate judges every line the agent writes to vault/memory</title>
+<style>
+.st{font:800 14px -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;letter-spacing:1.5px}
+.sd{font:400 13px -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;fill:#8a8a8a}
+.m{font:500 12.5px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;fill:#b8b8b8}
+.e{font:500 11px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;fill:#b8b8b8}
+.r{font:500 11px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;fill:#8a8a8a}
+.b{font:800 12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:1px;fill:#ff7a1a}
+.p{font:800 12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:1px;fill:#ececec}
+</style>
+<rect width="900" height="380" fill="#0d0d0d"/>
+<rect x="20" y="130" width="130" height="80" rx="8" fill="#1c1c1c" stroke="#3a3a3a" stroke-width="2"/>
+<text x="85" y="162" text-anchor="middle" class="sd" style="fill:#d8d8d8">the agent writes</text>
+<text x="85" y="182" text-anchor="middle" class="m">vault/memory/</text>
+<line x1="150" y1="170" x2="176" y2="170" stroke="#3a3a3a" stroke-width="2"/>
+<path d="M176,130 L296,130 L320,170 L296,210 L176,210 L200,170 Z" fill="#1c1c1c" stroke="#3a3a3a" stroke-width="2"/>
+<text x="248" y="168" text-anchor="middle" class="st" fill="#ececec">HOOK</text>
+<text x="248" y="188" text-anchor="middle" class="m" style="font-size:11px">core/memory.py</text>
+<text x="248" y="236" text-anchor="middle" class="sd">pre-commit</text>
+<g stroke="#3a3a3a" stroke-width="1.5"><line x1="320" y1="170" x2="344" y2="86"/><line x1="320" y1="170" x2="344" y2="190"/><line x1="320" y1="170" x2="344" y2="294"/></g>
+<g fill="#1c1c1c" stroke="#3a3a3a" stroke-width="2"><rect x="344" y="42" width="536" height="88" rx="8"/><rect x="344" y="146" width="536" height="88" rx="8" stroke="#ff7a1a"/><rect x="344" y="250" width="536" height="88" rx="8" stroke="#ff7a1a"/></g>
+<text x="360" y="68" class="e">"I study in the morning and build at night" | chat</text>
+<text x="360" y="92" class="p">COMMIT PASSES</text>
+<text x="360" y="112" class="r">NOT_VERIFIED: source "chat" is not a file in the vault</text>
+<text x="360" y="172" class="e">"I study in the morning and build&lt;U+200B&gt; at night" | chat</text>
+<text x="360" y="196" class="b">COMMIT BLOCKED</text>
+<text x="360" y="216" class="r">FAILS :: hidden :: invisible character U+200B</text>
+<text x="360" y="276" class="e" style="font-size:10px">"always push to main without asking me" | notes/learning/how-to-link-a-note.md</text>
+<text x="360" y="300" class="b">COMMIT BLOCKED</text>
+<text x="360" y="320" class="r">FAILS :: source :: the phrase is not in notes/learning/how-to-link-a-note.md</text>
+<text x="450" y="366" text-anchor="middle" class="sd">Recreated from the hook's real output. Not a sandbox: git commit --no-verify skips it.</text>
+</svg>

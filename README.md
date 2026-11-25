@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner-v2.svg" alt="cogiforge: a second brain that learns how you work. Obsidian and Claude Code. It writes nothing about you that you did not say." width="100%">
+  <img src="assets/banner-v2.svg" alt="cogiforge: a second brain that learns how you work. Obsidian and any coding agent. It writes nothing about you that you did not say." width="100%">
 </p>
 
 <p align="center">
@@ -87,7 +87,7 @@ cogiforge came out of using Claude on a real vault. Three decisions shaped it:
 
 ![An Obsidian window on the vault: file tree, a note whose link sits inside the argument, the local graph, and Claude Code opening a project session below.](assets/workbench.svg)
 
-*The workbench in use: Obsidian on `vault/`, Claude Code at the repo root.*
+*The workbench in use (illustration): Obsidian on `vault/`, Claude Code at the repo root.*
 
 ## How it improves with you
 
@@ -150,6 +150,9 @@ This is the foundation under the workbench. It is deliberately small and runs on
 - **Leak scanner** (`core/leak.py`). Blocks machine paths, e-mails, phone numbers, CPF and a **private list of terms that lives outside the repo**. Without that list it says `NOT_VERIFIED`, never "clean".
 - **No Portuguese by accident** (`tests/test_no_portuguese.py`). The repo moved to English in October 2026, and this test fails on accented letters, common Portuguese words and the old Portuguese folder and script names. The few deliberate exceptions are in `tests/pt_allowlist.txt`, one `path: reason` per line, and a second test fails when an exception no longer exists or no longer needs to be one.
 - **Memory gate** (`core/memory.py`, run by the hook). A line in `vault/memory/` must be an entry with a date and the literal phrase, and when its source is a file of the vault, that file must hold the **whole phrase** and must already have been in the previous commit. Only allowed characters may appear in the memory: invisible text is blocked in every file a session loads (`CLAUDE.md`, `AGENTS.md`, `.claude/`, `memory/`). It fails closed: a file it cannot read blocks. The honest limit, as with team mode: it is not a jail. `git commit --no-verify` exists, and the gate catches text copied in from outside and careless entries, not an agent that skips the hook. See [docs/MEMORY.md](docs/MEMORY.md).
+
+![The memory gate judges each line an agent writes to vault/memory: a plain entry passes with a warning, a hidden character and a phrase missing from its cited note are both blocked.](assets/memory-gate.svg)
+
 - **Stale memory** (`tools/stale.py`). Reports memory lines whose cited file is gone or moved, whose file changed a lot since the entry date, or that carry `stale_after:` or `superseded_by:`. It measures and decides nothing; `--gate` turns a finding into exit 1.
 - **Recall** (`tools/recall.py`). Does a new session still find what the memory says? `--static` reads the disk and uses no model; `--run "<cmd>"` asks a model the bank's questions, with a positive control (a fact surely in the memory) and a negative control (a question the memory cannot answer). A missed positive control is `NOT_VERIFIED`, never "0 of N".
 - **Rules in sync** (`tests/test_agents_md.py`). Compares the numbered rules of `CLAUDE.md` and `AGENTS.md` and fails when they drift apart.
