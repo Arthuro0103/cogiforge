@@ -163,12 +163,12 @@ def test_ignore_file_and_no_ignore(tmp_path):
 
 
 def test_binary_and_git_are_skipped(tmp_path):
-    (tmp_path / ".git").mkdir()
-    (tmp_path / ".git" / "config").write_text(EMAIL, encoding="utf-8")
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)  # a real repo: the gate can read its index
+    with open(tmp_path / ".git" / "config", "a", encoding="utf-8") as f:
+        f.write(f"# {EMAIL}\n")  # personal data inside .git must never be scanned
     (tmp_path / "img.bin").write_bytes(b"\xff\xfe\x00" + EMAIL.encode())
     r = run(["."], tmp_path)
-    # the fake `.git` folder is not a readable repo (rc 2, NOT_VERIFIED), but nothing inside it was scanned
-    assert r.returncode in (0, 2) and "0 finding(s)" in r.stdout
+    assert r.returncode == 0 and "0 finding(s)" in r.stdout
 
 
 def test_output_does_not_echo_the_data(tmp_path):
