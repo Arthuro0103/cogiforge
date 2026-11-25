@@ -479,3 +479,13 @@ def test_neutralizing_is_idempotent(tmp_path):
     first = tree(dest_of(tmp_path))
     run_import(tmp_path, src)
     assert {k: v for k, v in tree(dest_of(tmp_path)).items() if k != REPORT} == {k: v for k, v in first.items() if k != REPORT}
+
+
+def test_agent_instruction_paths_are_matched_without_regard_to_case():
+    # macOS folders are case-insensitive, so the folder name on disk may be spelled any way: tested on the function
+    m = load_module()
+    for rel in (".Claude/c.md", "x/.CURSOR/rules/a.mdc", "Claude.MD", "sub/Agents.md", ".GitHub/workflows/ci.yml",
+                "docs/Copilot-Instructions.md", "a/b/GEMINI.md"):
+        assert m.is_agent_instruction(rel), rel
+    for rel in ("note.md", "claude-notes.md", "docs/agents.txt", "github/ci.yml", "a/b/claude.md.bak"):
+        assert not m.is_agent_instruction(rel), rel
