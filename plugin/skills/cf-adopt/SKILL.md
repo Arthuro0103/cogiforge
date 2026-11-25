@@ -33,21 +33,21 @@ The git hook needs a fixed address for Cogiforge, and the plugin carries only in
 
 ### 0. A stable copy in `~/.cogiforge` (you, before the dry run)
 
-The plugin version is 0.1.0, so the tag is `v0.1.0`. If `git clone` fails (no internet, GitHub down), show its message as it is and stop.
+The plugin version is 0.1.1, so the tag is `v0.1.1`. If `git clone` fails (no internet, GitHub down), show its message as it is and stop.
 
 - `~/.cogiforge` does not exist: download it.
 
 ```bash
-[ ! -e ~/.cogiforge ] && git clone -q -c advice.detachedHead=false --depth 1 --branch v0.1.0 https://github.com/Arthuro0103/cogiforge.git ~/.cogiforge && rm -rf ~/.cogiforge/.git
+[ ! -e ~/.cogiforge ] && git clone -q -c advice.detachedHead=false --depth 1 --branch v0.1.1 https://github.com/Arthuro0103/cogiforge.git ~/.cogiforge && rm -rf ~/.cogiforge/.git
 ```
 
 - It exists: read its version in `~/.cogiforge/plugin/.claude-plugin/plugin.json`. If that file does not exist, it is a copy from before the `plugin/` layout: say you cannot tell the version and treat it as another version.
-- If `~/.cogiforge/.git` exists, it is a git clone (maybe the person's own development copy): this skill NEVER replaces it. If its version matches 0.1.0, use it; if not, tell the person to update it themselves and stop.
+- If `~/.cogiforge/.git` exists, it is a git clone (maybe the person's own development copy): this skill NEVER replaces it. If its version matches 0.1.1, use it; if not, tell the person to update it themselves and stop.
 - Same version: use it as it is.
-- Another version, no `.git`: show the two versions (this plugin's, 0.1.0, against the one found, or "unknown") and ask before replacing it. Never replace it without a yes. Only after a yes, with one chain:
+- Another version, no `.git`: show the two versions (this plugin's, 0.1.1, against the one found, or "unknown") and ask before replacing it. Never replace it without a yes. Only after a yes, with one chain:
 
 ```bash
-[ ! -e ~/.cogiforge/.git ] && rm -rf ~/.cogiforge.new ~/.cogiforge.old && git clone -q -c advice.detachedHead=false --depth 1 --branch v0.1.0 https://github.com/Arthuro0103/cogiforge.git ~/.cogiforge.new && rm -rf ~/.cogiforge.new/.git && mv ~/.cogiforge ~/.cogiforge.old && mv ~/.cogiforge.new ~/.cogiforge && rm -rf ~/.cogiforge.old
+[ ! -e ~/.cogiforge/.git ] && rm -rf ~/.cogiforge.new ~/.cogiforge.old && git clone -q -c advice.detachedHead=false --depth 1 --branch v0.1.1 https://github.com/Arthuro0103/cogiforge.git ~/.cogiforge.new && rm -rf ~/.cogiforge.new/.git && mv ~/.cogiforge ~/.cogiforge.old && mv ~/.cogiforge.new ~/.cogiforge && rm -rf ~/.cogiforge.old
 ```
 
   The old copy is only renamed after the new one is complete, and only deleted after the new one took its place. If the chain stops before the first `mv`, nothing changed. If the second `mv` fails, run `mv ~/.cogiforge.old ~/.cogiforge` to go back. If only the last `rm` fails, the new copy is already in place and `~/.cogiforge.old` is left for the person to delete. A `~/.cogiforge.old` or `~/.cogiforge.new` left from an earlier try that cannot be deleted stops the chain at its start, with nothing changed: show the `rm` message and ask the person to delete that folder themselves, then try again.

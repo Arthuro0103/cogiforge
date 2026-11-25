@@ -38,7 +38,7 @@ in the [tutorial](TUTORIAL.md).
 
 ## Install as a Claude Code plugin
 
-If you use Claude Code, you can install Cogiforge as a plugin (version 0.1.0). Two commands in your terminal:
+If you use Claude Code, you can install Cogiforge as a plugin (version 0.1.1). Two commands in your terminal:
 
 ```sh
 claude plugin marketplace add Arthuro0103/cogiforge
@@ -72,7 +72,7 @@ This repo has 17 skills, and the plugin installs just two on purpose. If you or 
 4. **A git hook needs a fixed path, and the plugin carries no code.** That is why each workbench carries its own `core/`, and why `/cf-adopt` keeps one stable copy in `~/.cogiforge` and points the vault's hook there.
 5. **Other agents (Codex, Cursor and others) find the same skills inside the workbench**, through `AGENTS.md` and `.agents/skills`. They do not need the plugin.
 6. **Updating.** A new plugin version points at a new tag, so new workbenches are already updated. An existing workbench does not update itself. To bring a fix into one, copy `core/` and `tools/` from a newer version over it (or run `git pull` in a clone). For a vault you adopted, run `/cf-adopt` again: it offers to replace `~/.cogiforge` with the new version, and every adopted vault gets the fix at once.
-7. **The plugin is only Markdown.** The Anthropic plugin directory accepts code only from a verified organization, so the plugin carries instructions and no scripts. The skills download this repo from GitHub at tag `v0.1.0` (the plugin's version) with `git clone`, which needs `git` and an internet connection.
+7. **The plugin is only Markdown.** The Anthropic plugin directory accepts code only from a verified organization, so the plugin carries instructions and no scripts. The skills download this repo from GitHub at tag `v0.1.1` (the plugin's version) with `git clone`, which needs `git` and an internet connection.
 
 ## Who it is for
 

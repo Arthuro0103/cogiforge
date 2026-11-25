@@ -5,7 +5,7 @@ description: Creates a new Cogiforge workbench in a folder the person picks, by 
 
 # cf-new-workbench: make a new workbench
 
-The plugin carries only instructions (Markdown); the code comes from GitHub. This skill downloads Cogiforge at tag `v0.1.0` (the plugin's version) into a fresh folder, turns the commit gate on and makes the first commit. The 17 working skills come along inside the copy, in `.claude/skills/`.
+The plugin carries only instructions (Markdown); the code comes from GitHub. This skill downloads Cogiforge at tag `v0.1.1` (the plugin's version) into a fresh folder, turns the commit gate on and makes the first commit. The 17 working skills come along inside the copy, in `.claude/skills/`.
 
 ## Rules
 
@@ -21,7 +21,7 @@ The plugin carries only instructions (Markdown); the code comes from GitHub. Thi
 2. Run this ONE command, changing only the path between the single quotes. It needs `git` and an internet connection. It is one command on purpose: every Bash call in Claude Code starts a new shell, so nothing here may depend on a variable from an earlier call. Never split it into lines or into separate calls. Each guard prints `STOP: <reason>` and ends the chain; repeat the reason in plain words and ask for another folder (for the git case, tell the person to run `git config --global user.name` and `git config --global user.email`, then try again).
 
 ```bash
-DEST='/absolute/path/to/the/folder' && { case "$DEST" in /*) true ;; *) echo "STOP: not an absolute path"; false ;; esac; } && { [ "${DEST%/}" != "" ] && [ "${DEST%/}" != "${HOME%/}" ] || { echo "STOP: / and the home folder are never used"; false; }; } && { [ ! -e "$DEST" ] || { [ -d "$DEST" ] && [ -r "$DEST" ] && [ -z "$(ls -A "$DEST")" ]; } || { echo "STOP: the folder exists and is not empty"; false; }; } && { git config user.name >/dev/null && git config user.email >/dev/null || { echo "STOP: git has no user.name or user.email"; false; }; } && git clone -q -c advice.detachedHead=false --depth 1 --branch v0.1.0 https://github.com/Arthuro0103/cogiforge.git "$DEST" && rm -rf "$DEST/.git" && cd "$DEST" && git init -q && sh install.sh && git add -A && git commit -qm "workbench from cogiforge 0.1.0"
+DEST='/absolute/path/to/the/folder' && { case "$DEST" in /*) true ;; *) echo "STOP: not an absolute path"; false ;; esac; } && { [ "${DEST%/}" != "" ] && [ "${DEST%/}" != "${HOME%/}" ] || { echo "STOP: / and the home folder are never used"; false; }; } && { [ ! -e "$DEST" ] || { [ -d "$DEST" ] && [ -r "$DEST" ] && [ -z "$(ls -A "$DEST")" ]; } || { echo "STOP: the folder exists and is not empty"; false; }; } && { git config user.name >/dev/null && git config user.email >/dev/null || { echo "STOP: git has no user.name or user.email"; false; }; } && git clone -q -c advice.detachedHead=false --depth 1 --branch v0.1.1 https://github.com/Arthuro0103/cogiforge.git "$DEST" && rm -rf "$DEST/.git" && cd "$DEST" && git init -q && sh install.sh && git add -A && git commit -qm "workbench from cogiforge 0.1.1"
 ```
 
 If the command prints nothing and stops, one guard failed: say which one. The chain removes only `.git` (the workbench starts its own history). It keeps `plugin/` and `.claude-plugin/`: the workbench is a copy of the repo, and its `tests/test_plugin.py` reads those folders.
@@ -30,7 +30,7 @@ If the command prints nothing and stops, one guard failed: say which one. The ch
 4. If something AFTER the clone fails (`install.sh`, or the hook blocked the commit), show the message as it is and stop. The folder already has the files and this skill NEVER deletes it. After the cause is fixed, to try again, run this in the folder (same absolute path as `DEST`):
 
 ```bash
-cd '/absolute/path/to/the/folder' && git init -q && sh install.sh && git add -A && git commit -qm "workbench from cogiforge 0.1.0"
+cd '/absolute/path/to/the/folder' && git init -q && sh install.sh && git add -A && git commit -qm "workbench from cogiforge 0.1.1"
 ```
 
    Or the person deletes the folder themselves and the skill runs again.
