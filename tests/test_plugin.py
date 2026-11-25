@@ -6,6 +6,7 @@ from GitHub at the tag of the plugin's version. The 17 working skills stay in `.
 inside each workbench. These tests read the files, they do not install anything.
 """
 import json
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -65,8 +66,66 @@ def test_only_the_two_entry_skills_are_plugin_skills():
     assert not (ROOT / "skills").exists()
 
 
+FENCE = re.compile(r"^(\s*)(`{3,}|~{3,})(.*)$")
+LIST_ITEM = re.compile(r"^(\s*)(?:[-*+]|\d+[.)])(\s+)")
+
+
+def code_in(body):
+    """Every piece of code in a Markdown text, in order: (kind, raw_opening_line, text, line numbers).
+
+    kind is "fence" for a ``` or ~~~ block (any indentation, any info text, so "```bash " and "~~~bash" count)
+    and "indented" for a 4-space or tab block outside a list. A fence that never closes is reported too."""
+    lines = body.split("\n")
+    out, i, prev_blank, list_width = [], 0, True, None
+    while i < len(lines):
+        line = lines[i]
+        m = FENCE.match(line)
+        if m and not (m.group(2)[0] == "`" and "`" in m.group(3)):
+            ch, n = m.group(2)[0], len(m.group(2))
+            j = i + 1
+            while j < len(lines) and not re.match(r"^\s*" + re.escape(ch) + "{" + str(n) + r",}\s*$", lines[j]):
+                j += 1
+            closed = j < len(lines)
+            out.append(("fence" if closed else "open-fence", line, "\n".join(lines[i + 1:j]), range(i, min(j, len(lines) - 1) + 1)))
+            i, prev_blank = j + 1, False
+            continue
+        if line.strip() == "":
+            prev_blank = True
+            i += 1
+            continue
+        li = LIST_ITEM.match(line)
+        if li:
+            list_width = len(li.group(0))   # indent + marker + spaces: where the item text starts
+        elif not line.startswith((" ", "\t")):
+            list_width = None
+        indent = len(line) - len(line.lstrip(" \t"))
+        tab = line.startswith("\t") or line.startswith("    ")
+        needs = 4 if list_width is None else list_width + 4
+        if tab and prev_blank and not li and (indent >= needs or line.startswith("\t")):
+            j = i
+            while j < len(lines) and (lines[j].strip() == "" or lines[j].startswith(("    ", "\t"))):
+                j += 1
+            out.append(("indented", line, "\n".join(x.strip() for x in lines[i:j]).strip(), range(i, j)))
+            i = j
+            prev_blank = True
+            continue
+        prev_blank = False
+        i += 1
+    return out
+
+
 def bash_blocks(body):
-    return [x.strip() for x in re.findall(r"```bash\n(.*?)```", body, re.S)]
+    """The text of the fenced blocks, and nothing is allowed to be anything but exactly a ```bash fence."""
+    return [x[2].strip() for x in code_in(body) if x[0] == "fence"]
+
+
+def prose_lines(body):
+    """(text, in_code) for each line, so a rule can look only at the prose."""
+    lines = body.split("\n")
+    code = set()
+    for kind, _, _, rng in code_in(body):
+        code.update(rng)
+    return [(l, k in code) for k, l in enumerate(lines)]
 
 
 def expected():
@@ -74,57 +133,176 @@ def expected():
     m = load(PLUGIN)
     v, repo = m["version"], m["repository"]
     clone = ("git clone -q -c advice.detachedHead=false --depth 1 --branch v" + v + " " + repo + ".git ")
-    install = 'cd "$DEST" && git init -q && sh install.sh && git add -A && git commit -qm "workbench from cogiforge ' + v + '"'
+    commit = 'cd "$DEST" && git init -q && sh install.sh && git add -A && git commit -qm "workbench from cogiforge ' + v + '"'
+    env = "unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR && "
+    dest = "DEST='/absolute/path/to/the/folder' && "
+    absolute = '{ case "$DEST" in /*) true ;; *) echo "STOP: not an absolute path"; false ;; esac; } && '
     guards = (
-        "DEST='/absolute/path/to/the/folder' && "
-        '{ case "$DEST" in /*) true ;; *) echo "STOP: not an absolute path"; false ;; esac; } && '
+        env + dest + absolute +
+        '{ case "$DEST/" in */./*|*/../*) echo "STOP: the path has . or .. in it"; false ;; *) true ;; esac; } && '
         '{ [ "${DEST%/}" != "" ] && [ "${DEST%/}" != "${HOME%/}" ] || { echo "STOP: / and the home folder are never used"; false; }; } && '
-        '{ [ ! -e "$DEST" ] || { [ -d "$DEST" ] && [ -r "$DEST" ] && [ -z "$(ls -A "$DEST")" ]; } || '
+        '{ [ ! -e "$DEST" ] || { [ -d "$DEST" ] && [ -r "$DEST" ] && [ -x "$DEST" ] && [ -z "$(ls -A "$DEST")" ]; } || '
         '{ echo "STOP: the folder exists and is not empty"; false; }; } && '
-        '{ git config user.name >/dev/null && git config user.email >/dev/null || '
-        '{ echo "STOP: git has no user.name or user.email"; false; }; } && ')
+        '{ git -C / config user.name >/dev/null && git -C / config user.email >/dev/null || '
+        '{ echo "STOP: git has no global user.name or user.email"; false; }; } && ')
+    home = '{ [ -n "$HOME" ] && [ "$HOME" != "/" ] || { echo "STOP: HOME is not set"; false; }; } && '
     return {
-        "new": guards + clone + '"$DEST" && rm -rf "$DEST/.git" && ' + install,
-        "retry": "cd '/absolute/path/to/the/folder' && " + install.split("&& ", 1)[1],
-        "adopt_fresh": "[ ! -e ~/.cogiforge ] && " + clone + "~/.cogiforge && rm -rf ~/.cogiforge/.git",
-        "adopt_swap": ("[ ! -e ~/.cogiforge/.git ] && rm -rf ~/.cogiforge.new ~/.cogiforge.old && " + clone +
+        "new": guards + clone + '"$DEST" && rm -rf "$DEST/.git" && ' + commit,
+        "retry": (env + dest + absolute +
+                  '{ [ -f "$DEST/install.sh" ] && [ -f "$DEST/core/memory.py" ] || '
+                  '{ echo "STOP: this folder is not a Cogiforge workbench"; false; }; } && ' + commit),
+        "adopt_fresh": (home + '{ [ ! -e ~/.cogiforge ] && [ ! -e ~/.cogiforge.new ] || '
+                        '{ echo "STOP: ~/.cogiforge or ~/.cogiforge.new already exists"; false; }; } && ' + clone +
+                        "~/.cogiforge.new && rm -rf ~/.cogiforge.new/.git && mv ~/.cogiforge.new ~/.cogiforge"),
+        "adopt_swap": (home + '{ [ -f ~/.cogiforge/tools/adopt.py ] && [ ! -e ~/.cogiforge/.git ] || '
+                       '{ echo "STOP: ~/.cogiforge is missing, incomplete, or a git clone"; false; }; } && '
+                       '{ [ ! -e ~/.cogiforge.new ] && [ ! -e ~/.cogiforge.old ] || '
+                       '{ echo "STOP: ~/.cogiforge.new or ~/.cogiforge.old is left from an earlier try"; false; }; } && ' + clone +
                        "~/.cogiforge.new && rm -rf ~/.cogiforge.new/.git && mv ~/.cogiforge ~/.cogiforge.old && "
                        "mv ~/.cogiforge.new ~/.cogiforge && rm -rf ~/.cogiforge.old"),
-        "adopt_dry": 'python3 ~/.cogiforge/tools/adopt.py "/absolute/path/to/vault"',
-        "adopt_apply": 'python3 ~/.cogiforge/tools/adopt.py "/absolute/path/to/vault" --apply --confirm <plan-sha256>',
+        "adopt_dry": "python3 ~/.cogiforge/tools/adopt.py '/absolute/path/to/vault'",
+        "adopt_apply": "python3 ~/.cogiforge/tools/adopt.py '/absolute/path/to/vault' --apply --confirm <plan-sha256>",
     }
+
+
+def code_errors(body, want):
+    """Every piece of code in a skill must be exactly one of the expected ```bash blocks, nothing more."""
+    errs = []
+    got = []
+    for kind, opening, text, _ in code_in(body):
+        if kind != "fence" or opening != "```bash":
+            errs.append(f"{kind} code block ({opening.strip()[:20]!r}): only exact ```bash fences are allowed")
+        if kind == "fence":
+            got.append(text.strip())
+    if got != want:
+        errs.append(f"blocks differ from the expected ones: got {len(got)}, want {len(want)}")
+    return errs
 
 
 def test_new_workbench_blocks_are_exactly_the_expected_commands():
     e = expected()
-    assert bash_blocks(skill("cf-new-workbench")) == [e["new"], e["retry"]]
+    assert code_errors(skill("cf-new-workbench"), [e["new"], e["retry"]]) == []
 
 
 def test_adopt_blocks_are_exactly_the_expected_commands():
     e = expected()
-    assert bash_blocks(skill("cf-adopt")) == [e["adopt_fresh"], e["adopt_swap"], e["adopt_dry"], e["adopt_apply"]]
+    want = [e["adopt_fresh"], e["adopt_swap"], e["adopt_dry"], e["adopt_apply"]]
+    assert code_errors(skill("cf-adopt"), want) == []
 
 
-def plugin_text_files():
-    return [p for p in PDIR.rglob("*") if p.is_file() and p.suffix in {".md", ".json"}]
+IMAGE_MAGIC = {
+    ".png": (b"\x89PNG\r\n\x1a\n",), ".gif": (b"GIF87a", b"GIF89a"), ".jpg": (b"\xff\xd8\xff",),
+    ".jpeg": (b"\xff\xd8\xff",), ".ico": (b"\x00\x00\x01\x00",),
+}
 
 
-def test_versions_branches_and_urls_in_the_plugin_are_the_manifest_ones():
+def is_real_image(suffix, data):
+    if suffix == ".webp":
+        return data[:4] == b"RIFF" and data[8:12] == b"WEBP"
+    return any(data.startswith(m) for m in IMAGE_MAGIC.get(suffix, ()))
+
+
+# The one exact set of files the plugin folder may hold. Anything else (hooks, an MCP config, commands, notes) changes
+# what the plugin can do, so it is a decision, not a side effect.
+PLUGIN_FILES = {".claude-plugin/plugin.json", "README.md", "icon.svg", "skills/cf-new-workbench/SKILL.md",
+                "skills/cf-adopt/SKILL.md"}
+
+# Sentences that protect the person. Each one has to stay in the skill that owns it, word for word.
+SAFETY = {
+    "cf-new-workbench": [
+        "**Never overwrite.**", "Do not delete anything to make room.", "Never use `--no-verify`.",
+        "Never split it into lines or into separate calls.", "this skill NEVER deletes it",
+        "This retry command is only for the folder the main command just downloaded",
+        "If git says `nothing to commit`, the first commit already happened",
+        "never guess which step failed",
+    ],
+    "cf-adopt": [
+        "Never replace it without a yes.", "this skill NEVER replaces it",
+        "**Dry run first, always.**", "Do not run `--apply` before the user has seen the plan.",
+        "Only after a clear \"yes\"", "(never a sha from an older run)", "A \"maybe\" or silence is a no.",
+        "run `mv ~/.cogiforge.old ~/.cogiforge` to go back",
+        "This skill never deletes `~/.cogiforge.old` or `~/.cogiforge.new` by itself",
+        "Never run `git init` or `--apply` before the plan was read and confirmed, and never use `--no-verify`.",
+        "ask the person to rename the folder or give another path",
+    ],
+}
+
+
+def safety_errors(name, body):
+    prose = "\n".join(l for l, in_code in prose_lines(body) if not in_code)
+    return [f"{name}: missing {s!r}" for s in SAFETY[name] if s not in prose]
+
+
+def test_the_safety_sentences_are_still_in_each_skill():
+    for name in ENTRY:
+        assert safety_errors(name, skill(name)) == []
+
+
+def plugin_text_files(base=PDIR):
+    """EVERY file of the plugin folder that is text (images are skipped: they have no words to read)."""
+    out = []
+    for rel in plugin_files(base):
+        if rel.suffix.lower() in IMAGE_SUFFIXES:
+            continue
+        out.append((rel, (base / rel).read_bytes().decode("utf-8", "replace")))
+    return out
+
+
+VERSION_RE = re.compile(r"\bv?\d+(\.\d+){1,3}(-[0-9A-Za-z.]+)?\b")
+TRIPLE_RE = re.compile(r"\d+\.\d+\.\d+")
+URL_RE = re.compile(r"https?://[^\s)`'\"<>\]]+|git@[^\s)`'\"<>]+|[A-Za-z0-9.-]*github[A-Za-z0-9.-]*\.com[^\s)`'\"<>\]]*")
+SVG_NS = "http://www.w3.org/2000/svg"
+NO_VERIFY_RE = re.compile(r"--no-verify|\bcommit\b[^\n]*?\s-[A-Za-z]*n[A-Za-z]*(?=\s|$)")
+
+
+def reference_errors(files, version, repo):
+    """Versions, URLs and hook-skipping flags in every text file. `files` is a list of (path, text)."""
+    errs = []
+    for rel, text in files:
+        tag = str(rel)
+        for m in VERSION_RE.finditer(text):
+            found = m.group(0)
+            if found.startswith("v"):
+                if found != "v" + version:
+                    errs.append(f"{tag}: version {found}")
+            elif found.count(".") >= 2 and found != version:
+                errs.append(f"{tag}: version {found}")
+        for found in TRIPLE_RE.findall(text):
+            if found != version:
+                errs.append(f"{tag}: version {found}")
+        for found in URL_RE.findall(text):
+            found = found.rstrip(".,;:")
+            if found == SVG_NS and str(rel).endswith(".svg"):
+                continue
+            if not (found in {repo, repo + ".git"} or found.startswith(repo + "#")):
+                errs.append(f"{tag}: url {found}")
+        in_code = {k for k, (_, c) in enumerate(prose_lines(text)) if c}
+        for k, line in enumerate(text.split("\n")):
+            if not NO_VERIFY_RE.search(line):
+                continue
+            if k in in_code or not str(rel).endswith(".md"):
+                errs.append(f"{tag}: hook-skipping flag in code or in a non-prose file: {line.strip()[:60]}")
+                continue
+            plain = re.sub(r"^\s*(?:[-*+]|\d+[.)])\s+", "", line.replace("**", ""))
+            for sentence in re.split(r"(?<=[.!?])\s+", plain):
+                m = NO_VERIFY_RE.search(sentence)
+                if m and not (re.match(r"(Never|Do not) (use|run|pass|add|skip|bypass)\b", sentence)
+                              and not re.search(r"[:;]", sentence[:m.start()])):
+                    errs.append(f"{tag}: the flag is not in a sentence that forbids it: {sentence[:60]}")
+    return errs
+
+
+def test_versions_urls_and_hook_skipping_in_every_plugin_file():
     m = load(PLUGIN)
     v, repo = m["version"], m["repository"]
-    for p in plugin_text_files():
-        text = p.read_text(encoding="utf-8")
-        for found in re.findall(r"(?<![\w.])v?\d+\.\d+\.\d+(?![\w.]*\w)", text):
-            assert found.removeprefix("v") == v, (p.name, found)   # v10.1.0 must not pass as 0.1.0
-        for found in re.findall(r"--branch\s+(\S+)", text):
-            assert found == "v" + v, (p.name, found)
-        for found in re.findall(r"github\.com/[^\s)`'\"<>]*", text):
-            url = "https://" + found
-            assert url in {repo, repo + ".git"} or url.startswith(repo + "#"), (p.name, found)
+    assert reference_errors(plugin_text_files(), v, repo) == []
+    assert m["homepage"] == repo
     for name in ENTRY:
         body = skill(name)
         assert "--branch v" + v in body and repo + ".git" in body
         assert "${CLAUDE_PLUGIN_ROOT}" not in body and ".in_use" not in body
+        for found in re.findall(r"--branch\s+(\S+)", body):
+            assert found == "v" + v, (name, found)
 
 
 def test_the_root_readmes_name_only_the_plugin_tag():
@@ -134,17 +312,6 @@ def test_the_root_readmes_name_only_the_plugin_tag():
         assert "v" + v in text, name
         for found in re.findall(r"(?<![\w.])v\d+\.\d+\.\d+(?![\w.]*\w)", text):
             assert found == "v" + v, (name, found)
-
-
-def test_no_verify_only_appears_in_a_line_that_forbids_it():
-    for p in plugin_text_files():
-        in_code = False
-        for line in p.read_text(encoding="utf-8").splitlines():
-            if line.lstrip().startswith("```"):
-                in_code = not in_code
-            if "--no-verify" in line:
-                assert not in_code, (p.name, "inside a code block", line)
-                assert re.search(r"\b(Never|never|Do not|do not)\b", line), (p.name, line)
 
 
 def test_adopt_runs_from_the_stable_copy_and_asks_before_replacing():
@@ -238,6 +405,8 @@ def allowlist_errors(base, files, icon):
         except UnicodeDecodeError:
             if suffix not in IMAGE_SUFFIXES:
                 errs.append(f"{tag}: not UTF-8")
+        if suffix in IMAGE_SUFFIXES and not is_real_image(suffix, data):
+            errs.append(f"{tag}: the bytes are not a {suffix} image")
     return errs
 
 
@@ -246,6 +415,11 @@ def test_the_plugin_folder_passes_the_directory_allow_list():
     assert files
     assert {f.as_posix() for f in files} >= {".claude-plugin/plugin.json", "icon.svg", "README.md"}
     assert allowlist_errors(PDIR, files, load(PLUGIN)["icon"].removeprefix("./")) == []
+
+
+def test_the_plugin_folder_holds_exactly_the_five_expected_files():
+    got = {f.as_posix() for f in plugin_files()}
+    assert got == PLUGIN_FILES, (sorted(got - PLUGIN_FILES), sorted(PLUGIN_FILES - got))
 
 
 PNG_1X1 = bytes.fromhex(
@@ -289,3 +463,53 @@ def test_the_allow_list_check_through_git_lists_tracked_and_untracked_files(tmp_
     assert files == {"x.py", "CLAUDE.md", "ok.md", "pixel.png", ".gitignore", "run.py"}
     flagged = {e.split(":")[0] for e in allowlist_errors(tmp_path, plugin_files(tmp_path), "icon.svg")}
     assert flagged == {"x.py", "CLAUDE.md", "run.py", ".gitignore"}   # .gitignore has no allowed type either
+
+
+def test_an_image_name_with_other_bytes_is_rejected(tmp_path):
+    good = {"a.gif": b"GIF89a" + bytes(8), "b.gif": b"GIF87a" + bytes(8), "c.jpg": b"\xff\xd8\xff\xe0" + bytes(8),
+            "d.jpeg": b"\xff\xd8\xff\xdb" + bytes(8), "e.webp": b"RIFF\x04\0\0\0WEBPVP8 ", "f.ico": b"\x00\x00\x01\x00" + bytes(8),
+            "g.png": PNG_1X1}
+    bad = {"macho.png": b"\xcf\xfa\xed\xfe\x07\x00\x00\x01" + bytes(64), "text.png": b"not an image",
+           "wrong.gif": PNG_1X1, "riff.webp": b"RIFF\x04\0\0\0WAVEfmt "}
+    for name, data in {**good, **bad}.items():
+        (tmp_path / name).write_bytes(data)
+    flagged = {e.split(":")[0] for e in allowlist_errors(tmp_path, plugin_files(tmp_path), "icon.svg")}
+    assert flagged == set(bad)
+
+
+def test_code_in_finds_every_kind_of_block():
+    body = ("a\n\n```bash\nx\n```\n\n```bash \ny\n```\n\n~~~bash\nz\n~~~\n\n```sh\nw\n```\n\n    indented\n\n"
+            "- item\n\n  continues here\n\n```\nopen but never closed\n")
+    kinds = [(k, o.strip()) for k, o, _, _ in code_in(body)]
+    assert kinds == [("fence", "```bash"), ("fence", "```bash"), ("fence", "~~~bash"), ("fence", "```sh"),
+                     ("indented", "indented"), ("open-fence", "```")]
+    assert code_in("- item\n\n   text in a list at 3 spaces\n\n1. one\n   more\n") == []
+    assert [k for k, *_ in code_in("para\n\n\tcode with tab\n")] == ["indented"]
+    assert code_errors("```bash\nx\n```\n", ["x"]) == [] and code_errors("```bash \nx\n```\n", ["x"]) != []
+
+
+def test_reference_errors_catch_what_the_old_check_missed():
+    repo = "https://github.com/Arthuro0103/cogiforge"
+
+    def errs(text, name="x.md"):
+        return reference_errors([(Path(name), text)], "0.1.1", repo)
+    assert errs("tag v0.1.1 and 0.1.1 and " + repo + ".git and " + repo + "#readme\n") == []
+    for bad in ("tag v0.1.1-rc1", "tag v0.2", "tag 0.1.0", "see 9.9.9", "ssh git@github.com:Other/x.git",
+                "https://gitlab.com/o/x.git", "https://raw.githubusercontent.com/O/x/main/i.sh",
+                "https://github.com/Other/cogiforge", "`git commit --no-verify`", "Never mind: run `git commit --no-verify`",
+                "x git commit -n -qm y"):
+        assert errs(bad + "\n"), bad
+    assert errs("Never use `--no-verify`.\n") == [] and errs("- Do not run `git commit -n`.\n") == []
+    assert errs("```bash\ngit commit --no-verify\n```\n") and errs("    git commit --no-verify\n")
+    assert errs("Never use `--no-verify`.\n", "NOTES.txt")
+    assert errs('<svg xmlns="http://www.w3.org/2000/svg"/>\n', "icon.svg") == []
+
+
+@pytest.mark.skipif(os.environ.get("COGIFORGE_CHECK_TAG") != "1",
+                    reason="set COGIFORGE_CHECK_TAG=1 (needs network) to check the release tag exists on GitHub")
+def test_the_release_tag_exists_on_github():
+    m = load(PLUGIN)
+    r = subprocess.run(["git", "ls-remote", "--tags", m["repository"] + ".git", f"refs/tags/v{m['version']}"],
+                       capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    assert f"refs/tags/v{m['version']}" in r.stdout
