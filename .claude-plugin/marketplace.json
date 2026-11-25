@@ -1,0 +1,13 @@
+{
+  "name": "cogiforge",
+  "owner": {
+    "name": "Arthuro0103"
+  },
+  "plugins": [
+    {
+      "name": "cogiforge",
+      "source": "./",
+      "description": "A second-brain workbench in Obsidian for coding agents, with a commit gate that checks the agent's memory."
+    }
+  ]
+}

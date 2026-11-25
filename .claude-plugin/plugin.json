@@ -1,0 +1,14 @@
+{
+  "name": "cogiforge",
+  "displayName": "Cogiforge",
+  "version": "0.1.0",
+  "description": "A second-brain workbench in Obsidian for coding agents, with a commit gate that checks the agent's memory.",
+  "author": {
+    "name": "Arthuro0103"
+  },
+  "homepage": "https://github.com/Arthuro0103/cogiforge",
+  "repository": "https://github.com/Arthuro0103/cogiforge",
+  "license": "MIT",
+  "keywords": ["obsidian", "second-brain", "agent-memory", "pkm", "claude-code"],
+  "skills": "./plugin-skills/"
+}
