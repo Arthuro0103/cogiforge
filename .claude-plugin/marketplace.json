@@ -1,5 +1,6 @@
 {
   "name": "cogiforge",
+  "description": "Marketplace for Cogiforge, a second-brain workbench in Obsidian for coding agents.",
   "owner": {
     "name": "Arthuro0103"
   },
