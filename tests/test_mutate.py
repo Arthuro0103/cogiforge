@@ -1,5 +1,6 @@
 """Tests for tests/mutate.py: an interrupted run must not leave the suite (or its children) running."""
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -118,34 +119,151 @@ def test_no_shard_keeps_every_mutant_and_a_bad_shard_is_refused():
     assert r.returncode == 2
 
 
-def test_the_diff_selects_the_pieces_by_file_suite_or_changed_entry():
+@pytest.fixture
+def repo(tmp_path):
+    """A real git repo whose tests/mutate.py is a copy of the real one (so its ROOT is the temp repo)."""
+    def git(*a):
+        return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.com", *a], cwd=tmp_path,
+                              check=True, capture_output=True, text=True).stdout.strip()
+    git("init", "-q", "-b", "main")
+    (tmp_path / "tests").mkdir()
+    shutil.copy(HERE / "mutate.py", tmp_path / "tests" / "mutate.py")
+    for f in ("README.md", "docs/a.md", "assets/x.png", "core/gate.py", "tests/conftest.py", "tests/test_x.py",
+              "CLAUDE.md", "AGENTS.md"):
+        (tmp_path / f).parent.mkdir(exist_ok=True)
+        (tmp_path / f).write_text("# a\n")
+    git("add", "-A")
+    git("commit", "-q", "-m", "base")
+
+    class R:
+        path = tmp_path
+        base = git("rev-parse", "HEAD")
+
+        def commit(self, files=None, rename=None, delete=()):
+            for f, body in (files or {}).items():
+                (tmp_path / f).parent.mkdir(parents=True, exist_ok=True)
+                (tmp_path / f).write_text(body)
+            if rename:
+                git("mv", *rename)
+            for f in delete:
+                git("rm", "-q", f)
+            git("add", "-A")
+            git("commit", "-q", "-m", "change")
+
+        def decide(self, ref):
+            import importlib.util
+            spec = importlib.util.spec_from_file_location("mutate_in_repo", tmp_path / "tests" / "mutate.py")
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            return mod.skip_decision(ref)
+
+        def cli(self, *args):
+            r = subprocess.run([sys.executable, str(tmp_path / "tests" / "mutate.py"), *args], capture_output=True,
+                               text=True, cwd=tmp_path)
+            return r.returncode, r.stdout
+    return R()
+
+
+def test_only_docs_changed_skips_the_mutation(repo):
+    repo.commit({"README.md": "b", "docs/a.md": "b", "assets/x.png": "b", "docs/new/deep.md": "b"})
+    skip, msg = repo.decide(repo.base)
+    assert skip and "only docs changed (4 files)" in msg
+    rc, out = repo.cli("--changed-since", repo.base)
+    assert rc == 0 and "nothing to mutate since" in out and "only docs changed" in out
+
+
+@pytest.mark.parametrize("files", [
+    {"tests/conftest.py": "b"},          # the suites import it: it once let a green CI skip 2 live mutants
+    {"core/gate.py": "b"},               # a module another piece imports
+    {"CLAUDE.md": "b"}, {"AGENTS.md": "b"}, {"vault/n.md": "b"}, {"demo/n.md": "b"}, {".github/w.yml": "b"},
+    {"README.md": "b", "core/gate.py": "b"},   # one relevant file among docs
+    {"docs/../core/gate.py": "b"},
+    {"README.md.bak": "b"}, {"docsx/a.md": "b"},   # look-alikes are not docs
+])
+def test_any_non_doc_change_mutates_everything(repo, files):
+    repo.commit(files)
+    skip, msg = repo.decide(repo.base)
+    assert not skip and "every piece is mutated" in msg
+    rc, out = repo.cli("--changed-since", repo.base, "--dry")
+    assert "nothing to mutate" not in out        # the real entry point agrees: it goes on to the pieces
+
+
+def test_renaming_a_test_file_mutates_everything_even_into_docs(repo):
+    repo.commit(rename=("tests/test_x.py", "docs/test_x.md"))      # the old path is on the list of changes too
+    assert not repo.decide(repo.base)[0]
+
+
+def test_deleting_a_code_file_mutates_everything(repo):
+    repo.commit(delete=("core/gate.py",))
+    assert not repo.decide(repo.base)[0]
+
+
+def test_the_runner_itself_changing_mutates_everything(repo):
+    repo.commit({"tests/mutate.py": (repo.path / "tests" / "mutate.py").read_text() + "\n# changed\n"})
+    assert not repo.decide(repo.base)[0]
+
+
+def test_unknown_or_unusable_refs_mutate_everything(repo):
+    for ref in ("0" * 40, "no-such-ref-xyz", "", None):
+        skip, msg = repo.decide(ref)
+        assert not skip and "cannot tell" in msg
+
+
+def test_nothing_changed_since_head_is_nothing_to_mutate(repo):
+    skip, msg = repo.decide("HEAD")
+    assert skip and "no file changed" in msg
+    assert repo.cli("--changed-since", "HEAD")[0] == 0
+
+
+def test_the_diff_looks_from_the_ref_to_head_not_the_other_way(repo):
+    """`HEAD...REF` would see nothing (or the other side) when REF is an ancestor: a code change must still show."""
+    repo.commit({"core/gate.py": "b"})
+    mod_files = None
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("mutate_dir", repo.path / "tests" / "mutate.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    mod_files = mod.changed_files(repo.base)
+    assert mod_files == ["core/gate.py"]          # not [] (inverted range) and not None
+
+
+def test_a_name_with_odd_characters_is_listed_whole(repo):
+    odd_a, odd_b = "docs/na\u00efve file.md", "core/caf\u00e9.py"      # non-ASCII + a space, git must not quote them
+    repo.commit({odd_a: "b", odd_b: "b"})
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("mutate_odd", repo.path / "tests" / "mutate.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert sorted(mod.changed_files(repo.base)) == sorted([odd_a, odd_b])
+
+
+def test_only_irrelevant_is_false_for_an_empty_list_and_exact_for_names():
     mod = _mod()
-    new = {"a": dict(file="core/a.py", suite=["tests/test_a.py"], texts=[("x", "1", "2")]),
-           "b": dict(file="core/b.py", suite=["tests/test_b.py", "tests/shared.py"], texts=[]),
-           "c": dict(file="core/c.py", suite=["tests/test_c.py"], texts=[])}
-    same = {k: dict(v) for k, v in new.items()}
-    assert mod.affected_pieces([], same, new) == []
-    assert mod.affected_pieces(["README.md"], same, new) == []
-    assert mod.affected_pieces(["core/a.py"], same, new) == ["a"]
-    assert mod.affected_pieces(["tests/shared.py"], same, new) == ["b"]
-    assert mod.affected_pieces(["tests/test_c.py", "core/a.py"], same, new) == ["a", "c"]
-    old = {k: dict(v) for k, v in new.items()}
-    old["c"] = dict(old["c"], texts=[("y", "1", "2")])
-    assert mod.affected_pieces([], old, new) == ["c"]            # entry changed, no file changed
-    del old["b"]
-    assert mod.affected_pieces([], old, new) == ["b", "c"]        # a new piece counts
-    assert mod.affected_pieces([], None, new) == ["a", "b", "c"]  # old PIECES unreadable: all
+    assert not mod.only_irrelevant([])
+    assert mod.only_irrelevant(["README.md", "LEIA-ME.md", "WHY.md", "TUTORIAL.md", "LICENSE", "preview.html",
+                                "docs/x/y.md", "assets/a.png"])
+    for bad in ("CLAUDE.md", "AGENTS.md", "vault/a.md", "demo/a.md", "tests/a.py", ".github/a.yml", "core/a.py",
+                "docs", "assets", "xdocs/a.md", "sub/README.md"):
+        assert not mod.only_irrelevant([bad]), bad
 
 
-def test_an_unknown_ref_means_every_piece_and_head_means_none():
-    mod = _mod()
-    for ref in ("0" * 40, "no-such-ref-xyz"):
-        assert mod.changed_selection(ref) == (list(mod.PIECES), False)
-    assert mod.changed_selection("HEAD") == ([], False)
+def test_a_piece_whose_file_is_missing_is_rc_2_not_skipped(repo):
+    rc, out = repo.cli("leak")            # the temp repo has no core/leak.py
+    assert rc == 2 and "does not exist" in out
+    rc, out = repo.cli("leak", "--dry")
+    assert rc == 2 and "does not exist" in out
 
 
-def test_pieces_literal_is_read_from_an_old_source():
-    mod = _mod()
-    old = (HERE / "mutate.py").read_text(encoding="utf-8")
-    assert mod.load_pieces(old) == mod.PIECES
-    assert mod.load_pieces("nothing here") is None
+def test_a_shard_with_no_mutant_says_not_verified(repo):
+    (repo.path / "core").mkdir(exist_ok=True)
+    # a piece with exactly 1 mutant, in a temp repo: shard 2/2 owns nothing
+    (repo.path / "core" / "one.py").write_text("X = 1\n")
+    (repo.path / "tests" / "test_one.py").write_text("def test_ok():\n    assert True\n")
+    runner = (repo.path / "tests" / "mutate.py").read_text()
+    runner = runner.replace("PIECES = {", 'PIECES = {\n    "one": dict(file="core/one.py", suite=["tests/test_one.py"], '
+                            'texts=[("x", "X = 1", "X = 2")]),', 1)
+    (repo.path / "tests" / "mutate.py").write_text(runner)
+    rc, out = repo.cli("one", "--shard", "2/2")
+    assert rc == 0 and "NOT_VERIFIED: this shard had no mutant to run" in out
+    rc, out = repo.cli("one", "--shard", "1/2")
+    assert rc == 1 and "SURVIVED" in out and "NOT_VERIFIED" not in out, out   # test is always green: the mutant lives
