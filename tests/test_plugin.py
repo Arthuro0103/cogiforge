@@ -275,7 +275,7 @@ def reference_errors(files, version, repo, also=None):
     `also` maps a path (as text) to extra versions that file may name (the plugin's own version, in one place)."""
     errs = []
     for rel, text in files:
-        tag = str(rel)
+        tag = Path(rel).as_posix()   # / on every OS, so names match on Windows too
         extra = (also or {}).get(tag, set())
         for m in VERSION_RE.finditer(text):
             found = m.group(0)
@@ -423,7 +423,7 @@ def allowlist_errors(base, files, icon):
     for rel in files:
         p = base / rel
         parts = [x.casefold() for x in rel.parts]
-        tag = str(rel)
+        tag = Path(rel).as_posix()   # / on every OS, so names match on Windows too
         suffix = rel.suffix.lower()
         if p.is_symlink():
             errs.append(f"{tag}: symlink")
