@@ -96,6 +96,8 @@ def test_new_workbench_deletes_only_after_a_guarded_copy():
     rm = next(i for i, x in enumerate(parts) if x.startswith("rm -rf"))
     assert all(parts.index(g) < cp for g in guards), "every guard comes before the copy"
     assert cp < rm, "the rm comes after the cp, joined by &&"
+    for gone in (".claude-plugin", "plugin-skills", ".git", ".in_use"):
+        assert f'"$DEST/{gone}"' in parts[rm], gone
 
 
 def test_adopt_deletes_only_after_a_copy_that_worked():
@@ -107,6 +109,8 @@ def test_adopt_deletes_only_after_a_copy_that_worked():
     cp = next(i for i, x in enumerate(parts) if x.startswith("cp -R"))
     rm = next(i for i, x in enumerate(parts) if x.startswith("rm -rf"))
     assert cp < rm
+    for gone in (".claude-plugin", "plugin-skills", ".git", ".in_use"):
+        assert f"~/.cogiforge/{gone}" in parts[rm], gone
 
 
 def test_the_icon_is_declared_and_is_a_flat_svg():

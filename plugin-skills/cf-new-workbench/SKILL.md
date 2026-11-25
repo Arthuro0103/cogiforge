@@ -20,10 +20,10 @@ The plugin carries the whole Cogiforge repo. This skill copies it into a fresh f
 Let `DEST` be the folder and `ROOT` be `${CLAUDE_PLUGIN_ROOT}`.
 
 1. Ask for `DEST`. Check it: it must not exist, or must be an empty folder.
-2. Copy and clean, as ONE chained command. The copy leaves out `.claude-plugin/` and `plugin-skills/` (they belong to the plugin, not to the workbench), and any `.git`. Every `&&` is a guard: `DEST` is not empty, not `/`, not `$HOME`; the folder is empty before the copy; the `rm` runs only after a copy that worked. Never split it into separate lines:
+2. Copy and clean, as ONE chained command. The copy leaves out `.claude-plugin/` and `plugin-skills/` (they belong to the plugin, not to the workbench), any `.git`, and the `.in_use` marker Claude Code leaves in the plugin copy. Every `&&` is a guard: `DEST` is not empty, not `/`, not `$HOME`; the folder is empty before the copy; the `rm` runs only after a copy that worked. Never split it into separate lines:
 
 ```bash
-[ -n "$DEST" ] && [ "$DEST" != "/" ] && [ "$DEST" != "$HOME" ] && mkdir -p "$DEST" && [ -z "$(ls -A "$DEST")" ] && cp -R "${CLAUDE_PLUGIN_ROOT}/." "$DEST/" && rm -rf "$DEST/.claude-plugin" "$DEST/plugin-skills" "$DEST/.git"
+[ -n "$DEST" ] && [ "$DEST" != "/" ] && [ "$DEST" != "$HOME" ] && mkdir -p "$DEST" && [ -z "$(ls -A "$DEST")" ] && cp -R "${CLAUDE_PLUGIN_ROOT}/." "$DEST/" && rm -rf "$DEST/.claude-plugin" "$DEST/plugin-skills" "$DEST/.git" "$DEST/.in_use"
 ```
 
 If the command prints nothing and stops, one guard failed: say which one in plain words and ask for another folder.

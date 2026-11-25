@@ -35,12 +35,12 @@ folder as `cogiforge.home` in the vault's local git config.
 
 ### 0. A stable copy in `~/.cogiforge` (you, before the dry run)
 
-The copy leaves out `.claude-plugin/` and `plugin-skills/` (they belong to the plugin) and any `.git`.
+The copy leaves out `.claude-plugin/` and `plugin-skills/` (they belong to the plugin) any `.git`, and the `.in_use` marker Claude Code leaves in the plugin copy.
 
 - `~/.cogiforge` does not exist: make it.
 
 ```bash
-mkdir -p ~/.cogiforge && cp -R "${CLAUDE_PLUGIN_ROOT}/." ~/.cogiforge/ && rm -rf ~/.cogiforge/.claude-plugin ~/.cogiforge/plugin-skills ~/.cogiforge/.git
+mkdir -p ~/.cogiforge && cp -R "${CLAUDE_PLUGIN_ROOT}/." ~/.cogiforge/ && rm -rf ~/.cogiforge/.claude-plugin ~/.cogiforge/plugin-skills ~/.cogiforge/.git ~/.cogiforge/.in_use
 ```
 
 It is one chained command on purpose: the `rm` runs only after a copy that worked.
