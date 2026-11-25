@@ -14,7 +14,7 @@ and the old ones are not touched.**
 
 ## Why `~/.cogiforge`
 
-The git hook needs a fixed address for Cogiforge, and the plugin carries only instructions (Markdown), no code. So this skill downloads Cogiforge from GitHub, at the tag of the plugin's version, into `~/.cogiforge`, and `adopt.py` is always run from there: it records its own folder as `cogiforge.home` in the vault's local git config. It needs `git` and an internet connection.
+The git hook needs a fixed address for Cogiforge, and the plugin carries only instructions (Markdown), no code. So this skill downloads Cogiforge 0.1.1 from GitHub, pinned to commit `1f0d9cc38ead38801fc3b2153e1f90f952628eb6` (tag `v0.1.1`), into `~/.cogiforge`, and checks that hash before it runs anything from the download. Never run anything from a download that failed the check. `adopt.py` is always run from `~/.cogiforge`: it records its own folder as `cogiforge.home` in the vault's local git config. It needs `git` and an internet connection.
 
 ## The rules
 
@@ -33,21 +33,21 @@ The git hook needs a fixed address for Cogiforge, and the plugin carries only in
 
 ### 0. A stable copy in `~/.cogiforge` (you, before the dry run)
 
-The plugin version is 0.1.1, so the tag is `v0.1.1`. If `git clone` fails (no internet, GitHub down), show its message as it is and stop.
+This plugin installs Cogiforge 0.1.1, commit `1f0d9cc38ead38801fc3b2153e1f90f952628eb6`. If the download fails (no internet, GitHub down, or the commit is not found), show the message as it is and stop; run nothing from a download that failed, and the person deletes any leftover `~/.cogiforge.new` themselves.
 
-- `~/.cogiforge` does not exist: download it. The clone goes to `~/.cogiforge.new` and only becomes `~/.cogiforge` whole, so an interrupted download never leaves a half folder under the real name.
+- `~/.cogiforge` does not exist: download it. The download goes to `~/.cogiforge.new` and only becomes `~/.cogiforge` whole, so an interrupted download never leaves a half folder under the real name.
 
 ```bash
-{ [ -n "$HOME" ] && [ "$HOME" != "/" ] || { echo "STOP: HOME is not set"; false; }; } && { [ ! -e ~/.cogiforge ] && [ ! -e ~/.cogiforge.new ] || { echo "STOP: ~/.cogiforge or ~/.cogiforge.new already exists"; false; }; } && git clone -q -c advice.detachedHead=false --depth 1 --branch v0.1.1 https://github.com/Arthuro0103/cogiforge.git ~/.cogiforge.new && rm -rf ~/.cogiforge.new/.git && mv ~/.cogiforge.new ~/.cogiforge
+{ [ -n "$HOME" ] && [ "$HOME" != "/" ] || { echo "STOP: HOME is not set"; false; }; } && { [ ! -e ~/.cogiforge ] && [ ! -e ~/.cogiforge.new ] || { echo "STOP: ~/.cogiforge or ~/.cogiforge.new already exists"; false; }; } && git init -q ~/.cogiforge.new && git -C ~/.cogiforge.new fetch -q --depth 1 https://github.com/Arthuro0103/cogiforge.git 1f0d9cc38ead38801fc3b2153e1f90f952628eb6 && git -C ~/.cogiforge.new -c advice.detachedHead=false checkout -q FETCH_HEAD && { [ "$(git -C ~/.cogiforge.new rev-parse HEAD)" = "1f0d9cc38ead38801fc3b2153e1f90f952628eb6" ] || { echo "STOP: the download is not the pinned commit"; false; }; } && rm -rf ~/.cogiforge.new/.git && printf '%s\n' 1f0d9cc38ead38801fc3b2153e1f90f952628eb6 > ~/.cogiforge.new/.cogiforge-commit && mv ~/.cogiforge.new ~/.cogiforge
 ```
 
-- It exists: read its version ONLY in `~/.cogiforge/plugin/.claude-plugin/plugin.json`. If that file does not exist, the version is unknown: treat it as another version (ask before replacing it).
-- If `~/.cogiforge/.git` exists, it is a git clone (maybe the person's own development copy): this skill NEVER replaces it. If its version matches 0.1.1, use it; if not, tell the person to update it themselves and stop.
-- Same version: use it as it is.
-- Another version, no `.git`: show the two versions (this plugin's, 0.1.1, against the one found, or "unknown") and ask before replacing it. Never replace it without a yes. Only after a yes, with one chain:
+- It exists: read its installed version ONLY from `~/.cogiforge/.cogiforge-commit` (the commit hash the download wrote). Do not read the plugin's own version from `~/.cogiforge/plugin/.claude-plugin/plugin.json`: the plugin's version is not the Cogiforge version. If the file is missing, the version is unknown: treat it as another version (ask before replacing it).
+- If `~/.cogiforge/.git` exists, it is a clone of the repo (maybe the person's own development copy): this skill NEVER replaces it. If its commit is the pinned one (`git -C ~/.cogiforge rev-parse HEAD`), use it; if not, tell the person to update it themselves and stop.
+- Same hash (`.cogiforge-commit` equals `1f0d9cc38ead38801fc3b2153e1f90f952628eb6`): same version, use it as it is.
+- Another version, no `.git`: show the two hashes (the pinned one, `1f0d9cc38ead38801fc3b2153e1f90f952628eb6`, against the one read, or "unknown") and ask before replacing it. Never replace it without a yes. Only after a yes, with one chain:
 
 ```bash
-{ [ -n "$HOME" ] && [ "$HOME" != "/" ] || { echo "STOP: HOME is not set"; false; }; } && { [ -f ~/.cogiforge/tools/adopt.py ] && [ ! -e ~/.cogiforge/.git ] || { echo "STOP: ~/.cogiforge is missing, incomplete, or a git clone"; false; }; } && { [ ! -e ~/.cogiforge.new ] && [ ! -e ~/.cogiforge.old ] || { echo "STOP: ~/.cogiforge.new or ~/.cogiforge.old is left from an earlier try"; false; }; } && git clone -q -c advice.detachedHead=false --depth 1 --branch v0.1.1 https://github.com/Arthuro0103/cogiforge.git ~/.cogiforge.new && rm -rf ~/.cogiforge.new/.git && mv ~/.cogiforge ~/.cogiforge.old && mv ~/.cogiforge.new ~/.cogiforge && rm -rf ~/.cogiforge.old
+{ [ -n "$HOME" ] && [ "$HOME" != "/" ] || { echo "STOP: HOME is not set"; false; }; } && { [ -f ~/.cogiforge/tools/adopt.py ] && [ ! -e ~/.cogiforge/.git ] || { echo "STOP: ~/.cogiforge is missing, incomplete, or a git clone"; false; }; } && { [ ! -e ~/.cogiforge.new ] && [ ! -e ~/.cogiforge.old ] || { echo "STOP: ~/.cogiforge.new or ~/.cogiforge.old is left from an earlier try"; false; }; } && git init -q ~/.cogiforge.new && git -C ~/.cogiforge.new fetch -q --depth 1 https://github.com/Arthuro0103/cogiforge.git 1f0d9cc38ead38801fc3b2153e1f90f952628eb6 && git -C ~/.cogiforge.new -c advice.detachedHead=false checkout -q FETCH_HEAD && { [ "$(git -C ~/.cogiforge.new rev-parse HEAD)" = "1f0d9cc38ead38801fc3b2153e1f90f952628eb6" ] || { echo "STOP: the download is not the pinned commit"; false; }; } && rm -rf ~/.cogiforge.new/.git && printf '%s\n' 1f0d9cc38ead38801fc3b2153e1f90f952628eb6 > ~/.cogiforge.new/.cogiforge-commit && mv ~/.cogiforge ~/.cogiforge.old && mv ~/.cogiforge.new ~/.cogiforge && rm -rf ~/.cogiforge.old
 ```
 
   The old copy is only renamed after the new one is complete, and only deleted after the new one took its place. If the chain stops before the first `mv`, nothing changed. If the second `mv` fails, run `mv ~/.cogiforge.old ~/.cogiforge` to go back. If only the last `rm` fails, the new copy is already in place and `~/.cogiforge.old` is left for the person to delete.
