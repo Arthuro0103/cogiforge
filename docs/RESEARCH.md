@@ -9,19 +9,34 @@ depends on a website.
 
 ## The loop
 
-1. **State the question as a sentence you could be wrong about.** "What do I already think about
-   spaced repetition?" is a question. "Spaced repetition" is a topic.
+1. **State a question, not a topic.** "Spaced repetition" is a topic. "Does spacing my reviews over
+   days help me keep vocabulary better than one long session?" is a question: it is focused, and one
+   quick search cannot settle it. If a single search answers it, it is a lookup, not research. Write
+   down your current guess, and do not fall in love with it.
 2. **Search the vault first.** Run `python3 tools/ask.py search "<question>"` (local, no network), or
    use the `cf-ask` skill (`.claude/skills/cf-ask/SKILL.md`, plain text any agent can follow). Read what
    comes back. Note which notes you already have and what they say.
 3. **Declare the gap before searching outside.** Write, in the working note, one line per hole:
    "my notes do not cover X". If you cannot name a gap, you do not need the internet yet. This is the
    step people skip, and it is why a research note ends up repeating what the vault already said.
-4. **Search outside only for the declared gaps.** Open every source yourself.
+   A claim your notes make that you never checked against a source is a gap too: "my note says X,
+   unchecked". For the claim the answer rests on, look for evidence against it, not only for it.
+4. **Search outside only for the declared gaps, and decide when you will stop before you start.**
+   Write the rule first, for example "stop when a round of 3 new sources adds at most 1 new finding".
+   Keep one log line per search: where, the exact search string, the date, how many results, how
+   many were new. End with the last round as a number ("last round: 1 of 4 new"), never just "done".
+   Meeting your rule is a convention you chose, not proof that nothing is left. Open every source
+   yourself.
 5. **Mark every outside claim `[VERIFY]` until you checked it** against the open source: the page
    exists, says what you wrote, and is from who you think. Use the form
    `[VERIFY: what is missing]`. A claim that stays `[VERIFY]` is allowed in a draft and never in a
    note you present as finished.
+   "From who you think" is checked from outside the page: search for the site or the author while
+   excluding the site itself (`name -site:example.com`). What a page says about itself is the weakest
+   evidence about it. For a code package, a matching name is not identity: check the publisher on the
+   registry and that the repository links back to the package. Stars and downloads come last, and
+   they measure popularity, not identity or upkeep. An archived repository is not maintained, whatever
+   its stars.
 6. **Name the target and write the diff there** (`project::`, `article::`, `question::`, `task::` or
    `none`), in the same commit as the note.
 
@@ -32,6 +47,16 @@ depends on a website.
 - A summary written by a model is not a source. Its links are leads: open them. Models invent links
   and quotes that look right.
 - Quote sparingly and exactly, and keep your own words apart from the source's.
+- A page that changes (docs, terms of service, a live article) needs a snapshot or its version next
+  to the date, so the next reader can tell whether they opened the same thing. Terms and laws state
+  an effective date in their own text: cite that date too.
+- For a tool or library, write the version you checked against and read the docs of that version.
+  An old forum answer, or a model's memory of an API, is a lead, not a fact: run it.
+- Automatic captions and PDF-to-text can garble names, numbers and tables. Check those against the
+  video or the page before quoting them.
+- Asking a model whether its own citation is right is not a check. A link that opens and a DOI that
+  resolves prove the source exists, not that it says what was claimed.
+- When sources disagree, show both, each with where it says it. Do not count votes or average them.
 - What the vault already says is cited with a full-path link in the body, for example
   `[[notes/learning/some-note|my earlier note]]`. `python3 tools/ask.py cite <draft.md>` checks that
   every such link points to something that exists.
