@@ -261,10 +261,11 @@ def test_gate_lets_the_listed_area_and_frontmatter_debt_through(tmp_path):
     assert run_gate(v, ALL[0], ALL[2])[0] == 0
 
 
-def test_a_listed_note_with_a_different_area_failure_still_fails(tmp_path):
-    v = gate_vault(tmp_path, {"area_missing": ["notes/life/wrong-area.md"]})  # it HAS an area now, and a wrong one
-    rc, text = run_gate(v, "notes/life/wrong-area.md")
-    assert rc == 1 and "wrong-area.md" in text
+def test_a_listed_note_is_exempt_from_any_area_failure_and_an_unlisted_one_is_not(tmp_path):
+    v = gate_vault(tmp_path, {"area_missing": ["notes/life/wrong-area.md"]})
+    assert run_gate(v, "notes/life/wrong-area.md")[0] == 0  # adopt listed it; in a notes/ vault its area failure may differ
+    rc, text = run_gate(v, "notes/life/no-area.md")  # not listed
+    assert rc == 1 and "no-area.md" in text
 
 
 def test_gate_without_files_is_a_full_audit_and_hides_nothing(tmp_path):
@@ -318,3 +319,134 @@ def test_leak_still_reads_everything_else(tmp_path):
                      "sub/.cogiforge/baseline.json:1: phone"):
             assert name in r.stdout, (args, r.stdout)
         assert "\n.cogiforge/baseline.json:" not in "\n" + r.stdout
+
+
+# ---- review of 151f055: a vault with notes/, a vault inside a bigger repo, the leak scanner --------------------------------
+
+NOTES = {
+    "notes/life/old-one.md": "an old note, no area\n",
+    "notes/loose.md": "loose in the root of notes\n",
+}
+
+
+def test_adopt_writes_an_areas_txt_that_does_not_settle_the_notes_the_baseline_lists(tmp_path):
+    v = adopted(tmp_path, NOTES)
+    assert "notes: notes" in (v / "areas.txt").read_text()
+    listed = json.loads((v / ".cogiforge" / "baseline.json").read_text())["area_missing"]
+    assert "notes/life/old-one.md" in listed and "notes/loose.md" in listed
+
+
+def test_a_vault_with_notes_folder_first_commit_passes(tmp_path):
+    v = adopted(tmp_path, NOTES)
+    r = commit(v, tmp_path, all_=True)
+    assert r.returncode == 0, out(r)
+
+
+def test_a_vault_with_notes_folder_editing_an_old_note_passes(tmp_path):
+    v = adopted(tmp_path, NOTES, history=True)
+    write(v, "notes/life/old-one.md", "an old note, edited\n")
+    write(v, "notes/loose.md", "loose, edited\n")
+    r = commit(v, tmp_path, "notes/life/old-one.md", "notes/loose.md")
+    assert r.returncode == 0, out(r)
+
+
+def test_a_vault_with_notes_folder_a_new_note_without_area_blocks(tmp_path):
+    v = adopted(tmp_path, NOTES, history=True)
+    write(v, "notes/life/new-one.md", "a new note, no area, links to [[old-one]]\n")
+    r = commit(v, tmp_path, "notes/life/new-one.md")
+    assert r.returncode != 0
+    assert "notes/life/new-one.md" in out(r).split("FAILS", 1)[1] and "area" in out(r)
+    assert git(v, "rev-list", "--count", "HEAD", tmp=tmp_path).stdout.strip() == "1"
+
+
+def forge(v, key, entry):
+    b = v / ".cogiforge" / "baseline.json"
+    data = json.loads(b.read_text())
+    data[key].append(entry)
+    b.write_text(json.dumps(data))
+
+
+def test_a_new_note_forged_into_area_missing_blocks_when_head_has_no_baseline(tmp_path):
+    v = adopted(tmp_path, NOTES, history=True)
+    write(v, "notes/life/new-one.md", "new, no area, links to [[old-one]]\n")
+    forge(v, "area_missing", "notes/life/new-one.md")
+    r = commit(v, tmp_path, "notes/life/new-one.md")
+    assert r.returncode != 0 and "notes/life/new-one.md" in out(r).split("FAILS", 1)[1]
+
+
+def test_a_new_note_forged_into_frontmatter_errors_blocks_when_head_has_no_baseline(tmp_path):
+    v = adopted(tmp_path, NOTES, history=True)
+    write(v, "notes/life/bad.md", "---\nkey: [unclosed\n---\nlinks to [[old-one]]\n")
+    forge(v, "frontmatter_errors", "notes/life/bad.md")
+    r = commit(v, tmp_path, "notes/life/bad.md")
+    assert r.returncode != 0 and "notes/life/bad.md" in out(r).split("FAILS", 1)[1]
+
+
+def test_a_new_note_with_a_dead_link_forged_into_the_baseline_blocks_when_head_has_no_baseline(tmp_path):
+    v = adopted(tmp_path, DEAD, history=True)
+    write(v, "c.md", "see [[a]] and [[phantom]]\n")  # linked to a, so only the dead link can fail
+    forge(v, "dead_links", "c.md:1 [[phantom]]")
+    r = commit(v, tmp_path, "c.md")
+    assert r.returncode != 0 and "phantom" in out(r)
+
+
+def test_a_baseline_that_is_a_symlink_whose_target_text_is_valid_json_exempts_nothing(tmp_path):
+    v = adopted(tmp_path, BASE)
+    assert commit(v, tmp_path, all_=True).returncode == 0  # HEAD has the real baseline
+    b = v / ".cogiforge" / "baseline.json"
+    b.unlink()
+    b.symlink_to(json.dumps({"orphans": ["ideas/loose-idea.md"]}))  # git stores the target text: valid JSON
+    write(v, "ideas/loose-idea.md", "a loose idea, edited\n")
+    r = commit(v, tmp_path, "ideas/loose-idea.md", ".cogiforge/baseline.json")
+    assert r.returncode != 0 and "ideas/loose-idea.md" in out(r).split("FAILS", 1)[1]
+
+
+RING = ROOT / "core" / "ring.py"
+
+
+def sub_repo(tmp_path, baseline):
+    """A repo with the vault in `vault/`: repo-root files (README.md, docs/guide.md) and an old orphan inside the vault."""
+    r = tmp_path / "repo"
+    write(r, "README.md", "# repo\n")
+    write(r, "docs/guide.md", "a guide of the repo, not a note\n")
+    write(r, "vault/reading.md", "see [[other]]\n")
+    write(r, "vault/other.md", "see [[reading]]\n")
+    write(r, "vault/old-orphan.md", "an old note, no link\n")
+    subprocess.run(["git", "init", "-q"], cwd=r, check=True)
+    git(r, "add", "-A", tmp=tmp_path)
+    assert git(r, "commit", "-q", "-m", "init", tmp=tmp_path).returncode == 0
+    write(r, "vault/.cogiforge/baseline.json", json.dumps(baseline))  # untracked: the disk copy counts
+    return r
+
+
+def run_ring(r, tmp_path):
+    return subprocess.run([sys.executable, "-B", str(RING), "--vault", "vault", "--gate", "--stage"], cwd=r,
+                          capture_output=True, text=True, env=env(tmp_path), stdin=subprocess.DEVNULL)
+
+
+def test_a_vault_inside_a_bigger_repo_old_debt_passes(tmp_path):
+    r = sub_repo(tmp_path, {"orphans": ["old-orphan.md"]})
+    write(r, "vault/old-orphan.md", "an old note, edited\n")
+    git(r, "add", "vault/old-orphan.md", tmp=tmp_path)
+    res = run_ring(r, tmp_path)
+    assert res.returncode == 0, out(res)
+
+
+def test_a_vault_inside_a_bigger_repo_a_new_note_named_like_a_repo_file_is_not_exempt(tmp_path):
+    r = sub_repo(tmp_path, {"orphans": ["old-orphan.md"]})
+    write(r, "vault/docs/guide.md", "a brand new note, no link\n")  # vault-relative name: docs/guide.md, in HEAD at the repo root
+    git(r, "add", "vault/docs/guide.md", tmp=tmp_path)
+    write(r, "vault/.cogiforge/baseline.json", json.dumps({"orphans": ["old-orphan.md", "docs/guide.md"]}))  # forged
+    res = run_ring(r, tmp_path)
+    assert res.returncode != 0 and "docs/guide.md" in out(res)
+
+
+def test_head_notes_are_relative_to_the_vault_and_drop_what_is_outside(tmp_path):
+    sys.path.insert(0, str(ROOT / "core"))
+    import baseline as B
+    from memory import Reader
+    r = sub_repo(tmp_path, {"orphans": []})
+    got = B._head_notes(Reader(r.resolve()), (r / "vault").resolve())
+    assert {"reading.md", "other.md", "old-orphan.md"} <= got
+    assert "README.md" not in got and "docs/guide.md" not in got and "vault/reading.md" not in got
+

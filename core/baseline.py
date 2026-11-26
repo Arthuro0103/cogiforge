@@ -8,7 +8,10 @@ debt the baseline lists blocks nobody, and anything NEW still does:
   orphans              a listed note with no link does not fail ring.py
   dead_links           a listed `[[target]]` in a listed note does not fail gate.py (line numbers are ignored: editing
                        the note moves them; the same target may repeat only as many times as the baseline counts)
-  area_missing         a listed note without `area:` does not fail the gate area check (any other area failure does)
+  area_missing         a listed note does not fail the gate area check, whatever the failure is: adopt lists the notes
+                       that sit under an area folder with no `area:`, and in a vault with `notes/` the same note is also
+                       "loose in notes/" or in a folder that belongs to no area, which the adopt-written areas.txt
+                       does not settle
   frontmatter_errors   a listed note whose frontmatter does not parse does not fail the gate frontmatter check
 
 Which copy of the list counts:
@@ -33,7 +36,6 @@ from pathlib import Path
 
 BASELINE = ".cogiforge/baseline.json"
 DEAD_MSG = re.compile(r"^\[\[(.*)\]\] does not resolve \(line \d+\)$", re.S)
-AREA_MSG = "missing area: field"  # the only area failure the baseline's `area_missing` describes (gate.chk_area)
 
 
 def nfc(s):
@@ -85,7 +87,7 @@ class Exempt:
             if f.check == "frontmatter":
                 ok = file in self.frontmatter_errors
             elif f.check == "area":
-                ok = file in self.area_missing and f.msg.startswith(AREA_MSG)
+                ok = file in self.area_missing  # ANY area failure of a listed note (adopt lists it for notes/ too)
             elif f.check == "dead-link":
                 m = DEAD_MSG.match(f.msg)
                 key = (file, m.group(1)) if m else None
@@ -146,11 +148,19 @@ def _disk(vault):
     return got if got is not None else unreadable("it is not a baseline.json this version understands")
 
 
-def _head_notes(reader):
+def _head_notes(reader, vault):
+    """The paths HEAD has, RELATIVE TO THE VAULT (the baseline, the gate and ring.py all speak vault-relative paths; git
+    speaks repo-relative ones, and the vault may be a folder inside the repo). What is outside the vault is dropped."""
     raw = reader.git("ls-tree", "-r", "-z", "--name-only", "HEAD")
     if raw is None:
         return None
-    return {nfc(x) for x in raw.decode("utf-8", errors="surrogateescape").split("\0") if x}
+    prefix = vault.relative_to(reader.top).as_posix()
+    prefix = "" if prefix == "." else prefix + "/"
+    out = set()
+    for x in raw.decode("utf-8", errors="surrogateescape").split("\0"):
+        if x and nfc(x).startswith(nfc(prefix)):
+            out.add(nfc(x)[len(nfc(prefix)):])
+    return out
 
 
 def load(vault):
@@ -188,7 +198,7 @@ def load(vault):
     else:
         cand = _disk(vault)
     if has_head and cand:
-        known = _head_notes(reader)
+        known = _head_notes(reader, vault)
         if known is None:
             return unreadable("git could not list HEAD")
         cand = cand.restrict(known)
