@@ -1,6 +1,6 @@
 ---
 name: cf-help
-description: Explains which workbench skills to use and how, tailored to what the user said about themselves. Reads the profile and counts what exists in the vault; short route in chat, detail on request. Writes nothing. TRIGGERS - "how do I use", "which skill should I use", "what can I do here", "como uso", "qual skill", "me ajuda a usar". Do NOT trigger when a concrete task is already asked (that task's skill).
+description: Explains which workbench skills to use and how, tailored to what the user said about themselves. Reads the profile and counts what exists in the vault; short route in chat, detail on request. Writes nothing. TRIGGERS - "how do I use", "which skill should I use", "which skill for", "what can I do here", "como uso", "qual skill", "me ajuda a usar". Do NOT trigger when a concrete task is already asked (that task's skill).
 ---
 
 # cf-help: which skill, for you, now
