@@ -56,7 +56,7 @@ Depois de instalar, abra o Claude Code em qualquer pasta e peça com as suas pal
 
 1. *"Monta um workbench novo do Cogiforge em ~/cogiforge-workbench."* O Claude roda a `/cf-new-workbench`: cria a pasta, liga o portão e faz o primeiro commit.
 2. *"Põe o portão de commit do Cogiforge no meu vault do Obsidian em ~/Documents/MeuVault."* O Claude roda a `/cf-adopt`: mostra o plano e espera o seu sim antes de mudar qualquer coisa.
-3. Depois abra o workbench novo (`cd ~/cogiforge-workbench && claude`) e diga *"Me conhece primeiro."* O Claude roda a `/cf-onboard` e faz a primeira pergunta.
+3. Depois abra o workbench novo (`cd ~/cogiforge-workbench && claude`) e diga *"Me conhece primeiro."* O Claude roda a `/cf-onboard` e faz a primeira pergunta. Depois, `/cf-help` mostra o que usar primeiro.
 
 ### Por que o plugin instala só duas skills
 
@@ -68,6 +68,8 @@ Este repo tem 17 skills, e o plugin instala só duas de propósito. Se você ou 
 4. **Um hook de git precisa de um caminho fixo, e o plugin não leva código.** Por isso cada workbench leva o próprio `core/`, e o `/cf-adopt` guarda uma cópia estável em `~/.cogiforge` e aponta o hook do vault para lá.
 5. **Outros agentes (Codex, Cursor e outros) acham as mesmas skills dentro do workbench**, pelo `AGENTS.md` e por `.agents/skills`. Eles não precisam do plugin.
 6. **Atualizar.** Uma versão nova do plugin aponta para uma tag nova, então os workbenches novos já nascem atualizados. Um workbench que já existe não se atualiza sozinho. Para trazer um conserto, copie `core/` e `tools/` de uma versão nova por cima (ou rode `git pull`, se for um clone). Num vault adotado, rode o `/cf-adopt` de novo: ele oferece trocar o `~/.cogiforge` pela versão nova, e todo vault adotado recebe o conserto de uma vez.
+
+A versão que o plugin instala hoje (Cogiforge 0.1.1) ainda não tem a `/cf-help`; ela chega na próxima versão.
 7. **O plugin é só Markdown.** O diretório de plugins da Anthropic só aceita código de organização verificada, então o plugin leva instruções e nenhum script. As skills baixam este repo do GitHub numa versão fixa, pelo hash do commit, e conferem o hash antes de rodar qualquer coisa: o plugin 0.1.2 instala o Cogiforge 0.1.1 (commit `1f0d9cc`, tag `v0.1.1`). Para lançar uma versão nova do Cogiforge, marque a tag primeiro; depois, um commit seguinte do plugin fixa o hash dela e sobe a versão do plugin. Pede `git` e internet.
 
 ## Para quem é
@@ -92,6 +94,7 @@ O cogiforge saiu de usar o Claude num cofre de verdade. Três decisões o moldar
 |---|---|---|
 | `vault/` | A bancada: `inbox/` para captura rápida, `notes/` para notas processadas, `projects/` com um arquivo-raiz por projeto, `memory/` para o que *você* disse, `tasks/` para tarefas. Abra esta pasta no Obsidian. O Claude Code carrega sozinho os três arquivos de memória (`profile.md`, `patterns.md`, `decisions.md`) pelas linhas de `@` import do `CLAUDE.md`; os outros agentes os leem porque o `AGENTS.md` manda. Veja [docs/MEMORY.md](docs/MEMORY.md). | Tudo o que as skills abaixo gravam mora aqui. |
 | `/cf-onboard` | Apresentação. Faz uma pergunta de cada vez, cada uma seguindo a sua última resposta, e escreve o que **você disse**, com data e entre aspas. Nunca adivinha. | `vault/_questions_about_me.md` e linhas aprovadas em `vault/memory/profile.md`, só depois do seu sim. |
+| `/cf-help [skill]` | Diz qual skill usar e como, para você: lê o que você disse no seu perfil e conta o que há no seu vault, depois dá um roteiro curto no chat. `/cf-help <skill>` explica uma skill em detalhe. | Nada (só lê). |
 | `/cf-open-session <nome>` | Começa o trabalho num projeto: lê a raiz, as últimas entradas do diário e as tarefas abertas, e diz onde você parou. | Nada (só lê). |
 | `/cf-close-session` | Encerra o dia: diário, um resumo por sessão, as **dores que você falou** juntas num arquivo, tarefas abertas para o que ficou pendente. Roda os verificadores (`core/gate.py`, `core/ring.py`, `tools/usage.py`, `tools/stale.py`). Só faz commit se você mandar e nunca dá push. | Resumo em `vault/memory/briefings/`, diário em `vault/memory/diary/`, dores acrescentadas em `vault/memory/ideas/_pains.md`, tarefas em `vault/tasks/`. Commit só se você mandar. |
 | `/cf-ask` | Responde só a partir das suas notas, com citações que o `tools/ask.py cite` consegue conferir. Modo opcional `--try-first`: você escreve o que lembra antes de ele mostrar qualquer coisa. | Nada nas suas notas; com `--log`, uma linha (data e notas citadas, sem a pergunta) em `vault/memory/ask-log.jsonl`. |
@@ -160,7 +163,7 @@ Esta é a base sob a bancada. É pequena de propósito e roda só com a bibliote
 - **Memória velha** (`tools/stale.py`). Lista as linhas de memória cujo arquivo citado sumiu ou mudou de pasta, cujo arquivo mudou muito depois da data da entrada, ou que têm `stale_after:` ou `superseded_by:`. Ele mede e não decide; com `--gate`, um achado vira saída 1.
 - **Lembrança** (`tools/recall.py`). Uma sessão nova ainda acha o que a memória diz? `--static` lê o disco e não usa modelo; `--run "<cmd>"` faz as perguntas do banco a um modelo, com um controle positivo (um fato que com certeza está na memória) e um controle negativo (uma pergunta que a memória não sabe responder). Controle positivo errado é `NOT_VERIFIED`, nunca "0 de N".
 - **Regras em sincronia** (`tests/test_agents_md.py`). Compara as regras numeradas do `CLAUDE.md` e do `AGENTS.md` e falha quando elas se afastam.
-- **Orçamento por sessão** (`core/budget.py`). Conta os bytes que uma sessão carrega antes de qualquer trabalho, com os `@` imports e as descrições das skills, e bloqueia um commit que aumenta um arquivo carregado com o contexto acima do teto (32 KB em toda sessão, 48 KB ao abrir um projeto). Medido no esqueleto vazio: 17.899 bytes, 56% do teto.
+- **Orçamento por sessão** (`core/budget.py`). Conta os bytes que uma sessão carrega antes de qualquer trabalho, com os `@` imports e as descrições das skills, e bloqueia um commit que aumenta um arquivo carregado com o contexto acima do teto (32 KB em toda sessão, 48 KB ao abrir um projeto). Medido no esqueleto vazio: 17.117 bytes, 53% do teto.
 - **CI** (`.github/workflows/prova.yml`). Instala de um clone limpo, roda os testes e a checagem de mutação, e experimenta o portão de órfãs de ponta a ponta.
 
 O hook pode ser burlado de propósito com `git commit --no-verify`. Toda regra daqui vem de uma falha real e

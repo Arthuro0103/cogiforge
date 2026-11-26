@@ -99,6 +99,7 @@ the commands above. Where a skill says "ask the user one question at a time", do
 
 | Skill (folder in `.claude/skills/`) | Use it when |
 |---|---|
+| `cf-help` | the user asks which skill to use or how, with no task yet: read their profile and count what exists in the vault, then answer with a short route; `cf-help <skill>` gives detail. Writes nothing |
 | `cf-onboard` | the first time, or when the user wants to update their profile: one question at a time, the output is the user's own words |
 | `cf-open-session` | starting work on a project: read its root, the last diary entries and the open tasks |
 | `cf-ask` | the user asks a question the notes may answer: answer only from the notes, with citations that `tools/ask.py cite` can check |

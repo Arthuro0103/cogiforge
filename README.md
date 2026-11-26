@@ -60,7 +60,7 @@ After installing, open Claude Code in any folder and ask in your own words, for 
 
 1. *"Make me a new Cogiforge workbench in ~/cogiforge-workbench."* Claude runs `/cf-new-workbench`: it builds the folder, turns the gate on and makes the first commit.
 2. *"Put the Cogiforge commit gate on my Obsidian vault at ~/Documents/MyVault."* Claude runs `/cf-adopt`: it shows the plan and waits for your yes before it changes anything.
-3. Then open the new workbench (`cd ~/cogiforge-workbench && claude`) and say *"Get to know me."* Claude runs `/cf-onboard` and asks its first question.
+3. Then open the new workbench (`cd ~/cogiforge-workbench && claude`) and say *"Get to know me."* Claude runs `/cf-onboard` and asks its first question. Afterwards, `/cf-help` shows what to use first.
 
 ### Why the plugin installs only two skills
 
@@ -73,6 +73,8 @@ This repo has 17 skills, and the plugin installs just two on purpose. If you or 
 5. **Other agents (Codex, Cursor and others) find the same skills inside the workbench**, through `AGENTS.md` and `.agents/skills`. They do not need the plugin.
 6. **Updating.** A new plugin version points at a new tag, so new workbenches are already updated. An existing workbench does not update itself. To bring a fix into one, copy `core/` and `tools/` from a newer version over it (or run `git pull` in a clone). For a vault you adopted, run `/cf-adopt` again: it offers to replace `~/.cogiforge` with the new version, and every adopted vault gets the fix at once.
 7. **The plugin is only Markdown.** The Anthropic plugin directory accepts code only from a verified organization, so the plugin carries instructions and no scripts. The skills download this repo from GitHub at a fixed version, by commit hash, and check the hash before running anything: plugin 0.1.2 installs Cogiforge 0.1.1 (commit `1f0d9cc`, tag `v0.1.1`). To ship a new Cogiforge version, tag it first; then a following commit of the plugin pins that tag's hash and raises the plugin version. It needs `git` and an internet connection.
+
+The version the plugin installs today (Cogiforge 0.1.1) does not have `/cf-help` yet; it arrives with the next version.
 
 ## Who it is for
 
@@ -104,6 +106,7 @@ cogiforge came out of using Claude on a real vault. Three decisions shaped it:
 |---|---|---|
 | `vault/` | The workbench: `inbox/` for quick capture, `notes/` for processed notes, `projects/` with one root file per project, `memory/` for what *you* told it, `tasks/` for tasks. Open this folder in Obsidian. Claude Code loads the three memory files (`profile.md`, `patterns.md`, `decisions.md`) by itself, through the `@` import lines in `CLAUDE.md`; other agents read them because `AGENTS.md` tells them to. See [docs/MEMORY.md](docs/MEMORY.md). | Everything the skills below write lives here. |
 | `/cf-onboard` | Onboarding. Asks one question at a time, each following your last answer, and writes what **you said**, dated and quoted. It never guesses. | `vault/_questions_about_me.md` and approved lines in `vault/memory/profile.md`, only after your yes. |
+| `/cf-help [skill]` | Tells you which skill to use and how, for you: it reads what you said in your profile and counts what is in your vault, then gives a short route in the chat. `/cf-help <skill>` explains one skill in detail. | Nothing (read only). |
 | `/cf-open-session <name>` | Starts work on a project: reads its root file, the last diary entries and the open tasks, and tells you where you stopped. | Nothing (read only). |
 | `/cf-close-session` | Ends the day: diary, a briefing per session, the **pains you voiced** collected in one file, tasks opened for what is pending. Runs the verifiers (`core/gate.py`, `core/ring.py`, `tools/usage.py`, `tools/stale.py`). It commits only if you say so and never pushes. | Briefing in `vault/memory/briefings/`, diary in `vault/memory/diary/`, pains appended to `vault/memory/ideas/_pains.md`, tasks in `vault/tasks/`. Commit only if you say so. |
 | `/cf-task-observer` | Watches how you work and **only proposes** improvements (a missing skill, a step you repeated three times, a correction you made twice). You decide. | Only appends to `vault/memory/observations.md`, at most 3 per session. |
@@ -194,7 +197,7 @@ This is the foundation under the workbench. It is deliberately small and runs on
 - **Stale memory** (`tools/stale.py`). Reports memory lines whose cited file is gone or moved, whose file changed a lot since the entry date, or that carry `stale_after:` or `superseded_by:`. It measures and decides nothing; `--gate` turns a finding into exit 1.
 - **Recall** (`tools/recall.py`). Does a new session still find what the memory says? `--static` reads the disk and uses no model; `--run "<cmd>"` asks a model the bank's questions, with a positive control (a fact surely in the memory) and a negative control (a question the memory cannot answer). A missed positive control is `NOT_VERIFIED`, never "0 of N".
 - **Rules in sync** (`tests/test_agents_md.py`). Compares the numbered rules of `CLAUDE.md` and `AGENTS.md` and fails when they drift apart.
-- **Per-session budget** (`core/budget.py`). Counts the bytes a session loads before any work, `@` imports and skill descriptions included, and blocks a commit that grows a loaded file while the context is over its ceiling (32 KB every session, 48 KB when a project is opened). Measured on the empty skeleton: 17,899 bytes, 56% of the ceiling.
+- **Per-session budget** (`core/budget.py`). Counts the bytes a session loads before any work, `@` imports and skill descriptions included, and blocks a commit that grows a loaded file while the context is over its ceiling (32 KB every session, 48 KB when a project is opened). Measured on the empty skeleton: 17,117 bytes, 53% of the ceiling.
 - **CI** (`.github/workflows/prova.yml`). Installs from a clean clone, runs the tests (on ubuntu and macOS, Python 3.10 to 3.13) and, in a separate job, the mutation check (ubuntu, Python 3.12, 8 shards), and tries the orphan gate end to end. The step that proves the hook test goes red now insists on that exact failure: a renamed test once made it print "ok" without testing anything.
 
 The hook can be bypassed on purpose with `git commit --no-verify`. Every rule here comes from a real,
