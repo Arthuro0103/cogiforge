@@ -75,6 +75,7 @@ Suggest a test: add a note with no link and run `git commit`; the hook should bl
 6. That the debt numbers are complete: skipped, unreadable and non-UTF-8 notes are listed, not measured, and links are resolved by the gate's rules, not Obsidian's.
 7. That a blocked vault is dangerous, or an accepted one is safe: the allowlist is deliberately narrow, so real configs (`pull.rebase`, `autocrlf`, `lfs`, credentials) block until you edit them.
 8. Anything after the apply: later edits to `.git/hooks` or to `.git/config` (by you or by another tool) are judged only if you run adopt again.
+9. That the baseline exemption is a lock. Once `.cogiforge/baseline.json` is committed, a commit cannot add an entry to it (the committed version is the ceiling). Before that, and in the first commit, whoever edits the file on the disk, or takes it out of git in a separate commit, can widen the exemption, the same way `--no-verify` skips the hook: it takes wanting to get around it. On a filesystem that tells the two apart, two note names that differ only in NFC/NFD (two ways to write the same accent) count as the same note.
 
 ## Never
 

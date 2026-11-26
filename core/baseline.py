@@ -24,6 +24,11 @@ Which copy of the list counts:
 When HEAD exists the exemption is also RESTRICTED to notes that HEAD already has: a note that was already committed is old
 debt, a note that arrives in this commit never is, whatever the list says. Without HEAD (the first commit) every note is new
 to git and the restriction is off.
+The exemption is NOT a lock. Once the baseline is committed, a commit cannot add an entry to it (the committed version is
+the ceiling). Before that, and in the first commit, whoever edits `.cogiforge/baseline.json` on the disk, or takes it out of
+git in a separate commit, can widen the exemption, the same way `--no-verify` skips the hook: it takes wanting to get
+around it. On a filesystem that tells them apart, two note names that differ only in NFC/NFD count as the same note (every
+name is compared in NFC).
 A baseline that cannot be read or understood exempts nothing and says so (`Exempt.problem`; ring.py and gate.py print one
 line). No baseline at all is not a problem: it is the behavior without one. Outside a git repository the disk is read.
 """

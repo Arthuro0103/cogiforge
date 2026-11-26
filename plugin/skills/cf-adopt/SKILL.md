@@ -91,6 +91,7 @@ Suggest a test: add a note with no link and run `git commit`; the hook should bl
 2. That a hook you approved, or a vault you cleaned by hand after a block, is safe: it judges what it sees at that moment.
 3. That the debt numbers are complete: skipped, unreadable and non-UTF-8 notes are listed, not measured.
 4. That your global git config, your `PATH` or your shell are not hostile.
+5. That the baseline exemption is a lock. Once `.cogiforge/baseline.json` is committed, a commit cannot add an entry to it (the committed version is the ceiling). Before that, and in the first commit, whoever edits the file on the disk, or takes it out of git in a separate commit, can widen the exemption, the same way `--no-verify` skips the hook: it takes wanting to get around it. On a filesystem that tells the two apart, two note names that differ only in NFC/NFD (two ways to write the same accent) count as the same note.
 
 ## Never
 
