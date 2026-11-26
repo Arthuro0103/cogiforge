@@ -467,3 +467,58 @@ def test_a_path_that_looks_like_a_stage_prefix_is_judged_by_its_own_content(clon
     (clone / "0:docs/CLAUDE.md").write_text("# real\nbe\u2063 kind\n", encoding="utf-8")
     sh(clone, "git", "add", "docs/CLAUDE.md", "0:docs/CLAUDE.md")
     assert blocked(sh(clone, "git", "commit", "-q", "-m", "x"), "0:docs/CLAUDE.md:2:")
+
+
+# ---- who signs the commit: the private list also covers author and committer ----
+
+TERM = "zeta-quux"
+
+
+@pytest.fixture
+def listed(clone, tmp_path):
+    blocklist = tmp_path / "blocklist.txt"  # outside the clone
+    blocklist.write_text(TERM + "\n", encoding="utf-8")
+    return clone, {"LEAK_BLOCKLIST": str(blocklist)}
+
+
+def head(repo):
+    return sh(repo, "git", "log", "-1", "--format=%H %an %cn").stdout
+
+
+@pytest.mark.parametrize("how", ["config", "env", "flag"])
+def test_a_blocklisted_signature_blocks_the_real_commit_without_echoing_it(listed, how):
+    repo, env = listed
+    extra, before = [], head(repo)
+    if how == "config":
+        sh(repo, "git", "config", "user.name", f"Mr {TERM}")
+    elif how == "env":
+        env = {**env, "GIT_COMMITTER_NAME": f"Mr {TERM}"}
+    else:
+        extra = ["--author", f"Mr {TERM} <x@example.com>"]
+    r = commit(repo, "docs/note.txt", "clean\n", *extra, env=env)
+    out = r.stdout + r.stderr
+    field = "committer name" if how == "env" else "author name"
+    assert r.returncode == 1 and f"identity: {field} matches a blocklist term" in out, out
+    assert "COMMIT BLOCKED" in out and "git commit --amend --reset-author" in out
+    assert TERM not in out.casefold() and head(repo) == before
+
+
+def test_the_printed_fix_repairs_a_commit_that_already_exists(listed):
+    repo, env = listed
+    sh(repo, "git", "config", "user.name", f"Mr {TERM}")
+    assert commit(repo, "docs/note.txt", "clean\n", "--no-verify", env=env).returncode == 0
+    sh(repo, "git", "config", "user.name", "handle")
+    r = sh(repo, "git", "commit", "-q", "--amend", "--no-edit", env=env)  # the old author would stay
+    assert r.returncode == 1 and "identity: author name matches" in r.stdout + r.stderr
+    r = sh(repo, "git", "commit", "-q", "--amend", "--reset-author", "--no-edit", env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert head(repo).split()[1:] == ["handle", "handle"]
+
+
+def test_an_old_blocklisted_commit_does_not_block_the_next_one(listed):
+    repo, env = listed
+    sh(repo, "git", "config", "user.name", f"Mr {TERM}")
+    commit(repo, "docs/old.txt", "clean\n", "--no-verify", env=env)
+    sh(repo, "git", "config", "user.name", "handle")
+    r = commit(repo, "docs/new.txt", "clean\n", env=env)
+    assert r.returncode == 0, r.stdout + r.stderr

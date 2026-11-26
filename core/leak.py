@@ -5,7 +5,7 @@ Catches the PATTERN, not the context: /Users/<name> path, e-mail, BR phone, form
 every term of the private blocklist. Stdlib only.
 
     leak.py [PATH ...]     scans files/folders (default: .)
-    leak.py --staged       scans what is in the git stage (used by the hook)
+    leak.py --staged       scans what is in the git stage (used by the hook), and who signs the commit
 
 The blocklist lives OUTSIDE the repo (one term per line, case-insensitive):
     ~/.config/cogiforge/blocklist.txt    (change it with LEAK_BLOCKLIST=/other/path)
@@ -26,8 +26,14 @@ that does not open as JSON, or has another shape, is scanned whole, like every o
 A `.claude/settings.local.json` in the git index, in any folder of the repo and in both modes, is always
 a finding (`settings-local-tracked`), even if `.leakignore` lists it: it holds commands approved with
 "don't ask again". Ignore it with `**/.claude/settings.local.json` (without `**/` only the root is covered).
+With `--staged` and a private list, the identity of the commit being made is checked too: author name, author email,
+committer name and committer email, as `git var GIT_AUTHOR_IDENT` and `git var GIT_COMMITTER_IDENT` give them (the
+GIT_AUTHOR_* / GIT_COMMITTER_* variables and the config count). Only the private list applies to it, matched like file
+content: every identity has an e-mail, so the generic patterns do not. A match is a finding (rc 1) that names the field,
+never the term nor the identity; `.leakignore` does not exempt it. If git cannot tell the identity, it is `NOT_VERIFIED`
+(rc 2). Commits that already exist are not checked.
 
-rc: 0 clean · 1 found a leak · 2 usage/error or unreadable file · 3 private list required and missing
+rc: 0 clean · 1 found a leak · 2 usage/error, unreadable file or identity · 3 private list required and missing
 """
 import argparse
 import json
@@ -52,6 +58,8 @@ SETTINGS_LOCAL = ".claude/settings.local.json"
 SETTINGS_LOCAL_IGNORE = "**/" + SETTINGS_LOCAL
 BASELINE = ".cogiforge/baseline.json"  # the ONE file skipped on purpose: it lists note names, which can look like a phone
 SKIP_DIRS = {".git", "__pycache__", ".pytest_cache"}  # only what is never content: venv/node_modules ARE scanned
+IDENT_VARS = (("author", "GIT_AUTHOR_IDENT"), ("committer", "GIT_COMMITTER_IDENT"))
+IDENT_RE = re.compile(r"([^<>]*) <([^<>]*)> ")  # `git var` prints `name <email> time zone`; neither part holds < or >
 
 PATH_RE = re.compile(r"(?:/|\\)Users(?:/|\\)[A-Za-z0-9._-]+", re.IGNORECASE)  # includes the Windows style
 # example.com/org/net (RFC 2606) only counts WHOLE: any suffix after example.com is already a real domain
@@ -220,6 +228,26 @@ def staged_text(path):
     return decode(r.stdout)
 
 
+def commit_identity():
+    """[(field, value)] of the commit being made, or None when git cannot tell. git's own error message is
+    dropped on purpose: it can quote the identity, and the output of this script never does."""
+    fields = []
+    for who, var in IDENT_VARS:
+        r = subprocess.run(["git", "var", var], capture_output=True)
+        m = IDENT_RE.match(r.stdout.decode("utf-8", "replace"))
+        if r.returncode != 0 or not m:
+            return None
+        fields += [(f"{who} name", m.group(1)), (f"{who} email", m.group(2))]
+    return fields
+
+
+def identity_matches(fields, terms):
+    """Names of the fields that hold a term of the private list, matched exactly like a line of a file. The generic
+    patterns are left out: an identity always carries an e-mail."""
+    return [field for field, value in fields
+            if any(kind == "blocklist" for _, kind in findings_of_text(value, terms))]
+
+
 def is_settings_local(name):
     # case-insensitive: macOS and Windows write `.Claude/Settings.Local.json` to the same file
     n = unicodedata.normalize("NFC", str(name).replace(os.sep, "/")).lower()
@@ -349,6 +377,22 @@ def main(argv=None):
         print(f"ERROR: could not list the git stage ({e})", file=sys.stderr)
         return 2
 
+    signed, identity_unread = [], False  # printed first: the hook shows only the head of this output
+    if args.staged and terms:
+        identity = commit_identity()
+        if identity is None:
+            identity_unread = True
+            print("NOT_VERIFIED: git could not tell the author and committer of this commit, so they were not "
+                  "checked. See: git var GIT_AUTHOR_IDENT")
+        else:
+            signed = identity_matches(identity, terms)
+        for field in signed:
+            print(f"identity: {field} matches a blocklist term")
+        if signed:
+            print("  Fix: git config user.name <handle> (user.email <address> for an e-mail), then, if the commit "
+                  "already exists, git commit --amend --reset-author")
+            print("  --author, GIT_AUTHOR_*, GIT_COMMITTER_*, author.* and committer.* win over user.*: check them too.")
+
     sources = [(n, strip_baseline_names(n, t)) for n, t in sources]
     total, exempted = 0, []
     flagged = set()  # absolute paths with a finding: a file counts once, whoever found it
@@ -408,6 +452,10 @@ def main(argv=None):
             return 3
     else:
         print(f"private list: {len(terms)} term(s) checked")
+    if signed:
+        return 1
+    if identity_unread and not total:
+        return 2
     return 1 if total else (2 if (unreadable or index_failed) else 0)
 
 

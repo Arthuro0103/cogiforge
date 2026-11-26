@@ -577,3 +577,150 @@ def test_a_file_on_disk_and_in_the_index_counts_once(tmp_path):
     (tmp_path / ".claude" / "settings.local.json").write_text("/" + "Users/someone/x\n", encoding="utf-8")
     r = run([], tmp_path)
     assert "in 1 file(s), of 1 scanned" in r.stdout, r.stdout
+
+
+# ---- who signs the commit (--staged): the private list against author and committer ----
+
+TERM = "zeta-quux"
+IDENTITY = {"GIT_AUTHOR_NAME": "ada-handle", "GIT_AUTHOR_EMAIL": "ada@example.com",
+            "GIT_COMMITTER_NAME": "bo-handle", "GIT_COMMITTER_EMAIL": "bo@example.com"}
+FIELDS = {"GIT_AUTHOR_NAME": "author name", "GIT_AUTHOR_EMAIL": "author email",
+          "GIT_COMMITTER_NAME": "committer name", "GIT_COMMITTER_EMAIL": "committer email"}
+CONTENT_SUMMARY = "0 finding(s) in 0 file(s), of 1 scanned\nprivate list: 1 term(s) checked\n"
+
+
+def signed_repo(tmp_path, text="clean text\n"):
+    """A repo with one staged file and a private list kept outside it."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    (repo / "x.md").write_text(text, encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", "x.md"], check=True)
+    blocklist = tmp_path / "blocklist.txt"
+    blocklist.write_text(TERM + "\n", encoding="utf-8")
+    return repo, blocklist
+
+
+def signed_run(repo, blocklist, args=("--staged",), **identity):
+    """Runs the scanner with an invented identity and no git config of the machine."""
+    env = {"LEAK_BLOCKLIST": str(blocklist), "GIT_CONFIG_NOSYSTEM": "1", "HOME": str(repo.parent),
+           **IDENTITY, **identity}
+    return run(list(args), repo, env=env)
+
+
+def said(r):
+    return (r.stdout + r.stderr).casefold()
+
+
+@pytest.mark.parametrize("var", list(FIELDS))
+def test_each_identity_field_blocks_and_only_that_field_is_named(tmp_path, var):
+    repo, blocklist = signed_repo(tmp_path)
+    value = f"x-{TERM}@example.com" if var.endswith("EMAIL") else f"Mr {TERM} Jr"
+    r = signed_run(repo, blocklist, **{var: value})
+    assert r.returncode == 1, said(r)
+    named = [l for l in r.stdout.splitlines() if l.startswith("identity: ")]
+    assert named == [f"identity: {FIELDS[var]} matches a blocklist term"]
+    assert "git config user.name <handle>" in r.stdout and "git commit --amend --reset-author" in r.stdout
+
+
+@pytest.mark.parametrize("var", list(FIELDS))
+def test_the_identity_output_never_holds_the_term_or_the_identity(tmp_path, var):
+    repo, blocklist = signed_repo(tmp_path)
+    every = {k: f"secret{n}-{TERM}-tail{n}" for n, k in enumerate(FIELDS)}
+    for identity in ({var: f"pre-{TERM}-post"}, every):
+        out = said(signed_run(repo, blocklist, **identity))
+        assert "identity: " in out
+        for value in [TERM, *IDENTITY.values(), *identity.values()]:
+            assert value.casefold() not in out
+
+
+def test_every_matching_field_is_named_and_printed_before_the_file_findings(tmp_path):
+    repo, blocklist = signed_repo(tmp_path, f"about {TERM}\n")
+    r = signed_run(repo, blocklist, **{k: f"{TERM}-{n}" for n, k in enumerate(FIELDS)})
+    lines = r.stdout.splitlines()
+    assert lines[:4] == [f"identity: {f} matches a blocklist term" for f in FIELDS.values()]
+    assert r.stdout.count("Fix: ") == 1 and lines.index("x.md:1: blocklist") > 4
+    assert "1 finding(s) in 1 file(s), of 1 scanned" in lines and r.returncode == 1
+
+
+@pytest.mark.parametrize("value", ["ZETA-QUUX", "Zeta-QuUx", "zeta​-quux", "ｚｅｔａ-ｑｕｕｘ", "zeta­-quux"])
+def test_the_identity_follows_the_matcher_of_the_content(tmp_path, value):
+    repo, blocklist = signed_repo(tmp_path)
+    r = signed_run(repo, blocklist, GIT_COMMITTER_NAME=value)
+    assert r.returncode == 1 and "identity: committer name matches" in r.stdout
+
+
+def test_an_identity_without_a_match_adds_nothing_to_the_output(tmp_path):
+    repo, blocklist = signed_repo(tmp_path)
+    r = signed_run(repo, blocklist, GIT_AUTHOR_NAME="zeta quux")  # near the term, not the term
+    assert r.returncode == 0 and r.stdout == CONTENT_SUMMARY
+
+
+def test_the_generic_patterns_do_not_apply_to_the_identity(tmp_path):
+    repo, blocklist = signed_repo(tmp_path)
+    r = signed_run(repo, blocklist, GIT_AUTHOR_EMAIL=EMAIL, GIT_COMMITTER_NAME=f"{PHONE_BARE} {PATH}")
+    assert r.returncode == 0 and r.stdout == CONTENT_SUMMARY
+
+
+def test_the_identity_from_the_git_config_is_checked_too(tmp_path):
+    repo, blocklist = signed_repo(tmp_path)
+    for key, value in (("user.name", f"cfg {TERM}"), ("user.email", "cfg@example.com")):
+        subprocess.run(["git", "-C", str(repo), "config", key, value], check=True)
+    r = run(["--staged"], repo, env={"LEAK_BLOCKLIST": str(blocklist), "GIT_CONFIG_NOSYSTEM": "1",
+                                     "HOME": str(tmp_path)})
+    assert r.returncode == 1
+    assert "identity: author name matches" in r.stdout and "identity: committer name matches" in r.stdout
+    assert "email matches" not in r.stdout
+
+
+def test_leakignore_and_no_ignore_do_not_exempt_the_identity(tmp_path):
+    repo, blocklist = signed_repo(tmp_path)
+    (repo / ".leakignore").write_text("x.md\nidentity\nauthor name\n", encoding="utf-8")
+    for args in (("--staged",), ("--staged", "--no-ignore")):
+        assert signed_run(repo, blocklist, args, GIT_AUTHOR_NAME=TERM).returncode == 1
+
+
+@pytest.mark.parametrize("extra,rc", [((), 0), (("--require-list",), 3)])
+def test_without_a_private_list_the_identity_changes_nothing(tmp_path, extra, rc):
+    repo, _ = signed_repo(tmp_path)
+    absent = tmp_path / "absent.txt"
+    plain = signed_run(repo, absent, ("--staged", *extra))
+    marked = signed_run(repo, absent, ("--staged", *extra), **{k: TERM for k in FIELDS})
+    untold = signed_run(repo, absent, ("--staged", *extra), GIT_AUTHOR_NAME="")
+    assert plain.returncode == marked.returncode == untold.returncode == rc
+    assert plain.stdout == marked.stdout == untold.stdout
+    assert "identity" not in plain.stdout and "NOT_VERIFIED: private blocklist" in plain.stdout
+
+
+def test_a_path_scan_does_not_check_the_identity(tmp_path):
+    repo, blocklist = signed_repo(tmp_path)
+    r = signed_run(repo, blocklist, (".",), GIT_AUTHOR_NAME=TERM)
+    assert r.returncode == 0 and "identity" not in r.stdout
+
+
+@pytest.mark.parametrize("var", ["GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME"])
+def test_an_identity_git_cannot_tell_is_not_verified_and_never_clean(tmp_path, var):
+    repo, blocklist = signed_repo(tmp_path)
+    r = signed_run(repo, blocklist, **{var: ""})  # git refuses an empty name and quotes the e-mail in its error
+    assert r.returncode == 2, said(r)
+    assert "NOT_VERIFIED: git could not tell the author and committer" in r.stdout
+    assert "@example.com" not in said(r) and "-handle" not in said(r)
+
+
+def test_a_file_finding_still_wins_over_an_identity_git_cannot_tell(tmp_path):
+    repo, blocklist = signed_repo(tmp_path, f"about {TERM}\n")
+    r = signed_run(repo, blocklist, GIT_AUTHOR_NAME="")
+    assert r.returncode == 1 and "NOT_VERIFIED: git could not tell" in r.stdout
+
+
+def test_an_empty_email_is_still_an_identity(tmp_path):
+    repo, blocklist = signed_repo(tmp_path)
+    assert signed_run(repo, blocklist, GIT_AUTHOR_EMAIL="").stdout == CONTENT_SUMMARY
+    r = signed_run(repo, blocklist, GIT_AUTHOR_EMAIL="", GIT_AUTHOR_NAME=TERM)
+    assert r.returncode == 1 and "identity: author name matches" in r.stdout
+
+
+@pytest.mark.parametrize("rc,out", [(0, b"no brackets here\n"), (0, b""), (128, b"n <e@example.com> 1 +0000\n")])
+def test_an_answer_of_git_var_that_cannot_be_trusted_is_none(monkeypatch, rc, out):
+    monkeypatch.setattr(v.subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a, rc, out, b""))
+    assert v.commit_identity() is None

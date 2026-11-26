@@ -4,7 +4,8 @@
 # Seven guards, and all only look at what THIS commit carries (a gate that fails you for something you
 # did not do is a gate people learn to skip):
 #   1. ring   a vault/ .md note with no inbound or outbound link
-#   2. leak   machine path, e-mail, phone, CPF and your private blocklist
+#   2. leak   machine path, e-mail, phone, CPF and your private blocklist; the blocklist also judges the author
+#             and committer of the commit being made
 #   3. people team mode only (vault/roles.txt exists): a member touching another person's folder,
 #             roles.txt, areas.txt, or creating a project. Without roles.txt it is silent.
 #   4. sync   a sync-tool conflict or duplicate file (`x (1).md`, conflicted copy, .sync-conflict-, .icloud)
@@ -55,6 +56,7 @@ if ! python3 core/leak.py --staged >"$out" 2>&1; then
     sed 's/^/     /' "$out" | head -20
     echo ""
     echo "  Take the data out of the file (the output above says file:line:type, never the data)."
+    echo "  An 'identity:' line is about who signs the commit, not a file: follow its Fix."
     blocked=1
 elif grep -q 'NOT_VERIFIED' "$out"; then
     grep 'NOT_VERIFIED' "$out" | sed 's/^/  /'
