@@ -71,8 +71,28 @@ This repo has 18 skills, and the plugin installs just two on purpose. If you or 
 3. **Claude Code loads the skills of the folder it is opened in.** So they appear only where they work, and they never show up in your other projects.
 4. **A git hook needs a fixed path, and the plugin carries no code.** That is why each workbench carries its own `core/`, and why `/cf-adopt` keeps one stable copy in `~/.cogiforge` and points the vault's hook there.
 5. **Other agents (Codex, Cursor and others) find the same skills inside the workbench**, through `AGENTS.md` and `.agents/skills`. They do not need the plugin.
-6. **Updating.** A new plugin version points at a new tag, so new workbenches are already updated. An existing workbench does not update itself. To bring a fix into one, copy `core/` and `tools/` from a newer version over it (or run `git pull` in a clone). For a vault you adopted, run `/cf-adopt` again: it offers to replace `~/.cogiforge` with the new version, and every adopted vault gets the fix at once.
+6. **Updating.** A new plugin version points at a new tag, so new workbenches are already updated. A workbench keeps the Cogiforge history and a `cogiforge` remote, so it updates with git: see the section "Updating your workbench" below. For a vault you adopted, run `/cf-adopt` again: it offers to replace `~/.cogiforge` with the new version, and every adopted vault gets the fix at once.
 7. **The plugin is only Markdown.** The Anthropic plugin directory accepts code only from a verified organization, so the plugin carries instructions and no scripts. The skills download this repo from GitHub at a fixed version, by commit hash, and check the hash before running anything: plugin 0.1.3 installs Cogiforge 0.1.2 (commit `74177d4`, tag `v0.1.2`). To ship a new Cogiforge version, tag it first; then a following commit of the plugin pins that tag's hash and raises the plugin version. It needs `git` and an internet connection.
+
+## Updating your workbench
+
+A workbench made by the plugin keeps the history of Cogiforge and a remote called `cogiforge`, so updating is plain git: it brings the newest release and keeps everything you changed. Run this in the workbench folder:
+
+```sh
+git fetch cogiforge --tags && git merge --no-edit "$(git tag --list 'v*' --sort=-v:refname | head -n 1)"
+```
+
+You can also just ask your agent: "update Cogiforge".
+
+**A workbench made before this existed** has no `cogiforge` remote. Its first commit says `workbench from cogiforge 0.1.X`; find that version with `git log --reverse --format=%s | head -n 1`. Then run this once, replacing `0.1.X` with that version:
+
+```sh
+git remote add cogiforge https://github.com/Arthuro0103/cogiforge.git && git fetch cogiforge --tags && git merge --allow-unrelated-histories -s ours --no-edit v0.1.X
+```
+
+This only records which version the workbench came from; it changes no file. After it, run the normal block above.
+
+If you changed a file that the new release also changed, git stops and lists the files in conflict. Choose what to keep in each (or ask your agent), then finish with `git commit`. Nothing is deleted. A merge does not go through the commit hook, so afterwards run `python3 core/gate.py --vault vault`.
 
 ## Who it is for
 

@@ -35,6 +35,10 @@ Agents that do not follow `@` imports (everything except Claude Code) must, at t
 before anything else, read `vault/memory/profile.md`, `vault/memory/patterns.md` and `vault/memory/decisions.md`
 (in shared mode also your own `vault/people/<handle>/memory/` files). Rule 2 applies to them.
 
+## Updating Cogiforge
+
+To update the workbench, follow the section "Updating your workbench" of `README.md`. Never use `git pull --rebase`, `git push --force` or `reset --hard` to update.
+
 ## Layout of `vault/`
 
 `inbox/` raw capture (fallback, not the main door) · `notes/<area>/` processed notes; the folder is the
