@@ -138,7 +138,12 @@ def expected():
                 f'{{ [ "$(git -C {d} rev-parse HEAD)" = "{PIN_SHA}" ] || '
                 '{ echo "STOP: the download is not the pinned commit"; false; }; } && ')
     v = PIN_VERSION
-    commit = 'cd "$DEST" && git init -q && sh install.sh && git add -A && git commit -qm "workbench from cogiforge ' + v + '"'
+    commit = 'cd "$DEST" && sh install.sh && git add -A && git commit --allow-empty -qm "workbench from cogiforge ' + v + '"'
+    keep = (f"git init -q \"$DEST\" && git -C \"$DEST\" fetch -q --depth 1 {REPO_GIT} {PIN_SHA} && "
+            'git -C "$DEST" -c advice.detachedHead=false checkout -q -B main FETCH_HEAD && '
+            f'{{ [ "$(git -C "$DEST" rev-parse HEAD)" = "{PIN_SHA}" ] || '
+            '{ echo "STOP: the download is not the pinned commit"; false; }; } && '
+            f'git -C "$DEST" remote add cogiforge {REPO_GIT} && ')
     env = "unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR && "
     dest = "DEST='/absolute/path/to/the/folder' && "
     absolute = '{ case "$DEST" in /*) true ;; *) echo "STOP: not an absolute path"; false ;; esac; } && '
@@ -152,10 +157,11 @@ def expected():
         '{ echo "STOP: git has no global user.name or user.email"; false; }; } && ')
     home = '{ [ -n "$HOME" ] && [ "$HOME" != "/" ] || { echo "STOP: HOME is not set"; false; }; } && '
     return {
-        "new": guards + fetch('"$DEST"') + 'rm -rf "$DEST/.git" && ' + commit,
+        "new": guards + keep + commit,
         "retry": (env + dest + absolute +
                   '{ [ -f "$DEST/install.sh" ] && [ -f "$DEST/core/memory.py" ] || '
-                  '{ echo "STOP: this folder is not a Cogiforge workbench"; false; }; } && ' + commit),
+                  '{ echo "STOP: this folder is not a Cogiforge workbench"; false; }; } && '
+                  '{ [ -d "$DEST/.git" ] || { echo "STOP: this folder has no git history"; false; }; } && ' + commit),
         "adopt_fresh": (home + '{ [ ! -e ~/.cogiforge ] && [ ! -e ~/.cogiforge.new ] || '
                         '{ echo "STOP: ~/.cogiforge or ~/.cogiforge.new already exists"; false; }; } && ' + fetch("~/.cogiforge.new") +
                         f"rm -rf ~/.cogiforge.new/.git && printf '%s\\n' {PIN_SHA} > ~/.cogiforge.new/.cogiforge-commit && "
@@ -344,7 +350,7 @@ def test_the_pin_is_one_hash_everywhere_and_checked_before_anything_runs():
         for b in blocks:
             # the check comes after the checkout and before anything is removed, moved or run
             check = b.index("rev-parse HEAD")
-            assert b.index("checkout -q FETCH_HEAD") < check
+            assert b.index("checkout -q FETCH_HEAD" if "checkout -q FETCH_HEAD" in b else "checkout -q -B main FETCH_HEAD") < check
             for later in ("rm -rf", "mv ", "install.sh", "printf"):
                 assert later not in b[:check], (name, later)
 
@@ -561,3 +567,18 @@ def test_the_release_tag_is_the_pinned_commit_on_github(tmp_path):
     subprocess.run(["git", "-C", str(tmp_path), "fetch", "-q", "--depth", "1", REPO_GIT, PIN_SHA], check=True, timeout=120)
     got = subprocess.run(["git", "-C", str(tmp_path), "rev-parse", "FETCH_HEAD"], capture_output=True, text=True, check=True)
     assert got.stdout.strip() == PIN_SHA
+
+
+def test_new_workbench_keeps_the_history_and_adds_the_cogiforge_remote():
+    block = bash_blocks(skill("cf-new-workbench"))[0]
+    assert "remote add cogiforge" in block and 'rm -rf "$DEST/.git"' not in block
+    assert block.index("rev-parse HEAD") < block.index("remote add cogiforge") < block.index("install.sh")
+
+
+def test_no_plugin_file_carries_update_commands():
+    """The Anthropic directory flags skill text that downloads code without a hash: updating is explained in the README only."""
+    for p in PDIR.rglob("*"):
+        if p.is_file() and p.suffix in (".md", ".json"):
+            text = p.read_text(encoding="utf-8")
+            for banned in ("git fetch cogiforge", "git pull", "git merge"):
+                assert banned not in text, (p, banned)
