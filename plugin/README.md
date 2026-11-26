@@ -19,6 +19,6 @@ The repo has 18 skills. They live inside each workbench, and Claude Code loads o
 
 ## Why the plugin is only Markdown
 
-The Anthropic plugin directory accepts code only from a verified organization. So this plugin carries instructions and no scripts: the skills download the workbench from this repo on GitHub at a fixed version, by commit hash, and check the hash before running anything: plugin 0.1.3 installs Cogiforge 0.1.2 (commit `74177d4`). To ship a new Cogiforge version, tag it first; then a following commit of the plugin pins that tag's hash and raises the plugin version. It needs `git` and an internet connection.
+The Anthropic plugin directory accepts code only from a verified organization. So this plugin carries instructions and no scripts: the skills download the workbench from this repo on GitHub at a fixed version, by commit hash, and check the hash before running anything: plugin 0.1.4 installs Cogiforge 0.1.3 (commit `30533b0`). To ship a new Cogiforge version, tag it first; then a following commit of the plugin pins that tag's hash and raises the plugin version. It needs `git` and an internet connection.
 
 More in the repo README: https://github.com/Arthuro0103/cogiforge#readme
