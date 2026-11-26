@@ -17,6 +17,10 @@ part was not checked, and that never becomes "OK". `--require-list` turns this i
 The output carries file:line:type and NEVER the data found (the CI log is public).
 Files named `blocklist.txt` or `negra.txt` are always ignored. `.leakignore` (one path per line,
 relative to where it runs) exempts fixtures planted on purpose; `--no-ignore` turns it off.
+`.cogiforge/baseline.json` (the debt that tools/adopt.py measures: it holds NAMES of notes, and a note called `call 11
+98765-4321.md` is no leak) is skipped, and exactly that path: relative to where it runs, or to a folder given as PATH, in
+both modes (staged names are relative to the repo root). Any other file in `.cogiforge/`, `.cogiforge/baseline.json.bak`
+and `x/.cogiforge/baseline.json` included, is read like every other file.
 A `.claude/settings.local.json` in the git index, in any folder of the repo and in both modes, is always
 a finding (`settings-local-tracked`), even if `.leakignore` lists it: it holds commands approved with
 "don't ask again". Ignore it with `**/.claude/settings.local.json` (without `**/` only the root is covered).
@@ -43,6 +47,7 @@ IGNORE_FILE = ".leakignore"
 SETTINGS_LOCAL = ".claude/settings.local.json"
 # with `**/` the line also covers subfolders; `.claude/settings.local.json` alone only covers the root
 SETTINGS_LOCAL_IGNORE = "**/" + SETTINGS_LOCAL
+BASELINE = ".cogiforge/baseline.json"  # the ONE file skipped on purpose: it lists note names, which can look like a phone
 SKIP_DIRS = {".git", "__pycache__", ".pytest_cache"}  # only what is never content: venv/node_modules ARE scanned
 
 PATH_RE = re.compile(r"(?:/|\\)Users(?:/|\\)[A-Za-z0-9._-]+", re.IGNORECASE)  # includes the Windows style
@@ -140,6 +145,17 @@ def files_of(paths):
             dirs[:] = sorted(d for d in dirs if d not in SKIP_DIRS)
             for name in sorted(n for n in names if n not in SKIP_DIRS):
                 yield Path(root) / name
+
+
+def is_baseline(name, roots):
+    """True only for `.cogiforge/baseline.json` itself: relative to the cwd, or to a folder given as PATH."""
+    n = os.path.normpath(str(name))
+    if n == os.path.normpath(BASELINE):
+        return True
+    for root in roots:
+        if os.path.isdir(root) and os.path.normpath(os.path.join(root, BASELINE)) == n:
+            return True
+    return False
 
 
 def decode(data):
@@ -305,6 +321,7 @@ def main(argv=None):
         print(f"ERROR: could not list the git stage ({e})", file=sys.stderr)
         return 2
 
+    sources = [(n, t) for n, t in sources if not is_baseline(n, [] if args.staged else args.paths)]
     total, exempted = 0, []
     flagged = set()  # absolute paths with a finding: a file counts once, whoever found it
     scanned = {os.path.abspath(n) for n, _ in sources}

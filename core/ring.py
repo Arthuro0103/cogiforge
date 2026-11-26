@@ -4,6 +4,8 @@
     ring.py [--vault vault]                lists the orphans (rc 0)
     ring.py --gate                         rc 1 if there is an orphan; this is what the hook runs
     ring.py --gate --stage                 only fails orphans that are IN THIS commit; the others become a WARNING
+                                           (an orphan that `.cogiforge/baseline.json` lists is old debt: also a WARNING.
+                                           Rules in core/baseline.py; without that file nothing changes)
     vault/gate.txt                         optional `orphan: block` (default) or `orphan: warn` (report, never block)
     ring.py --json                         {"total", "orphans", "exempt"}
     ring.py --selftest                     proves it fails when it should (orphan -> rc 1, cure -> rc 0)
@@ -29,6 +31,7 @@ import unicodedata
 from pathlib import Path
 from urllib.parse import unquote
 
+import baseline
 from gate import GATE_KEYS, Index, mask, wikilinks
 
 DEPOSITS = ("inbox", "tasks")  # quick capture and the TaskNotes plugin: blocking here makes people uninstall
@@ -192,6 +195,12 @@ def gate(vault, stage_only=False):
             return 2
         outside = [o for o in orphans if o not in blocking]
         orphans = blocking
+        known = baseline.load(vault).orphans
+        old = [o for o in orphans if nfc(o) in known]
+        orphans = [o for o in orphans if nfc(o) not in known]
+        if old:
+            print(f"WARNING — {len(old)} orphan(s) in this commit are old debt listed in {baseline.BASELINE} (does not block):")
+            print("".join(f"   {o}\n" for o in old))
     if outside:
         print(f"WARNING — {len(outside)} orphan(s) OUTSIDE this commit (does not block):")
         print("".join(f"   {o}\n" for o in outside))

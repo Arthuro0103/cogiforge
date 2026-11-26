@@ -12,6 +12,9 @@ The 5 checks:
 
 Code (fenced block and `inline`) does not count as a link. rc: 0 clean · 1 fails · 2 usage · 3 could not read.
 
+Given FILES (how the pre-commit hook of tools/adopt.py calls it) the old debt in `<vault>/.cogiforge/baseline.json` blocks
+nobody, if that file exists; the rules are in core/baseline.py. Without it nothing changes.
+
 Areas: `<vault>/areas.txt`, one per line, `area` (the folder has the same name) or `folder: area`.
 Without the file the 3 examples apply (learning, technology, life). Only applies inside `notes/`.
 
@@ -31,6 +34,8 @@ import re
 import sys
 from collections import namedtuple
 from pathlib import Path
+
+import baseline
 
 Failure = namedtuple("Failure", "file check msg")
 
@@ -304,20 +309,27 @@ def collect(vault, targets=None):
     return found
 
 
-def audit(vault, files=None, areas=None, checks=None):
-    """(.md files scanned, [Failure])."""
+def audit(vault, files=None, areas=None, checks=None, exempt=None):
+    """(.md files scanned, [Failure]). `exempt` (a baseline.Exempt): its old debt is left out of the failures; the
+    ones it hid are counted in `audit.hidden`."""
     vault = Path(vault)
     idx = Index(vault, areas)
     everything = collect(vault, files)
     failures = []
+    audit.hidden = 0
     for p in everything:
         try:
             n = Note(vault, p)
         except (OSError, UnicodeDecodeError) as e:
             failures.append(Failure(Path(p).relative_to(vault).as_posix(), "UNREADABLE", f"{type(e).__name__}"))
             continue
+        found = []
         for fn in ORDER:
-            failures += [f for f in fn(n, idx) if not checks or f.check in checks]
+            found += [f for f in fn(n, idx) if not checks or f.check in checks]
+        if exempt:
+            found, hidden = exempt.failures(found)
+            audit.hidden += len(hidden)
+        failures += found
     return everything, failures
 
 
@@ -344,8 +356,10 @@ def main(argv=None):
                   file=sys.stderr)
             return 2
         targets.append(f)
+    # given files = the hook's mode: the old debt in .cogiforge/baseline.json (if the vault has one) blocks nobody
+    exempt = baseline.load(vault) if targets else None
     targets = targets or None
-    everything, found = audit(vault, targets, checks=set(args.check or []))
+    everything, found = audit(vault, targets, checks=set(args.check or []), exempt=exempt)
     unreadable = [f for f in found if f.check == "UNREADABLE"]
     failures = [f for f in found if f.check != "UNREADABLE"]
     failed = {f.file for f in failures}
@@ -361,6 +375,8 @@ def main(argv=None):
         for f in failures:
             print(f"FAILS {f.file} :: {f.check} :: {f.msg}")
         print(f"\n{len(everything)} note(s), {len(failed)} fail, {len(unreadable)} COULD NOT READ")
+        if audit.hidden:
+            print(f"{audit.hidden} old failure(s) hidden: they are debt listed in {baseline.BASELINE}")
         for c, d in CHECKS:
             print(f"  {c:<13}{len(by[c]):>4}  {d}")
     return 3 if unreadable else (1 if failures else 0)
