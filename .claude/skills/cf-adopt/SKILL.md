@@ -39,7 +39,7 @@ python3 tools/adopt.py <vault> --json   # same data, for you to read
 1. The areas it found (the proposed `areas.txt`), and that the user can change them later.
 2. What would be created, and what already exists and will be kept.
 3. The debt today, as numbers: orphan notes, dead links, notes without `area:`. It is saved as `.cogiforge/baseline.json`.
-4. The warning, literally: the hook only judges the notes in the commit, so the old debt blocks nobody. It only stops new orphans, dead links and personal data.
+4. The warning, literally: the hook only judges the notes in the commit, so the old debt blocks nobody. It only stops new orphans, dead links and personal data. The old debt is the list in `.cogiforge/baseline.json` as git has it, so the baseline must be committed together with the notes or before them.
 5. Anything pending (rule 4).
 
 ### 3. Ask

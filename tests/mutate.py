@@ -53,7 +53,11 @@ def mutant_limit(baseline_seconds):
 TIMEOUT_RC = -999   # run_suite's return code when the time ran out
 
 PIECES = {
-    "leak": dict(file="core/leak.py", suite=["tests/test_leak.py"], texts=[
+    "leak": dict(file="core/leak.py", suite=["tests/test_leak.py", "tests/test_baseline.py"], texts=[
+        ("the baseline is scanned", 'if not is_baseline(n, [] if args.staged else args.paths)]', 'if True]'),
+        ("any baseline.json is skipped by name", 'if n == os.path.normpath(BASELINE):', 'if os.path.basename(n) == "baseline.json":'),
+        ("everything in .cogiforge/ is skipped", 'if n == os.path.normpath(BASELINE):', 'if n.startswith(".cogiforge"):'),
+        ("the baseline is skipped only from the cwd", 'if os.path.isdir(root) and os.path.normpath(os.path.join(root, BASELINE)) == n:', 'if False:'),
         ("ignores blocklist files", 'if text is None or Path(name).name in BLOCKLIST_NAMES:', 'if text is None:'),
         ("ignores .leakignore", 'if os.path.normpath(name) in ignored:', 'if False:'),
         ("require-list does not fail", 'return 3', 'return 0'),
@@ -93,7 +97,9 @@ PIECES = {
         ("negra.txt not ignored by the scanner", 'BLOCKLIST_NAMES = (BLOCKLIST_NAME, LEGACY_BLOCKLIST_NAME)', 'BLOCKLIST_NAMES = (BLOCKLIST_NAME,)'),
         ("blocklist.txt not ignored by the scanner", 'BLOCKLIST_NAMES = (BLOCKLIST_NAME, LEGACY_BLOCKLIST_NAME)', 'BLOCKLIST_NAMES = (LEGACY_BLOCKLIST_NAME,)'),
     ]),
-    "gate": dict(file="core/gate.py", suite=["tests/test_gate.py", "tests/test_demo.py"], texts=[
+    "gate": dict(file="core/gate.py", suite=["tests/test_gate.py", "tests/test_demo.py", "tests/test_baseline.py"], texts=[
+        ("the gate never reads the baseline", 'exempt = baseline.load(vault) if targets else None', 'exempt = None'),
+        ("the full audit reads the baseline too", 'exempt = baseline.load(vault) if targets else None', 'exempt = baseline.load(vault)'),
         ("area: folder != area passes", 'if area != expected:', 'if False:'),
         ("frontmatter of tasks is judged by the subset", ' or Path(n.rel).parts[0] in PLUGIN_FOLDERS', ''),
         ("file outside the vault passes", 'f.resolve().relative_to(vault.resolve())', 'f.resolve().relative_to(f.resolve())'),
@@ -131,7 +137,9 @@ PIECES = {
         ("non-utf8 read as text", 'except (OSError, UnicodeDecodeError) as e:', 'except OSError as e:'),
         ("broken-link counts the whole line", 'if "[[" in rest:', 'if "[[" in line:'),
     ]),
-    "ring": dict(file="core/ring.py", suite=["tests/test_ring.py", "tests/test_ring_cache.py", "tests/test_demo.py", "tests/test_people.py"], texts=[
+    "ring": dict(file="core/ring.py", suite=["tests/test_ring.py", "tests/test_ring_cache.py", "tests/test_demo.py", "tests/test_people.py", "tests/test_baseline.py"], texts=[
+        ("a baseline orphan blocks", 'orphans = [o for o in orphans if nfc(o) not in known]', 'orphans = orphans'),
+        ("the ring never reads the baseline", 'known = baseline.load(vault).orphans', 'known = set()'),
         ("cache ignores the size", 'key = [st.st_size, st.st_mtime_ns]', 'key = [0, st.st_mtime_ns]'),
         ("cache ignores the mtime", 'key = [st.st_size, st.st_mtime_ns]', 'key = [st.st_size, 0]'),
         ("a fresh file is cached", 'if st.st_mtime_ns < time.time_ns() - RACY_NS:', 'if True:'),
@@ -363,6 +371,18 @@ PIECES = {
         ("sync guard does not teach", 'How to fix: compare', 'Fix: compare'),
         ("sync guard does not block", '    fi\n    blocked=1\nfi\n\n# 5. the target', '    fi\nfi\n\n# 5. the target'),
         ("conflicts.py missing passes", 'core/people.py core/conflicts.py core/target.py', 'core/people.py core/target.py'),
+    ]),
+    "baseline": dict(file="core/baseline.py", suite=["tests/test_baseline.py"], texts=[
+        ("a listed dead link blocks", 'elif f.check == "dead-link":', 'elif False:'),
+        ("a dead link is exempt any number of times", 'if key and left[key] > 0:', 'if key:'),
+        ("a listed note is exempt from any area failure", 'ok = file in self.area_missing and f.msg.startswith(AREA_MSG)', 'ok = file in self.area_missing'),
+        ("a listed frontmatter error blocks", 'ok = file in self.frontmatter_errors', 'ok = False'),
+        ("HEAD and the index are not intersected", 'return now.intersect(before) if before is not None else Exempt()', 'return now'),
+        ("a baseline that HEAD lacks is trusted", 'if head_entry is None or head_entry[1] != "blob":\n        return Exempt()', 'if head_entry is None or head_entry[1] != "blob":\n        return now'),
+        ("the first commit does not trust the index", 'if not reader.has_head():\n        return now', 'if not reader.has_head():\n        return Exempt()'),
+        ("the intersection of orphans is a union", 'out.orphans = self.orphans & other.orphans', 'out.orphans = self.orphans | other.orphans'),
+        ("the intersection of dead links is a union", 'out.dead_links = self.dead_links & other.dead_links', 'out.dead_links = self.dead_links | other.dead_links'),
+        ("the baseline is read from the disk", 'entry = reader.index_entry(rel) if rel else None', 'entry = reader.index_entry(rel) if rel else None\n    if entry is None and (vault / BASELINE).is_file():\n        return parse((vault / BASELINE).read_bytes()) or Exempt()'),
     ]),
     "adopt": dict(file="tools/adopt.py", suite=["tests/test_adopt.py"], texts=[
         ("hook back in the versioned tree", 'HOOK = ".git/hooks/pre-commit"', 'HOOK = ".githooks/pre-commit"'),
