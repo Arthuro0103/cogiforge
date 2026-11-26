@@ -86,12 +86,13 @@ def test_an_empty_profile_sends_to_onboard_with_one_question():
     assert "6. **At most one question before answering**" in t
 
 
-def test_the_tables_say_it_writes_nothing_and_the_plugin_notes_say_17():
+def test_the_tables_say_it_writes_nothing_and_the_plugin_notes_count_the_skills_on_disk():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     row = next(l for l in readme.splitlines() if l.startswith("| `/cf-help"))
     assert row.rstrip().endswith("| Nothing (read only). |")          # tied to rule 1 of the skill ("Read only.")
     leia = next(l for l in (ROOT / "LEIA-ME.md").read_text(encoding="utf-8").splitlines() if l.startswith("| `/cf-help"))
     assert leia.rstrip().endswith("| Nada (s\u00f3 l\u00ea). |")
     assert re.search(r"^\| `cf-help` \|.*Writes nothing", (ROOT / "AGENTS.md").read_text(encoding="utf-8"), re.M)
-    assert "The 17 skills live inside each workbench" in readme       # the plugin's version (0.1.1) has 17
-    assert "does not have `/cf-help` yet" in readme
+    n = len(list((ROOT / ".claude" / "skills").glob("*/SKILL.md")))   # the plugin pins this version, so its notes count what is here
+    assert f"The {n} skills live inside each workbench" in readme
+    assert "does not have `/cf-help` yet" not in readme

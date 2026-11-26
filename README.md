@@ -64,17 +64,15 @@ After installing, open Claude Code in any folder and ask in your own words, for 
 
 ### Why the plugin installs only two skills
 
-This repo has 17 skills, and the plugin installs just two on purpose. If you or your AI wonder why, here is the reasoning.
+This repo has 18 skills, and the plugin installs just two on purpose. If you or your AI wonder why, here is the reasoning.
 
 1. **The plugin is the door.** It does two jobs: make a workbench (`/cf-new-workbench`) or put the gate on a vault that already exists (`/cf-adopt`). Everything else happens inside a workbench.
-2. **The 17 skills live inside each workbench**, in `.claude/skills/`. They work on the files of that folder (`vault/`, `core/`, `tools/`) with paths relative to it. Outside a workbench they would have nothing to work on.
+2. **The 18 skills live inside each workbench**, in `.claude/skills/`. They work on the files of that folder (`vault/`, `core/`, `tools/`) with paths relative to it. Outside a workbench they would have nothing to work on.
 3. **Claude Code loads the skills of the folder it is opened in.** So they appear only where they work, and they never show up in your other projects.
 4. **A git hook needs a fixed path, and the plugin carries no code.** That is why each workbench carries its own `core/`, and why `/cf-adopt` keeps one stable copy in `~/.cogiforge` and points the vault's hook there.
 5. **Other agents (Codex, Cursor and others) find the same skills inside the workbench**, through `AGENTS.md` and `.agents/skills`. They do not need the plugin.
 6. **Updating.** A new plugin version points at a new tag, so new workbenches are already updated. An existing workbench does not update itself. To bring a fix into one, copy `core/` and `tools/` from a newer version over it (or run `git pull` in a clone). For a vault you adopted, run `/cf-adopt` again: it offers to replace `~/.cogiforge` with the new version, and every adopted vault gets the fix at once.
-7. **The plugin is only Markdown.** The Anthropic plugin directory accepts code only from a verified organization, so the plugin carries instructions and no scripts. The skills download this repo from GitHub at a fixed version, by commit hash, and check the hash before running anything: plugin 0.1.2 installs Cogiforge 0.1.1 (commit `1f0d9cc`, tag `v0.1.1`). To ship a new Cogiforge version, tag it first; then a following commit of the plugin pins that tag's hash and raises the plugin version. It needs `git` and an internet connection.
-
-The version the plugin installs today (Cogiforge 0.1.1) does not have `/cf-help` yet; it arrives with the next version.
+7. **The plugin is only Markdown.** The Anthropic plugin directory accepts code only from a verified organization, so the plugin carries instructions and no scripts. The skills download this repo from GitHub at a fixed version, by commit hash, and check the hash before running anything: plugin 0.1.3 installs Cogiforge 0.1.2 (commit `74177d4`, tag `v0.1.2`). To ship a new Cogiforge version, tag it first; then a following commit of the plugin pins that tag's hash and raises the plugin version. It needs `git` and an internet connection.
 
 ## Who it is for
 

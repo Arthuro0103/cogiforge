@@ -15,10 +15,10 @@ claude plugin install cogiforge --marketplace Arthuro0103/cogiforge
 
 ## Why only two skills
 
-The repo has 17 skills. They live inside each workbench, and Claude Code loads only the skills of the folder it is opened in, so they appear where they work. The git hook also needs a fixed path, which a plugin folder cannot give.
+The repo has 18 skills. They live inside each workbench, and Claude Code loads only the skills of the folder it is opened in, so they appear where they work. The git hook also needs a fixed path, which a plugin folder cannot give.
 
 ## Why the plugin is only Markdown
 
-The Anthropic plugin directory accepts code only from a verified organization. So this plugin carries instructions and no scripts: the skills download the workbench from this repo on GitHub at a fixed version, by commit hash, and check the hash before running anything: plugin 0.1.2 installs Cogiforge 0.1.1 (commit `1f0d9cc`). To ship a new Cogiforge version, tag it first; then a following commit of the plugin pins that tag's hash and raises the plugin version. It needs `git` and an internet connection.
+The Anthropic plugin directory accepts code only from a verified organization. So this plugin carries instructions and no scripts: the skills download the workbench from this repo on GitHub at a fixed version, by commit hash, and check the hash before running anything: plugin 0.1.3 installs Cogiforge 0.1.2 (commit `74177d4`). To ship a new Cogiforge version, tag it first; then a following commit of the plugin pins that tag's hash and raises the plugin version. It needs `git` and an internet connection.
 
 More in the repo README: https://github.com/Arthuro0103/cogiforge#readme

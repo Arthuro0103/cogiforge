@@ -1,7 +1,7 @@
 {
   "name": "cogiforge",
   "displayName": "Cogiforge",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A second-brain workbench in Obsidian for coding agents, with a commit gate that checks the agent's memory.",
   "author": {
     "name": "Arthuro0103"

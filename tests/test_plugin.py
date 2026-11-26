@@ -2,7 +2,7 @@
 
 The plugin is the `plugin/` folder (the marketplace points at it). It carries only Markdown, JSON and the icon:
 the Anthropic directory refuses code from organizations that are not verified, so the skills download this repo
-from GitHub at the tag of the plugin's version. The 17 working skills stay in `.claude/skills/` and travel
+from GitHub at the tag of the plugin's version. The 18 working skills stay in `.claude/skills/` and travel
 inside each workbench. These tests read the files, they do not install anything.
 """
 import json
@@ -25,8 +25,8 @@ MARKET_ENTRY_KEYS = {"name", "source", "description"}
 # The Cogiforge version and commit the plugin installs. The plugin's own version (plugin.json) is separate: the commit
 # that holds the skills cannot name its own hash, so the skills pin an EARLIER, tagged commit. To ship a new Cogiforge,
 # tag it, then pin its hash here and in both skills and raise the plugin version, in one commit.
-PIN_VERSION = "0.1.1"
-PIN_SHA = "1f0d9cc38ead38801fc3b2153e1f90f952628eb6"
+PIN_VERSION = "0.1.2"
+PIN_SHA = "74177d483c444ee628114f56770fe5d111e97b29"
 REPO_GIT = "https://github.com/Arthuro0103/cogiforge.git"
 
 
