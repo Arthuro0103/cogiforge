@@ -18,9 +18,11 @@ The output carries file:line:type and NEVER the data found (the CI log is public
 Files named `blocklist.txt` or `negra.txt` are always ignored. `.leakignore` (one path per line,
 relative to where it runs) exempts fixtures planted on purpose; `--no-ignore` turns it off.
 `.cogiforge/baseline.json` (the debt that tools/adopt.py measures: it holds NAMES of notes, and a note called `call 11
-98765-4321.md` is no leak) is skipped, and exactly that path: relative to where it runs, or to a folder given as PATH, in
-both modes (staged names are relative to the repo root). Any other file in `.cogiforge/`, `.cogiforge/baseline.json.bak`
-and `x/.cogiforge/baseline.json` included, is read like every other file.
+98765-4321.md` is no leak) is read with the note paths it LISTS blanked (the items of `orphans`, `area_missing`,
+`frontmatter_errors`, `skipped`, and the note and target of each `dead_links`): a file whose path ends in
+`.cogiforge/baseline.json`, at any depth, in both modes, that opens as JSON with the baseline's keys. Everything else in it
+(extra keys, extra values, `created`) is scanned, so an e-mail or a machine path written by hand there is a finding. A file
+that does not open as JSON, or has another shape, is scanned whole, like every other file.
 A `.claude/settings.local.json` in the git index, in any folder of the repo and in both modes, is always
 a finding (`settings-local-tracked`), even if `.leakignore` lists it: it holds commands approved with
 "don't ask again". Ignore it with `**/.claude/settings.local.json` (without `**/` only the root is covered).
@@ -28,6 +30,7 @@ a finding (`settings-local-tracked`), even if `.leakignore` lists it: it holds c
 rc: 0 clean · 1 found a leak · 2 usage/error or unreadable file · 3 private list required and missing
 """
 import argparse
+import json
 import os
 import re
 import shlex
@@ -147,15 +150,40 @@ def files_of(paths):
                 yield Path(root) / name
 
 
-def is_baseline(name, roots):
-    """True only for `.cogiforge/baseline.json` itself: relative to the cwd, or to a folder given as PATH."""
-    n = os.path.normpath(str(name))
-    if n == os.path.normpath(BASELINE):
-        return True
-    for root in roots:
-        if os.path.isdir(root) and os.path.normpath(os.path.join(root, BASELINE)) == n:
-            return True
-    return False
+def is_baseline_path(name):
+    """True when the path ends in `.cogiforge/baseline.json`, at any depth (the repo root, a vault inside the repo, a PATH)."""
+    parts = Path(os.path.normpath(str(name))).parts
+    return len(parts) >= 2 and parts[-2:] == (".cogiforge", "baseline.json")
+
+
+DEBT_KEYS = ("orphans", "dead_links", "area_missing", "frontmatter_errors")
+DEAD = re.compile(r"^(.*?):\d+ \[\[(.*)\]\]$", re.S)
+
+
+def strip_baseline_names(name, text):
+    """The text to scan for a file called `.cogiforge/baseline.json`: the note paths it LISTS (the items of `orphans`,
+    `area_missing`, `frontmatter_errors`, `skipped`, and the note and target of each `dead_links` entry) are blanked,
+    because a note named after a phone number is no leak; everything else in the file is still read (extra keys, extra
+    values, `created`). Blank, not removed, so the line numbers of an adopt-written file stay. A file that does not open as
+    JSON, or has none of the baseline's keys, is read whole."""
+    if text is None or not is_baseline_path(name):
+        return text
+    try:
+        data = json.loads(text)
+    except ValueError:
+        return text
+    if not isinstance(data, dict) or not any(k in data for k in DEBT_KEYS):
+        return text
+    for key in ("orphans", "area_missing", "frontmatter_errors"):
+        if isinstance(data.get(key), list):
+            data[key] = ["" if isinstance(x, str) else x for x in data[key]]
+    if isinstance(data.get("dead_links"), list):
+        data["dead_links"] = [":0 [[]]" if isinstance(x, str) and DEAD.match(x) else x for x in data["dead_links"]]
+    if isinstance(data.get("skipped"), list):
+        data["skipped"] = [("" if isinstance(x, str) else
+                            {**x, "path": ""} if isinstance(x, dict) and isinstance(x.get("path"), str) else x)
+                           for x in data["skipped"]]
+    return json.dumps(data, ensure_ascii=False, indent=2)
 
 
 def decode(data):
@@ -321,7 +349,7 @@ def main(argv=None):
         print(f"ERROR: could not list the git stage ({e})", file=sys.stderr)
         return 2
 
-    sources = [(n, t) for n, t in sources if not is_baseline(n, [] if args.staged else args.paths)]
+    sources = [(n, strip_baseline_names(n, t)) for n, t in sources]
     total, exempted = 0, []
     flagged = set()  # absolute paths with a finding: a file counts once, whoever found it
     scanned = {os.path.abspath(n) for n, _ in sources}

@@ -450,3 +450,60 @@ def test_head_notes_are_relative_to_the_vault_and_drop_what_is_outside(tmp_path)
     assert {"reading.md", "other.md", "old-orphan.md"} <= got
     assert "README.md" not in got and "docs/guide.md" not in got and "vault/reading.md" not in got
 
+
+
+EMAIL = "someone" + "@" + "corpmail.net"  # assembled here so this file does not accuse itself
+MACHINE_PATH = "/Us" + "ers/someone/secret"
+
+
+def leak_vault(tmp_path, data, rel=".cogiforge/baseline.json"):
+    v = tmp_path / "lv"
+    write(v, rel, data if isinstance(data, str) else json.dumps(data, indent=2))
+    write(v, "ok.md", "clean\n")
+    subprocess.run(["git", "init", "-q"], cwd=v, check=True)
+    git(v, "add", "-A", tmp=tmp_path)
+    return v
+
+
+def test_leak_reads_the_hand_written_data_in_a_baseline_and_not_the_note_names(tmp_path):
+    base = {"orphans": [PHONE_NOTE], "dead_links": [f"{PHONE_NOTE}:3 [[call {PHONE}]]"], "area_missing": [PHONE_NOTE],
+            "frontmatter_errors": [PHONE_NOTE], "skipped": [{"path": PHONE_NOTE, "reason": "not UTF-8"}],
+            "nota": f"{EMAIL} {MACHINE_PATH} {PHONE}"}
+    v = leak_vault(tmp_path, base)
+    for args in (("--staged",), ()):
+        r = run_leak(v, *args, tmp=tmp_path)
+        assert r.returncode == 1, out(r)
+        for kind in ("email", "phone", "path"):
+            assert f".cogiforge/baseline.json:" in r.stdout and kind in r.stdout, (args, r.stdout)
+        assert EMAIL not in out(r) and MACHINE_PATH not in out(r)  # the log never carries the data
+    base.pop("nota")
+    write(v, ".cogiforge/baseline.json", json.dumps(base, indent=2))
+    git(v, "add", "-A", tmp=tmp_path)
+    for args in (("--staged",), ()):
+        assert run_leak(v, *args, tmp=tmp_path).returncode == 0
+
+
+def test_leak_reads_created_and_extra_keys_of_the_baseline(tmp_path):
+    v = leak_vault(tmp_path, {"orphans": [PHONE_NOTE], "created": f"on {PHONE}", "extra": {"deep": [EMAIL]}})
+    r = run_leak(v, "--staged", tmp=tmp_path)
+    assert r.returncode == 1 and r.stdout.count(".cogiforge/baseline.json:") >= 2, out(r)
+
+
+def test_leak_does_not_let_a_note_path_hide_the_same_text_in_another_key(tmp_path):
+    v = leak_vault(tmp_path, {"orphans": [PHONE_NOTE], "extra": PHONE_NOTE})
+    assert run_leak(v, "--staged", tmp=tmp_path).returncode == 1
+
+
+def test_leak_reads_a_baseline_that_is_not_json_or_has_another_shape_whole(tmp_path):
+    for text in (f'{{"orphans": ["{PHONE_NOTE}"', json.dumps({"other": PHONE_NOTE}), json.dumps([PHONE_NOTE])):
+        v = leak_vault(tmp_path / str(abs(hash(text))), text)
+        assert run_leak(v, "--staged", tmp=tmp_path).returncode == 1, text
+
+
+def test_leak_filters_a_baseline_at_any_depth_and_keeps_reading_the_rest_of_it(tmp_path):
+    v = leak_vault(tmp_path, {"orphans": [PHONE_NOTE], "nota": EMAIL}, rel="sub/.cogiforge/baseline.json")
+    assert run_leak(v, "--staged", tmp=tmp_path).returncode == 1
+    write(v, "sub/.cogiforge/baseline.json", json.dumps({"orphans": [PHONE_NOTE]}))
+    git(v, "add", "-A", tmp=tmp_path)
+    for args in (("--staged",), (), ("sub",)):
+        assert run_leak(v, *args, tmp=tmp_path).returncode == 0, args
