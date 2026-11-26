@@ -447,8 +447,7 @@ def test_head_notes_are_relative_to_the_vault_and_drop_what_is_outside(tmp_path)
     from memory import Reader
     r = sub_repo(tmp_path, {"orphans": []})
     got = B._head_notes(Reader(r.resolve()), (r / "vault").resolve())
-    assert {"reading.md", "other.md", "old-orphan.md"} <= got
-    assert "README.md" not in got and "docs/guide.md" not in got and "vault/reading.md" not in got
+    assert got == {"reading.md", "other.md", "old-orphan.md"}  # nothing of the repo root, no `vault/` prefix
 
 
 
@@ -477,6 +476,7 @@ def test_leak_reads_the_hand_written_data_in_a_baseline_and_not_the_note_names(t
             assert f".cogiforge/baseline.json:" in r.stdout and kind in r.stdout, (args, r.stdout)
         assert EMAIL not in out(r) and MACHINE_PATH not in out(r)  # the log never carries the data
     base.pop("nota")
+    base["skipped"].append(PHONE_NOTE)  # a bare string item is also a listed path
     write(v, ".cogiforge/baseline.json", json.dumps(base, indent=2))
     git(v, "add", "-A", tmp=tmp_path)
     for args in (("--staged",), ()):
@@ -507,3 +507,9 @@ def test_leak_filters_a_baseline_at_any_depth_and_keeps_reading_the_rest_of_it(t
     git(v, "add", "-A", tmp=tmp_path)
     for args in (("--staged",), (), ("sub",)):
         assert run_leak(v, *args, tmp=tmp_path).returncode == 0, args
+
+
+def test_leak_strips_only_the_file_called_cogiforge_baseline_json(tmp_path):
+    for rel in ("other/baseline.json", "baseline.json", ".cogiforge/other.json", ".cogiforge/baseline.json.bak"):
+        v = leak_vault(tmp_path / rel.replace("/", "_"), {"orphans": [PHONE_NOTE]}, rel=rel)
+        assert run_leak(v, "--staged", tmp=tmp_path).returncode == 1, rel
