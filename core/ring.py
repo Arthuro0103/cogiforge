@@ -195,7 +195,10 @@ def gate(vault, stage_only=False):
             return 2
         outside = [o for o in orphans if o not in blocking]
         orphans = blocking
-        known = baseline.load(vault).orphans
+        exempt = baseline.load(vault)
+        if baseline.warning(exempt):
+            print(baseline.warning(exempt))
+        known = exempt.orphans
         old = [o for o in orphans if nfc(o) in known]
         orphans = [o for o in orphans if nfc(o) not in known]
         if old:

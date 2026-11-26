@@ -18,9 +18,9 @@ RUN: it prints the plan and writes nothing. The plan has four parts:
                   can become a hook. A file that already exists is NEVER overwritten: it becomes a CONFLICT item.
   3. debt         measured today: orphan notes, dead wikilinks, notes in an area folder without `area:`
                   (and notes whose frontmatter the gate cannot parse). It is saved as the baseline.
-  4. the warning  the hook only judges the notes IN THE COMMIT, so the old debt blocks nobody. It trusts the baseline that
-                  git has (HEAD and the stage, the stricter of the two; the first commit trusts the stage): commit
-                  `.cogiforge/baseline.json` together with your notes or before them.
+  4. the warning  the hook only judges the notes IN THE COMMIT, so the old debt blocks nobody. Notes that git
+                  already has stay exempt as long as they are listed in `.cogiforge/baseline.json`; a note that
+                  arrives in a commit never is (once the baseline is in HEAD, a commit cannot widen it).
 
 The hook is only written when `.git/hooks/pre-commit` does not exist (or is byte for byte the generated one); a
 different hook (yours or someone else's) is a BLOCKING conflict: adopt never overwrites nor chains it, the plan shows
@@ -758,8 +758,8 @@ def render(plan):
     out += ["", "4. the hook only judges the notes IN THE COMMIT: the old debt above blocks nobody; it only stops",
             "   new orphans, dead links and personal data from entering. Clean the old debt when you want to.",
             "   (The area check of the gate applies under notes/; elsewhere the area numbers are information.)",
-            f"   The old debt is the list in {BASELINE} as git has it (HEAD and the stage, the stricter of the two; the first",
-            "   commit trusts the stage): commit that file together with your notes, or before them."]
+            f"   The old debt is the list in {BASELINE}: notes git already has stay exempt while listed; a note that arrives in a",
+            "   commit never is. You do not need to commit the baseline first."]
     if plan["migrate"]:
         out += ["", f"older install found: after the apply, {LEGACY_HOOK} is no longer read by git (it stays in your tree;",
                 f"   remove it with `git rm {LEGACY_HOOK}` when you want)."]

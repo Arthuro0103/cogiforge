@@ -11,12 +11,18 @@ debt the baseline lists blocks nobody, and anything NEW still does:
   area_missing         a listed note without `area:` does not fail the gate area check (any other area failure does)
   frontmatter_errors   a listed note whose frontmatter does not parse does not fail the gate frontmatter check
 
-The list is read from git, never from the disk, and the STRICTER of two copies wins (the same idea as vault/gate.txt in
-core/memory.py): what the baseline in HEAD lists AND what the one in the index lists, the intersection of both. A commit
-that adds a note to the list gets no exemption for it. With no commit yet (the first one) the index decides. A baseline
-that is not in the index (untracked, or removed by this commit), one that HEAD does not have while HEAD exists, one that
-is not a regular file, or one that cannot be read or understood, exempts nothing: it is the behavior without a baseline.
-Outside a git repository the file on the disk is read.
+Which copy of the list counts:
+  HEAD has it and the index has it   the STRICTER of the two (the idea of vault/gate.txt in core/memory.py): the
+                                     intersection. A commit that adds a note to the list gets no exemption for it.
+  HEAD has it, the index does not    nothing (this commit removes it).
+  HEAD does not have it              the one in the index; if it is not there either (untracked), the one on the disk.
+                                     That is the usual case: notes committed first, adopt after, baseline not committed yet.
+  no commit yet (the first one)      the index, else the disk.
+When HEAD exists the exemption is also RESTRICTED to notes that HEAD already has: a note that was already committed is old
+debt, a note that arrives in this commit never is, whatever the list says. Without HEAD (the first commit) every note is new
+to git and the restriction is off.
+A baseline that cannot be read or understood exempts nothing and says so (`Exempt.problem`; ring.py and gate.py print one
+line). No baseline at all is not a problem: it is the behavior without one. Outside a git repository the disk is read.
 """
 import collections
 import json
@@ -46,6 +52,17 @@ class Exempt:
             m = re.match(r"^(.*?):\d+ \[\[(.*)\]\]$", entry, re.S)
             if m:
                 self.dead_links[(nfc(m.group(1)), m.group(2))] += 1
+
+    problem = None  # why a baseline that exists could not be used (None: nothing wrong)
+
+    def restrict(self, notes):
+        """The same debt, only for the notes in `notes` (the ones HEAD already has)."""
+        out = Exempt()
+        out.orphans = self.orphans & notes
+        out.area_missing = self.area_missing & notes
+        out.frontmatter_errors = self.frontmatter_errors & notes
+        out.dead_links = collections.Counter({k: v for k, v in self.dead_links.items() if k[0] in notes})
+        return out
 
     def __bool__(self):
         return bool(self.orphans or self.dead_links or self.area_missing or self.frontmatter_errors)
@@ -104,32 +121,75 @@ def _git_top(vault):
     return Path(r.stdout.strip()).resolve() if r.returncode == 0 and r.stdout.strip() else None
 
 
+def unreadable(why):
+    out = Exempt()
+    out.problem = why
+    return out
+
+
+def warning(exempt):
+    """One line for the hook output when the baseline exists but could not be used, else None."""
+    p = getattr(exempt, "problem", None)
+    return f"WARNING: {BASELINE} could not be read ({p}): the old debt is NOT exempted in this commit." if p else None
+
+
+def _disk(vault):
+    f = vault / BASELINE
+    if not f.exists() and not f.is_symlink():
+        return Exempt()
+    try:
+        if f.is_symlink() or not f.is_file():
+            return unreadable("not a regular file")
+        got = parse(f.read_bytes())
+    except OSError:
+        return unreadable("it could not be opened")
+    return got if got is not None else unreadable("it is not a baseline.json this version understands")
+
+
+def _head_notes(reader):
+    raw = reader.git("ls-tree", "-r", "-z", "--name-only", "HEAD")
+    if raw is None:
+        return None
+    return {nfc(x) for x in raw.decode("utf-8", errors="surrogateescape").split("\0") if x}
+
+
 def load(vault):
-    """The Exempt for this vault: from the index and HEAD when the vault is in a git repository, else from the disk."""
+    """The Exempt for this vault (see the docstring for which copy of the list counts)."""
     vault = Path(vault).resolve()
     top = _git_top(vault)
     if top is None:
-        f = vault / BASELINE
-        try:
-            ok = f.is_file() and not f.is_symlink()
-            return (parse(f.read_bytes()) if ok else None) or Exempt()
-        except OSError:
-            return Exempt()
+        return _disk(vault)
     from memory import Reader, REGULAR  # late: memory imports gate, and gate imports this module
     reader = Reader(top)
     rel = reader.rel(vault / BASELINE)
-    entry = reader.index_entry(rel) if rel else None
-    if entry is None or entry[0] not in REGULAR:
+    if not rel:
         return Exempt()
-    raw = reader.blob(entry[1])
-    now = parse(raw) if raw is not None else None
-    if now is None:
-        return Exempt()
-    if not reader.has_head():
-        return now
-    head_entry = reader.head_entry(rel)
-    if head_entry is None or head_entry[1] != "blob":
-        return Exempt()
-    head_raw = reader.blob(head_entry[2])
-    before = parse(head_raw) if head_raw is not None else None
-    return now.intersect(before) if before is not None else Exempt()
+    has_head = reader.has_head()
+    head_entry = reader.head_entry(rel) if has_head else None
+    entry = reader.index_entry(rel)
+    if head_entry is not None:
+        if entry is None:
+            return Exempt()  # this commit removes it
+        if entry[0] not in REGULAR or head_entry[1] != "blob":
+            return unreadable("not a regular file")
+        now, before = reader.blob(entry[1]), reader.blob(head_entry[2])
+        now = parse(now) if now is not None else None
+        before = parse(before) if before is not None else None
+        if now is None or before is None:
+            return unreadable("it is not a baseline.json this version understands")
+        cand = now.intersect(before)
+    elif entry is not None:
+        if entry[0] not in REGULAR:
+            return unreadable("not a regular file")
+        raw = reader.blob(entry[1])
+        cand = parse(raw) if raw is not None else None
+        if cand is None:
+            return unreadable("it is not a baseline.json this version understands")
+    else:
+        cand = _disk(vault)
+    if has_head and cand:
+        known = _head_notes(reader)
+        if known is None:
+            return unreadable("git could not list HEAD")
+        cand = cand.restrict(known)
+    return cand

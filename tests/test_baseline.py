@@ -34,15 +34,17 @@ def git(v, *a, tmp):
 
 
 def adopted(tmp_path, files, history=None):
-    """A vault with `files`, git init and NO commit, adopted (dry run, then --apply --confirm). `history`: a file
-    committed before the adopt, so HEAD exists and has no baseline."""
+    """A vault with `files`, git init and NO commit, adopted (dry run, then --apply --confirm). `history`: True commits
+    `files` BEFORE the adopt (the usual order: HEAD exists and has no baseline); a dict commits those files instead."""
     v = tmp_path / "vault"
     for rel, text in files.items():
         write(v, rel, text)
     subprocess.run(["git", "init", "-q"], cwd=v, check=True)
     if history:
-        write(v, history, "linked to [[reading]]\n")
-        git(v, "add", history, tmp=tmp_path)
+        extra = history if isinstance(history, dict) else {}
+        for rel, text in extra.items():
+            write(v, rel, text)
+        git(v, "add", "-A", tmp=tmp_path)
         assert git(v, "commit", "-q", "-m", "before", tmp=tmp_path).returncode == 0
     run = lambda *a: subprocess.run([sys.executable, str(ADOPT), str(v), *a], capture_output=True, text=True,
                                     env=env(tmp_path), stdin=subprocess.DEVNULL)
@@ -105,16 +107,68 @@ def test_a_commit_that_adds_a_note_to_the_baseline_does_not_exempt_it(tmp_path):
     assert git(v, "rev-list", "--count", "HEAD", tmp=tmp_path).stdout.strip() == "1"
 
 
-def test_a_baseline_that_is_not_in_the_commit_exempts_nothing(tmp_path):
+def test_an_untracked_baseline_is_read_from_the_disk_in_the_first_commit(tmp_path):
     v = adopted(tmp_path, BASE)
-    r = commit(v, tmp_path, "reading.md", "ideas/loose-idea.md")  # the baseline stays untracked
-    assert r.returncode != 0 and "ideas/loose-idea.md" in out(r)
+    r = commit(v, tmp_path, "reading.md", "ideas/loose-idea.md")  # the baseline stays untracked, there is no HEAD
+    assert r.returncode == 0, out(r)
 
 
-def test_a_baseline_that_head_does_not_have_exempts_nothing(tmp_path):
-    v = adopted(tmp_path, BASE, history="before.md")  # HEAD exists, and has no baseline
-    r = commit(v, tmp_path, all_=True)
-    assert r.returncode != 0 and "ideas/loose-idea.md" in out(r)
+def test_notes_committed_before_the_adopt_and_an_untracked_baseline_editing_an_old_orphan_passes(tmp_path):
+    v = adopted(tmp_path, BASE, history=True)  # the README order: commit the notes, then adopt
+    write(v, "ideas/loose-idea.md", "a loose idea, edited\n")
+    r = commit(v, tmp_path, "ideas/loose-idea.md")  # ONLY the note: the baseline is untracked, HEAD has none
+    assert r.returncode == 0, out(r)
+
+
+def test_the_same_with_the_baseline_committed_together_passes(tmp_path):
+    v = adopted(tmp_path, BASE, history=True)
+    write(v, "ideas/loose-idea.md", "a loose idea, edited\n")
+    r = commit(v, tmp_path, "ideas/loose-idea.md", ".cogiforge/baseline.json", "areas.txt")
+    assert r.returncode == 0, out(r)
+
+
+def test_a_new_note_added_to_the_list_in_a_commit_when_head_has_no_baseline_blocks(tmp_path):
+    v = adopted(tmp_path, BASE, history=True)
+    write(v, "ideas/sneaky.md", "no link\n")
+    b = v / ".cogiforge" / "baseline.json"
+    data = json.loads(b.read_text())
+    data["orphans"].append("ideas/sneaky.md")
+    b.write_text(json.dumps(data))
+    r = commit(v, tmp_path, "ideas/sneaky.md", ".cogiforge/baseline.json")
+    assert r.returncode != 0 and "ideas/sneaky.md" in out(r).split("FAILS", 1)[1]
+
+
+def test_an_old_note_added_to_the_list_when_head_has_the_baseline_blocks(tmp_path):
+    v = adopted(tmp_path, {**BASE, "ideas/linked.md": "see [[reading]]\n"})
+    assert commit(v, tmp_path, all_=True).returncode == 0  # linked.md is in HEAD and was NOT an orphan
+    write(v, "ideas/linked.md", "no link any more\n")
+    b = v / ".cogiforge" / "baseline.json"
+    data = json.loads(b.read_text())
+    data["orphans"].append("ideas/linked.md")
+    b.write_text(json.dumps(data))
+    r = commit(v, tmp_path, "ideas/linked.md", ".cogiforge/baseline.json")
+    assert r.returncode != 0 and "ideas/linked.md" in out(r).split("FAILS", 1)[1]
+
+
+def test_a_malformed_baseline_blocks_and_says_so(tmp_path):
+    v = adopted(tmp_path, BASE, history=True)
+    (v / ".cogiforge" / "baseline.json").write_text('{"orphans": [1, 2')
+    write(v, "ideas/loose-idea.md", "edited\n")
+    r = commit(v, tmp_path, "ideas/loose-idea.md")
+    assert r.returncode != 0
+    assert "WARNING: .cogiforge/baseline.json could not be read" in out(r)
+
+
+def test_the_staged_baseline_decides_not_the_disk(tmp_path):
+    v = adopted(tmp_path, BASE)
+    write(v, "ideas/new-loose.md", "brand new\n")
+    git(v, "add", "-A", tmp=tmp_path)
+    b = v / ".cogiforge" / "baseline.json"
+    data = json.loads(b.read_text())
+    data["orphans"].append("ideas/new-loose.md")
+    b.write_text(json.dumps(data))  # on the disk only, after the stage
+    r = git(v, "commit", "-q", "-m", "x", tmp=tmp_path)
+    assert r.returncode != 0 and "ideas/new-loose.md" in out(r).split("FAILS", 1)[1]
 
 
 def test_deleting_the_baseline_in_the_commit_exempts_nothing(tmp_path):
@@ -219,11 +273,12 @@ def test_gate_without_files_is_a_full_audit_and_hides_nothing(tmp_path):
     assert rc == 1 and "no-area.md" in text and "bad-fm.md" in text
 
 
-def test_a_malformed_baseline_exempts_nothing(tmp_path):
+def test_a_malformed_baseline_exempts_nothing_and_the_gate_says_so(tmp_path):
     v = gate_vault(tmp_path, None)
     write(v, ".cogiforge/baseline.json", '{"area_missing": "not a list"')
     rc, text = run_gate(v, *ALL)
     assert rc == 1 and "no-area.md" in text
+    assert "WARNING: .cogiforge/baseline.json could not be read" in text
 
 
 # ---- leak.py ---------------------------------------------------------------------------------------------------------

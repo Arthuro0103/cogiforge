@@ -360,6 +360,8 @@ def main(argv=None):
     exempt = baseline.load(vault) if targets else None
     targets = targets or None
     everything, found = audit(vault, targets, checks=set(args.check or []), exempt=exempt)
+    if exempt is not None and baseline.warning(exempt):
+        print(baseline.warning(exempt))
     unreadable = [f for f in found if f.check == "UNREADABLE"]
     failures = [f for f in found if f.check != "UNREADABLE"]
     failed = {f.file for f in failures}
