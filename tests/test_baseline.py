@@ -467,7 +467,7 @@ def leak_vault(tmp_path, data, rel=".cogiforge/baseline.json"):
 def test_leak_reads_the_hand_written_data_in_a_baseline_and_not_the_note_names(tmp_path):
     base = {"orphans": [PHONE_NOTE], "dead_links": [f"{PHONE_NOTE}:3 [[call {PHONE}]]"], "area_missing": [PHONE_NOTE],
             "frontmatter_errors": [PHONE_NOTE], "skipped": [{"path": PHONE_NOTE, "reason": "not UTF-8"}],
-            "nota": f"{EMAIL} {MACHINE_PATH} {PHONE}"}
+            "note": f"{EMAIL} {MACHINE_PATH} {PHONE}"}
     v = leak_vault(tmp_path, base)
     for args in (("--staged",), ()):
         r = run_leak(v, *args, tmp=tmp_path)
@@ -475,7 +475,7 @@ def test_leak_reads_the_hand_written_data_in_a_baseline_and_not_the_note_names(t
         for kind in ("email", "phone", "path"):
             assert f".cogiforge/baseline.json:" in r.stdout and kind in r.stdout, (args, r.stdout)
         assert EMAIL not in out(r) and MACHINE_PATH not in out(r)  # the log never carries the data
-    base.pop("nota")
+    base.pop("note")
     base["skipped"].append(PHONE_NOTE)  # a bare string item is also a listed path
     write(v, ".cogiforge/baseline.json", json.dumps(base, indent=2))
     git(v, "add", "-A", tmp=tmp_path)
@@ -501,7 +501,7 @@ def test_leak_reads_a_baseline_that_is_not_json_or_has_another_shape_whole(tmp_p
 
 
 def test_leak_filters_a_baseline_at_any_depth_and_keeps_reading_the_rest_of_it(tmp_path):
-    v = leak_vault(tmp_path, {"orphans": [PHONE_NOTE], "nota": EMAIL}, rel="sub/.cogiforge/baseline.json")
+    v = leak_vault(tmp_path, {"orphans": [PHONE_NOTE], "note": EMAIL}, rel="sub/.cogiforge/baseline.json")
     assert run_leak(v, "--staged", tmp=tmp_path).returncode == 1
     write(v, "sub/.cogiforge/baseline.json", json.dumps({"orphans": [PHONE_NOTE]}))
     git(v, "add", "-A", tmp=tmp_path)
