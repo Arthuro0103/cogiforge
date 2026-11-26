@@ -69,7 +69,7 @@ Este repo tem 18 skills, e o plugin instala só duas de propósito. Se você ou 
 5. **Outros agentes (Codex, Cursor e outros) acham as mesmas skills dentro do workbench**, pelo `AGENTS.md` e por `.agents/skills`. Eles não precisam do plugin.
 6. **Atualizar.** Uma versão nova do plugin aponta para uma tag nova, então os workbenches novos já nascem atualizados. O workbench guarda o histórico do Cogiforge e um remote `cogiforge`, então se atualiza com git: veja a seção "Atualizar o seu workbench" abaixo. Num vault adotado, rode o `/cf-adopt` de novo: ele oferece trocar o `~/.cogiforge` pela versão nova, e todo vault adotado recebe o conserto de uma vez.
 
-7. **O plugin é só Markdown.** O diretório de plugins da Anthropic só aceita código de organização verificada, então o plugin leva instruções e nenhum script. As skills baixam este repo do GitHub numa versão fixa, pelo hash do commit, e conferem o hash antes de rodar qualquer coisa: o plugin 0.1.4 instala o Cogiforge 0.1.3 (commit `30533b0`, tag `v0.1.3`). Para lançar uma versão nova do Cogiforge, marque a tag primeiro; depois, um commit seguinte do plugin fixa o hash dela e sobe a versão do plugin. Pede `git` e internet.
+7. **O plugin é só Markdown.** O diretório de plugins da Anthropic só aceita código de organização verificada, então o plugin leva instruções e nenhum script. As skills baixam este repo do GitHub numa versão fixa, pelo hash do commit, e conferem o hash antes de rodar qualquer coisa: o plugin 0.1.5 instala o Cogiforge 0.1.4 (commit `886f8ce`, tag `v0.1.4`). Para lançar uma versão nova do Cogiforge, marque a tag primeiro; depois, um commit seguinte do plugin fixa o hash dela e sobe a versão do plugin. Pede `git` e internet.
 
 ## Atualizar o seu workbench
 

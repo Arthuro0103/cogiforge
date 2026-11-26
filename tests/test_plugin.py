@@ -25,8 +25,8 @@ MARKET_ENTRY_KEYS = {"name", "source", "description"}
 # The Cogiforge version and commit the plugin installs. The plugin's own version (plugin.json) is separate: the commit
 # that holds the skills cannot name its own hash, so the skills pin an EARLIER, tagged commit. To ship a new Cogiforge,
 # tag it, then pin its hash here and in both skills and raise the plugin version, in one commit.
-PIN_VERSION = "0.1.3"
-PIN_SHA = "30533b0236fa4735e65fd4a0bbc9f2bec2256748"
+PIN_VERSION = "0.1.4"
+PIN_SHA = "886f8cec819446d3440afc6b817c6ca5ec668510"
 REPO_GIT = "https://github.com/Arthuro0103/cogiforge.git"
 
 
