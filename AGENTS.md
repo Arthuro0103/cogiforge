@@ -74,7 +74,7 @@ Body with the argument. The link goes here, in the middle:
 | record that an answer used notes (after the citations exist) | `python3 tools/ask.py cite <answer.md> --log "<question>"` |
 | the memory: line format, date, the phrase in its source (when the source is a file), invisible text (`NOT_VERIFIED` is never OK) | `python3 core/memory.py` · `--staged` · `--json` |
 | bytes a session loads, against its ceiling | `python3 core/budget.py` |
-| does each citation (URL, arXiv id, DOI) exist and say what the text claims? (`NOT_VERIFIED` is never OK) | `python3 tools/citation.py <file.md>` · `--no-network` · `--selftest` · `--quotes NOTE.md` (a quote against the vault file linked on its line) |
+| does each citation (URL, arXiv id, DOI) exist and say what the text claims? (`NOT_VERIFIED` is never OK) | `python3 tools/citation.py <file.md>` (a quote of 5+ words on a line with a web link is also looked for, word for word, on that page) · `--no-network` · `--selftest` · `--quotes NOTE.md` (a quote against the vault file linked on its line) |
 | a verdict with a typed reason for "no value" (library for your own checks) | `python3 core/proof.py --selftest` |
 | background subagents that stopped without finishing (STOPPED is the alarm) | `python3 tools/agents_watch.py [--session <id>] [--min 10]` |
 | move the older dated lines of a memory file to an archive (plan first, `--apply` with the user's yes) | `python3 tools/cool.py memory/<file>.md --keep 40` |

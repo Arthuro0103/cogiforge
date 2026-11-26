@@ -404,3 +404,542 @@ def test_quotes_a_one_word_piece_still_counts():
     assert q.found_ordered("push ... never", "you should push to main and never before") is True
     assert q.found_ordered("never ... push", "you should push to main and never before") is False
     assert q.found_ordered("[only editorial]", "x") is None
+
+
+# ---- a quote on a line with a web link: it has to be literally on THAT page ----------------------
+
+WEB = ("<html><body><h1>Harbour log</h1><p>The lighthouse keeper counted 412 gulls over the long winter and "
+       "wrote that the north wall leaks whenever the tide runs high.</p></body></html>")
+LINK = "[log](https://pages.test/log)"
+REAL = "the north wall leaks whenever the tide runs high"
+INVENTED = "the south wall holds even when the tide runs high"
+
+
+def judge(line, page=WEB, status=200, which=0):
+    return cit.check_one(cit.extract(line)[which], lambda url: (status, page))
+
+
+def verdict(line, page=WEB, status=200):
+    return judge(line, page, status)["state"]
+
+
+def said(quote, page=WEB):
+    return verdict(f'It says "{quote}" {LINK}', page)
+
+
+def test_a_literal_quote_is_verified_without_any_number():
+    r = judge(f'It says "{REAL}" {LINK}')
+    assert (r["state"], r["note"]) == (cit.VERIFIED, "every quote (1) is literally on the page")
+
+
+def test_an_invented_quote_is_partial_and_the_note_shows_it():
+    r = judge(f'It says "{INVENTED}" {LINK}')
+    assert r["state"] == cit.PARTIAL
+    assert "NOT found literally" in r["note"] and "the south wall holds" in r["note"]
+
+
+def test_only_the_page_linked_on_that_line_counts():
+    pages = {"https://pages.test/log": "<p>A page about bread ovens and nothing else at all.</p>",
+             "https://pages.test/other": WEB}
+    text = f'It says "{REAL}" {LINK}\nSee also [other](https://pages.test/other)\n'
+    res = cit.check_text(text, lambda url: (200, pages[url]))
+    assert res[0]["state"] == cit.PARTIAL and res[1]["state"] == cit.NOT_VERIFIED
+
+
+def test_each_page_of_a_line_is_searched_alone_and_the_note_says_so():
+    pages = {"https://pages.test/log": WEB, "https://pages.test/other": "<p>bread ovens</p>"}
+    res = cit.check_text(f'It says "{REAL}" {LINK} [other](https://pages.test/other)', lambda url: (200, pages[url]))
+    assert [r["state"] for r in res] == [cit.VERIFIED, cit.PARTIAL]
+    assert all("the line links 2 pages" in r["note"] for r in res)
+    assert "pages and each" not in judge(f'It says "{REAL}" {LINK}')["note"]
+    assert "pages and each" not in judge(f'It says "{REAL}" {LINK} and again {LINK}')["note"]
+
+
+def test_a_quote_on_a_line_with_no_web_link_is_left_alone():
+    text = f'It says "{INVENTED}" arXiv:1706.03762, Attention Is All You Need\n'
+    res = cit.check_text(text, fake)
+    assert [(r["state"], "quote" in r["note"]) for r in res] == [(cit.VERIFIED, False)]
+    res = cit.check_text(f'It says "{INVENTED}" doi 10.1000/real', fake)
+    assert res[0]["note"] == "the DOI resolves; what the sentence claims was not checked"
+    assert cit.check_text(f'"{INVENTED}"\n[log](https://example.test/page) 77.6%', fake)[0]["state"] == cit.VERIFIED
+
+
+@pytest.mark.parametrize("opening,closing", [('"', '"'), ("\u201c", "\u201d"), ("\u00ab", "\u00bb"), ("\u2018", "\u2019")])
+def test_every_kind_of_quotation_mark_is_read(opening, closing):
+    assert verdict(f"It says {opening}{REAL}{closing} {LINK}") == cit.VERIFIED
+    assert verdict(f"It says {opening}{INVENTED}{closing} {LINK}") == cit.PARTIAL
+
+
+@pytest.mark.parametrize("line", [
+    f'\u201cThe keeper wrote that \u201c{INVENTED}\u201d in the log\u201d',
+    f'"The keeper wrote that "{INVENTED}" in the log"',
+    f'\u00abThe keeper wrote \u2018{INVENTED}\u2019 there\u00bb',
+    f'\u201c"{INVENTED}" is what the keeper wrote\u201d',
+])
+def test_nested_quotes_are_checked_at_every_depth(line):
+    quotes, unmatched = cit.line_quotes(line)
+    assert INVENTED in quotes and len(quotes) == 2 and not unmatched
+
+
+def test_a_nested_quote_matches_a_page_that_marks_it_differently():
+    page = "<p>The keeper called it \u201cthe leaking north wall\u201d in every report.</p>"
+    for line in ('\u201cThe keeper called it \u2018the leaking north wall\u2019 in every report\u201d',
+                 '"The keeper called it "the leaking north wall" in every report"',
+                 "\u00abThe keeper called it 'the leaking north wall' in every report\u00bb"):
+        assert verdict(f"{line} {LINK}", page) == cit.VERIFIED, line
+
+
+def test_an_apostrophe_inside_a_word_is_not_a_quotation_mark():
+    inside = "I don\u2019t know why the keeper\u2019s lamp went dark"
+    assert cit.line_quotes(f"\u2018{inside}\u2019") == ([inside], False)
+    page = "<p>I don't know why the keeper's lamp went dark that night.</p>"
+    assert verdict(f"\u2018{inside}\u2019 {LINK}", page) == cit.VERIFIED
+    assert cit.line_quotes("rock \u2019n\u2019 roll, Hawai\u2018i and the keeper\u2019s old brass lamp are here") == ([], False)
+
+
+def test_an_apostrophe_that_differs_is_a_different_word():
+    assert said("the gulls know its nest very well", "<p>the gulls know it's nest very well</p>") == cit.PARTIAL
+
+
+def test_a_plural_apostrophe_that_closes_early_never_verifies():
+    page = "<p>we read all of the keepers notes</p>"
+    r = judge(f"\u2018we read all of the keepers\u2019 notes and then invented this\u2019 {LINK}", page)
+    assert r["state"] == cit.PARTIAL and "no pair" in r["note"]
+    assert cit.line_quotes("\u2018one two three four five\u2019 and the keepers\u2019 lamp")[1] is False
+
+
+@pytest.mark.parametrize("mark", ["...", "\u2026", "[...]", "[\u2026]", "(...)", "(\u2026)", "[ ... ]", "...."])
+def test_an_elision_may_cut_words(mark):
+    r = judge(f'"The lighthouse keeper counted {mark} the north wall leaks" {LINK}')
+    assert r["state"] == cit.VERIFIED and "elision" in r["note"]
+    assert said(f"The lighthouse keeper counted {mark} the south wall holds") == cit.PARTIAL
+
+
+def test_an_elision_glued_to_a_word_does_not_eat_the_word():
+    assert said("The lighthouse keeper counted[...] the north wall leaks") == cit.VERIFIED
+    assert said("The lighthouse keeper invented[...] the north wall leaks") == cit.PARTIAL
+
+
+def test_stretches_must_come_in_the_order_of_the_page_and_not_overlap():
+    assert said("the north wall leaks ... The lighthouse keeper counted") == cit.PARTIAL
+    assert said("the north wall leaks ... wall leaks whenever the tide") == cit.PARTIAL
+    assert said("the north wall leaks ... whenever the tide runs") == cit.VERIFIED
+
+
+def test_without_an_elision_the_note_does_not_mention_one():
+    assert "elision" not in judge(f'"{REAL}" {LINK}')["note"]
+
+
+@pytest.mark.parametrize("quote", [
+    "the north wall [of the tower] leaks whenever the tide runs high",
+    "[The old keeper] wrote that the north wall leaks",
+    "[T]he lighthouse keeper counted 412 gulls",
+    "the north wall leaks whenever the tide run[ning] high [sic]",
+])
+def test_an_editorial_insertion_caps_the_result_at_partial(quote):
+    r = judge(f'"{quote}" {LINK}')
+    assert r["state"] == cit.PARTIAL and "editorial insertion" in r["note"] and "NOT found" not in r["note"]
+
+
+def test_an_editorial_insertion_does_not_hide_an_invented_stretch():
+    r = judge(f'"the south wall [sic] holds even when the tide" {LINK}')
+    assert r["state"] == cit.PARTIAL and "NOT found" in r["note"]
+
+
+@pytest.mark.parametrize("quote", [
+    "possible to count every gull on the roof",   # the page says `impossible`
+    "impossible to count every gull on the roo",  # cut in the middle of the last word
+])
+def test_a_stretch_is_matched_as_whole_words(quote):
+    assert said(quote, "<p>It is impossible to count every gull on the roof.</p>") == cit.PARTIAL
+
+
+@pytest.mark.parametrize("page,quote,found", [
+    ("the keeper is a well-known figure", "known figure the keeper", False),
+    ("the keeper is a well-known figure", "the keeper is a well", False),
+    ("the keeper is a well- known figure", "the keeper is a well", True),
+    ("the keeper lit John's old lamp", "the keeper lit John", False),
+    ("the keeper lit John' old lamp", "the keeper lit John", True),
+    ("it rose by 3.5 metres in a day", "metres in a day", True),
+    ("the tide rose by 3.5 metres", "the tide rose by 3", False),
+    ("the tide rose by 3, then fell", "the tide rose by 3", True),
+    ("level 2.5 of the tide gauge broke", "5 of the tide gauge", False),
+    ("level two,5 of the tide gauge broke", "5 of the tide gauge", True),
+    ("-5 degrees at the tower", "5 degrees at the tower", False),
+    ("it was -5 degrees at the tower", "5 degrees at the tower", False),
+    ("it was (\u22125 degrees at the tower)", "5 degrees at the tower", False),
+    ("it was -5 degrees at the tower", "-5 degrees at the tower", True),
+    ("pages 4-5 degrees at the tower", "5 degrees at the tower", False),
+    ("it was -five degrees at the tower", "five degrees at the tower", True),
+    ("snake_case names are used here", "case names are used", False),
+    ("unlit lamps stay on the shelf. lit lamps stay on the desk", "lit lamps stay on the desk", True),
+])
+def test_word_and_number_boundaries(page, quote, found):
+    assert cit.in_order([cit.literal(quote)], cit.literal(page)) is found
+
+
+def test_a_combining_mark_belongs_to_its_word():
+    assert cit.in_order(["say k"], "say k\u093f now") is False
+
+
+@pytest.mark.parametrize("page", [
+    "<p>THE NORTH WALL LEAKS WHENEVER THE TIDE RUNS HIGH</p>",
+    "<p>the north&nbsp;wall\n   leaks whenever the <em>tide</em> runs high</p>",
+    "<p>the north wall leaks whenever the ti<b>de</b> r<wbr>uns h<span class='x'>igh</span></p>",
+    "<p>the north wall leaks when\u00adever the ti&#8203;de runs hi\ufeffgh</p>",
+    '<p>the north wall <a href="/x">leaks</a>, whenever the tide runs high</p>',
+    "<p>the &quot;north&quot; wall leaks whenever the tide runs high</p>",
+])
+def test_markup_entities_case_and_invisible_characters_do_not_matter(page):
+    assert said(REAL if "</a>," not in page else "wall leaks, whenever the tide", page) == cit.VERIFIED
+
+
+@pytest.mark.parametrize("page", [
+    "<p>the north wall leaks when</p><p>ever the tide runs high</p>",
+    "<p>the north wall leaks when<br>ever the tide runs high</p>",
+    "<p>the north wall leaks when<a-card></a-card>ever the tide runs high</p>",
+    "<p>the north wall leaks whenever the tide runs low</p><script>var s = 'the north wall leaks whenever the tide runs high'</script>",
+    "<!-- the north wall leaks whenever the tide runs high --><p>nothing</p>",
+    '<p title="the north wall leaks whenever the tide runs high">nothing</p>',
+])
+def test_what_is_not_on_the_page_as_text_is_not_found(page):
+    assert said(REAL, page) == cit.PARTIAL
+
+
+def test_a_tag_inside_the_page_text_with_a_slash_or_a_space_is_still_inline():
+    assert cit.visible_text("a<b/>c<i\n x>d</i>e<a-b>f", cit.INLINE_TAGS) == "acde f"
+    assert cit.visible_text("a<b>c</b>d") == "a c d"  # the number check keeps its spacing
+
+
+@pytest.mark.parametrize("page,quote", [
+    ("calm\u2014and that matters\u2014at night", "calm \u2014 and that matters - at night"),
+    ("calm \u2013 and that matters a lot -- at night", "calm\u2014and that matters a lot\u2014at night"),
+    ("the years 1910\u20131920 were wet", "the years 1910-1920 were wet"),
+    ("a well\u2011kept lamp on the stairs", "a well-kept lamp on the stairs"),
+    ("a well\u2010kept lamp on the stairs", "a well-kept lamp on the stairs"),
+    ("Caf\u00e9 owners fed the gulls daily", "Cafe\u0301 owners fed the gulls daily"),
+])
+def test_dash_style_and_unicode_form_do_not_matter(page, quote):
+    assert said(quote, f"<p>{page}</p>") == cit.VERIFIED
+
+
+def test_an_apostrophe_after_a_decomposed_letter_is_still_inside_the_word():
+    page = "<p>Jose\u0301\u2019s lamp burned all night</p>"
+    assert said("Jos\u00e9's lamp burned all night", page) == cit.VERIFIED
+
+
+def test_accents_and_inner_punctuation_do_matter():
+    assert said("Cafe owners fed the gulls daily", "<p>Caf\u00e9 owners fed the gulls daily</p>") == cit.PARTIAL
+    assert said("no, the keeper stayed at home", "<p>no the keeper stayed at home</p>") == cit.PARTIAL
+
+
+@pytest.mark.parametrize("quote", [
+    f"{REAL}.", f"{REAL}!?", f"\u2014 {REAL};", "the north wall leaks *whenever* the tide runs high",
+    "the north wall **_leaks_** whenever the tide runs high", "the north wall `leaks` whenever the tide runs high",
+    "the north wall [leaks](https://pages.test/log) whenever the tide runs high",
+    "the north wall <em>leaks</em> whenever the tide runs high",
+    "the north wall leaks whenever the ti<b>de</b> runs high",
+    "the north wall leaks<br>whenever the tide runs high",
+])
+def test_punctuation_at_the_edges_and_markdown_in_the_note_do_not_matter(quote):
+    assert said(quote) == cit.VERIFIED
+
+
+def test_literal_asterisks_and_snake_case_are_not_emphasis():
+    assert said("set max_wall_height to 3 * 4 metres", "<p>set max_wall_height to 3 * 4 metres</p>") == cit.VERIFIED
+
+
+@pytest.mark.parametrize("line", [
+    f'<span title="{INVENTED}">log</span> {LINK}',
+    f'[log](https://pages.test/log "{INVENTED}")',
+    f"[log](https://pages.test/log '{INVENTED}') and \u2018",
+    f'`"{INVENTED}"` {LINK}',
+    f"https://pages.test/log?q=%22 {LINK}",
+    f"The keeper owns a 13\" screen and a 15\" screen for the gulls {LINK}",
+    f"Home \u00bb Logs \u00bb the keeper and the gulls of winter {LINK}",
+    f"If a <- b and b <= c then the keeper \u201cwins\u201d {LINK}",
+])
+def test_things_that_are_not_quotes(line):
+    assert cit.line_quotes(line) == ([], False)
+
+
+def test_marks_around_comparisons_are_not_swallowed_as_tags():
+    assert cit.line_quotes(f'if a <b and "{INVENTED}" > c') == ([INVENTED], False)
+    assert cit.line_quotes(f'width <= 4 "{INVENTED}" x >= 3') == ([INVENTED], False)
+    tag = f'<img src="a.png" alt="{INVENTED}" hidden data-x=1 /><br/><p class=\'y\' >'
+    assert cit.line_quotes(tag) == ([], False)
+
+
+def test_a_link_label_and_a_url_glued_to_the_closing_mark():
+    assert cit.line_quotes(f'["{REAL}" in the log](https://pages.test/a_(b))') == ([REAL], False)
+    assert cit.line_quotes(f"\u2018{REAL} https://pages.test/log\u2019") == ([REAL], False)
+    assert cit.line_quotes(f'"{REAL} https://pages.test/log" ok') == ([REAL], False)
+
+
+def test_inches_inside_or_outside_a_quote():
+    q = "the keeper bought a 13\" screen"
+    assert cit.line_quotes(f"\u00ab{q} for the tower\u00bb") == ([f"{q} for the tower"], False)
+    assert cit.line_quotes(f'"it was built to last until 2030" {LINK}') == (["it was built to last until 2030"], False)
+    assert cit.line_quotes(f'Screen 13" says "{REAL}"') == ([REAL], False)
+
+
+@pytest.mark.parametrize("line", [
+    f'Says:"{REAL}"', f'("{REAL}")', f'[ "{REAL}" ]', f'word\u2014"{REAL}"', f'\u201c{REAL}" mixed', f'"{REAL}\u201d mixed',
+])
+def test_how_a_straight_quote_opens_and_closes(line):
+    assert cit.line_quotes(line) == ([REAL], False)
+
+
+@pytest.mark.parametrize("line", [
+    f'"{INVENTED}', f"\u201c{INVENTED}", f"\u00ab{INVENTED}", f"\u2018{INVENTED}", f"{INVENTED}\u201d",
+    f'{INVENTED} "', f'"{INVENTED} \u201cand a closed one inside here\u201d', f'"one \u2018{INVENTED}"',
+])
+def test_a_mark_without_a_pair_around_five_words_never_verifies(line):
+    assert cit.line_quotes(line)[1] is True
+    full = judge(f"{LINK} 412 gulls. {line}")
+    assert full["state"] != cit.VERIFIED and "no pair" in full["note"]
+
+
+def test_an_unmatched_mark_downgrades_a_verified_number_to_partial():
+    r = judge(f'412 gulls {LINK} "{INVENTED}')
+    assert r["state"] == cit.PARTIAL and "no pair" in r["note"]
+
+
+def test_an_unmatched_mark_around_few_words_changes_nothing():
+    line = f'412 gulls {LINK} and then "one two'
+    assert cit.line_quotes(line) == ([], False)
+    assert judge(line)["state"] == cit.VERIFIED
+
+
+def test_too_deep_nesting_is_unmatched_not_slow():
+    import time
+    start = time.monotonic()
+    line = "\u2018" * 20_000 + " one two three four five " + "\u201d " * 20_000
+    assert cit.line_quotes(line)[1] is True
+    assert time.monotonic() - start < 2
+    deep = "\u201c" * (cit.MAX_NESTING + 1) + REAL + "\u201d" * (cit.MAX_NESTING + 1)
+    assert cit.line_quotes(deep)[1] is True
+
+
+@pytest.mark.parametrize("hostile", [
+    "[](" + " " * 60_000, "[a](u \"" * 8_000, "a" * 100_000 + " [", "*a " * 30_000, "<a " * 30_000, "`" * 60_000,
+    '"' + "a" * 60_000 + '"', "[" * 60_000,
+])
+def test_a_hostile_line_is_read_in_linear_time(hostile):
+    import time
+    start = time.monotonic()
+    quotes, _ = cit.line_quotes(hostile)
+    for q in quotes:
+        cit.split_quote(q)
+    cit.split_quote(hostile)
+    assert time.monotonic() - start < 15  # quadratic would take minutes
+
+
+def test_five_words_make_a_quote_and_four_do_not():
+    assert cit.line_quotes('"one two three four"') == ([], False)
+    assert cit.line_quotes('"one two three four five"') == (["one two three four five"], False)
+    assert cit.line_quotes('"one \u2014 two ... three four"') == ([], False)  # punctuation is not a word
+
+
+def test_a_quote_with_only_tiny_stretches_is_not_verified():
+    r = judge(f'"the ... wall ... the ... tide ... high" {LINK}')
+    assert r["state"] == cit.NOT_VERIFIED and "3+ words" in r["note"]
+    assert said("the ... wall ... the tide runs high") == cit.VERIFIED
+
+
+def test_only_so_many_quotes_per_line_are_judged(monkeypatch):
+    monkeypatch.setattr(cit, "MAX_LINE_QUOTES", 1)
+    r = judge(f'"{REAL}" and "The lighthouse keeper counted 412 gulls" {LINK}')
+    assert r["state"] == cit.NOT_VERIFIED and "first 1 quotes" in r["note"]
+    assert judge(f'"{REAL}" {LINK}')["state"] == cit.VERIFIED
+
+
+def test_the_same_quote_twice_counts_once():
+    assert "(1)" in judge(f'"{REAL}" and \u201c{REAL}\u201d {LINK}')["note"]
+
+
+def test_one_bad_quote_among_good_ones_is_partial_and_the_worst_note_comes_first():
+    r = judge(f'"{REAL}" and "{INVENTED}" {LINK}')
+    assert r["state"] == cit.PARTIAL and r["note"].startswith("quote NOT found")
+    r = judge(f'"{INVENTED}" and "a ... b ... c ... d ... e" {LINK}')
+    assert r["state"] == cit.NOT_VERIFIED and r["note"].startswith("quote NOT checked") and "NOT found" in r["note"]
+
+
+def test_with_numbers_and_a_quote_the_worst_result_wins():
+    ok = judge(f'412 gulls: "{REAL}" {LINK}')
+    assert ok["state"] == cit.VERIFIED and "literally" in ok["note"] and "every number" in ok["note"]
+    wrong_number = judge(f'987 gulls: "{REAL}" {LINK}')
+    assert wrong_number["state"] == cit.PARTIAL and "987" in wrong_number["note"]
+    wrong_quote = judge(f'412 gulls: "{INVENTED}" {LINK}')
+    assert wrong_quote["state"] == cit.PARTIAL and "NOT found" in wrong_quote["note"]
+    unjudged = judge(f'987 gulls: "{REAL}" {LINK}', cut_page(WEB))
+    assert unjudged["state"] == cit.NOT_VERIFIED
+
+
+def cut_page(text, why="the page came truncated"):
+    page = cit.Page(text)
+    page.unread = why
+    return page
+
+
+@pytest.mark.parametrize("quote", [REAL, INVENTED])
+def test_a_page_not_read_whole_is_not_verified_and_never_says_not_found(quote):
+    for page in (cut_page(WEB), WEB + "<p unfinished", WEB + "<!-- unfinished", WEB + "<script>unfinished"):
+        r = judge(f'"{quote}" {LINK}', page)
+        assert r["state"] == cit.NOT_VERIFIED, page[-20:]
+        assert "NOT checked" in r["note"] and "NOT found" not in r["note"]
+
+
+@pytest.mark.parametrize("page", ["", "<html><body></body></html>", "<p>x</p>&#" + "9" * 5000 + ";"])
+def test_a_page_with_no_text_or_that_cannot_be_decoded_is_not_verified(page):
+    r = judge(f'"{REAL}" {LINK}', page)
+    assert r["state"] == cit.NOT_VERIFIED and "NOT found" not in r["note"]
+
+
+@pytest.mark.parametrize("status,state", [
+    (404, "BROKEN"), (410, "BROKEN"), (401, "NOT_VERIFIED"), (403, "NOT_VERIFIED"), (405, "NOT_VERIFIED"),
+    (500, "NOT_VERIFIED"), (302, "NOT_VERIFIED"), (300, "NOT_VERIFIED"), (0, "NOT_VERIFIED"),
+    (cit.REFUSED, "NOT_VERIFIED"), (200, "VERIFIED"), (203, "VERIFIED"),
+])
+def test_a_quote_is_only_judged_against_a_page_that_was_read(status, state):
+    r = judge(f'"{REAL}" {LINK}', WEB, status)
+    assert r["state"] == state and "NOT found" not in r["note"]
+    if state == "NOT_VERIFIED":
+        assert "quote NOT checked: the page was not read" in r["note"]
+        assert (f"(status {status}" in r["note"]) is (status > 0)
+
+
+def test_a_page_the_parser_chokes_on_is_still_not_verified(monkeypatch):
+    def boom(*a, **k):
+        raise RecursionError
+    monkeypatch.setattr(cit, "visible_text", boom)
+    assert judge(f'"{REAL}" {LINK}')["state"] == cit.NOT_VERIFIED
+
+
+def test_a_quote_in_a_fenced_block_is_not_checked_but_the_link_still_is():
+    inside = f'412 "{INVENTED}" {LINK}'
+    after = f'"{INVENTED}" {LINK}'
+    text = f"```\n{inside}\n~~~\n{inside}\n``` not a close\n{inside}\n````\n{after}\n  ~~~~\n```\n{inside}\n~~~\n{inside}\n~~~~~\n{after}\n"
+    res = cit.check_text(text, lambda url: (200, WEB))
+    assert [(r["line"], r["state"]) for r in res] == [
+        (2, cit.VERIFIED), (4, cit.VERIFIED), (6, cit.VERIFIED), (8, cit.PARTIAL),
+        (11, cit.VERIFIED), (13, cit.VERIFIED), (15, cit.PARTIAL)]
+    assert cit.fenced_lines("a\n```py\nb\n```\nc") == {2, 3, 4}
+
+
+def test_no_network_stays_the_same_with_a_quote():
+    r = cit.check_one(cit.extract(f'"{REAL}" {LINK}')[0], None)
+    assert (r["state"], r["note"]) == (cit.NOT_VERIFIED, "no network: the form was read, the content was not")
+
+
+@pytest.mark.parametrize("quote,rc", [(REAL, 0), (INVENTED, 4)])
+def test_the_rc_of_a_run_follows_the_quote(tmp_path, monkeypatch, capsys, quote, rc):
+    f = tmp_path / "a.md"
+    f.write_text(f'"{quote}" {LINK}\n', encoding="utf-8")
+    monkeypatch.setattr(cit, "fetch_http", lambda url: (200, WEB))
+    assert cit.main([str(f)]) == rc
+
+
+# ---- lines without a quote behave exactly as before ----------------------------------------------
+
+AROUND = "412: ...Harbour log The lighthouse keeper counted 412 gulls over the long winter and wrote that the north wa..."
+FOUND = (cit.VERIFIED, f"every number is on the page, whole -> {AROUND}")
+NO_NUMBER = (cit.NOT_VERIFIED, "opened (status 200), but the sentence claims no number to compare")
+
+
+@pytest.mark.parametrize("line,status,expected", [
+    (f"412 gulls {LINK}", 200, FOUND),
+    (f"999 gulls {LINK}", 200, (cit.PARTIAL, "opened, but NOT found ['999'] (whole, on the page)")),
+    (f"412 and 999 gulls {LINK}", 200, (cit.PARTIAL, f"found ['412'] but NOT ['999'] (whole, on the page) -> {AROUND}")),
+    (f"gulls {LINK}", 200, NO_NUMBER),
+    (f'412 gulls, the "winter count" of the keeper {LINK}', 200, FOUND),
+    (f"412 gulls on the keeper\u2019s 13\" screen, Home \u00bb Logs {LINK}", 200,
+     (cit.PARTIAL, f"found ['412'] but NOT ['13'] (whole, on the page) -> {AROUND}")),
+    (f"412 gulls and `\"a quoted bit of five words\"` {LINK}", 200, FOUND),
+    (f"412 gulls {LINK}", 403, (cit.PARTIAL, "answered 403 to a GET: probably a POST-only or authenticated endpoint")),
+    (f"412 gulls {LINK}", 404, (cit.BROKEN, "does not exist (status 404)")),
+    (f"412 gulls {LINK}", 500, (cit.NOT_VERIFIED, "answered 500: the server could not settle it, which is not proof it is gone")),
+    (f"412 gulls {LINK}", 0, (cit.NOT_VERIFIED, "no answer (network down or host gone): cannot say the page is broken")),
+])
+def test_a_line_without_a_quote_gives_the_same_result_as_before(line, status, expected):
+    for page in (WEB, cut_page(WEB)):  # and a truncated page does not change the number check
+        r = judge(line, page, status)
+        assert (r["state"], r["note"]) == expected
+        assert set(r) == {"kind", "target", "line", "context", "state", "note"}
+
+
+def test_a_404_with_a_quote_keeps_the_old_note():
+    r = judge(f'"{REAL}" {LINK}', "", 404)
+    assert (r["state"], r["note"]) == (cit.BROKEN, "does not exist (status 404)")
+
+
+# ---- what the fetch says about the body ----------------------------------------------------------
+
+def served(monkeypatch, raw, status=200, length=0):
+    """_fetch over a scripted response: (status, body)."""
+    import io
+
+    class Response(io.BytesIO):
+        pass
+
+    r = Response(raw)
+    r.status, r.length = status, length
+
+    class Opener:
+        def open(self, req, timeout):
+            return r
+
+    monkeypatch.setattr(cit, "_opener", Opener)
+    return cit._fetch("https://pages.test/log")
+
+
+def test_a_whole_utf8_page_is_read_as_whole(monkeypatch):
+    status, body = served(monkeypatch, "caf\u00e9".encode("utf-8"))
+    assert (status, body, body.unread) == (200, "caf\u00e9", "")
+
+
+def test_a_page_over_the_limit_is_cut_and_says_so(monkeypatch):
+    monkeypatch.setattr(cit, "MAX_BYTES", 20_000)
+    _, body = served(monkeypatch, b"a" * 20_000)
+    assert len(body) == 20_000 and body.unread == ""  # exactly the limit is whole
+    _, body = served(monkeypatch, b"a" * 20_001)
+    assert len(body) == 20_000 and "larger than" in body.unread
+    _, body = served(monkeypatch, b"a" * 90_000)
+    assert len(body) == 20_000 and "larger than" in body.unread
+    monkeypatch.setattr(cit, "MAX_BYTES", 16_384)  # exactly one read block: the byte past it must still be asked for
+    _, body = served(monkeypatch, b"a" * 16_385)
+    assert len(body) == 16_384 and "larger than" in body.unread
+
+
+def test_a_page_that_is_not_utf8_says_so_and_keeps_the_text_for_the_numbers(monkeypatch):
+    _, body = served(monkeypatch, "caf\u00e9 412".encode("latin-1"))
+    assert "412" in body and "not valid UTF-8" in body.unread
+    assert judge(f'"{REAL}" {LINK}', body)["state"] == cit.NOT_VERIFIED
+
+
+def test_a_partial_content_answer_is_truncated(monkeypatch):
+    assert "truncated" in served(monkeypatch, b"abc", status=206)[1].unread
+
+
+def test_a_body_shorter_than_declared_is_truncated():
+    """The real stdlib response: a `read(n)` that hits the end early does not raise, it only leaves `length`."""
+    import http.client
+    import io
+
+    class Sock:
+        def makefile(self, *a, **k):
+            return io.BytesIO(b"HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\nonly this")
+
+    r = http.client.HTTPResponse(Sock())
+    r.begin()
+
+    class Opener:
+        def open(self, req, timeout):
+            return r
+
+    original, cit._opener = cit._opener, Opener
+    try:
+        status, body = cit._fetch("https://pages.test/log")
+    finally:
+        cit._opener = original
+    assert (status, body) == (200, "only this") and "truncated" in body.unread
