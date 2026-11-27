@@ -545,7 +545,8 @@ def test_an_untold_committer_blocks_with_its_own_text_not_the_leak_one(unsigned)
     r = commit(repo, "docs/note.txt", "clean\n", AUTHOR, env=env)
     out = r.stdout + r.stderr
     assert r.returncode == 1 and head(repo) == before, out
-    assert "COMMIT BLOCKED — git could not tell who signs this commit" in out
+    # ASCII only: on Windows `sh` decodes with the locale code page, so the dash of the header does not survive
+    assert "COMMIT BLOCKED" in out and "git could not tell who signs this commit" in out
     assert "git could not tell the committer of this commit" in out and "git var GIT_COMMITTER_IDENT" in out
     assert "GIT_AUTHOR_IDENT" not in out
     assert "git config user.name <handle>" in out and "git config user.email <address>" in out
