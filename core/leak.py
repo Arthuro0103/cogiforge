@@ -29,8 +29,8 @@ a finding (`settings-local-tracked`), even if `.leakignore` lists it: it holds c
 With `--staged` and a private list, the identity of the commit being made is checked too: author name, author email,
 committer name and committer email, as `git var GIT_AUTHOR_IDENT` and `git var GIT_COMMITTER_IDENT` give them (the
 GIT_AUTHOR_* / GIT_COMMITTER_* variables and the config count). Only the private list applies to it, matched like file
-content: every identity has an e-mail, so the generic patterns do not. A match is a finding (rc 1) that names the field,
-never the term nor the identity; `.leakignore` does not exempt it. If git cannot tell the identity, it is `NOT_VERIFIED`
+content: every identity has an e-mail, so the generic patterns do not. A match fails the run (rc 1) and names the field,
+never the term nor the identity; it is not counted with the files, and `.leakignore` does not exempt it. If git cannot tell the identity, it is `NOT_VERIFIED`
 (rc 2). Commits that already exist are not checked.
 
 rc: 0 clean · 1 found a leak · 2 usage/error, unreadable file or identity · 3 private list required and missing

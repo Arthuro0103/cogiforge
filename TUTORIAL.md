@@ -203,6 +203,7 @@ phone number or a CPF (Brazilian tax ID):
      NOT_VERIFIED: private blocklist missing — only the generic patterns ran. Create ~/.config/cogiforge/blocklist.txt (one term per line) to check the private part.
 
   Take the data out of the file (the output above says file:line:type, never the data).
+  An 'identity:' line is about who signs the commit, not a file: follow its Fix.
   Deliberate bypass: git commit --no-verify
 ```
 
@@ -220,6 +221,16 @@ The output says **where** and **what type**, never the data that was found.
 
 
 This means "the private part was **not checked**", and never "it is clean".
+
+With the list in place, a commit is also blocked when its **author or committer** (name or e-mail) holds one
+of the terms. The message says which field, never the term:
+
+```
+     identity: author name matches a blocklist term
+```
+
+Fix it with `git config user.name <handle>` (`user.email <address>` for an e-mail). If the commit already
+exists, run `git commit --amend --reset-author`. Older commits are not checked.
 
 **f) Check by hand at any time:**
 
