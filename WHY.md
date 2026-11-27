@@ -179,7 +179,7 @@ a link in code and a link out do not; the stale limit is inclusive at exactly 90
 ### 12. A commit gate that reads the whole vault gets slower with every note (Oct 8)
 
 **What broke.** Nobody had measured a big vault. On a synthetic one with the shape of the author's (6 areas, links
-by full path, a heavy tail of links, @@N10K@@ notes), committing ONE note took @@PRE_BEFORE@@ in the hook, almost all of
+by full path, a heavy tail of links, 10,000 notes), committing ONE note took about 6 seconds in the hook, almost all of
 it in `core/ring.py`, which read and parsed every note to decide whether the one in the commit was an orphan. A
 gate that costs seconds is a gate people skip (see 8).
 
