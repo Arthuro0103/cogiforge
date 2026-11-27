@@ -48,8 +48,19 @@ if git diff --cached --name-only --diff-filter=ACMR | grep -q '\.md$'; then
     fi
 fi
 
-# 2. the leak
-if ! python3 core/leak.py --staged >"$out" 2>&1; then
+# 2. the leak. rc 4 = nothing found, but git could not tell who signs the commit; any other rc but 0 is the leak block
+python3 core/leak.py --staged >"$out" 2>&1
+rc=$?
+if [ "$rc" -eq 4 ]; then
+    echo ""
+    echo "  ⛔ COMMIT BLOCKED — git could not tell who signs this commit, so it was not checked"
+    echo ""
+    sed 's/^/     /' "$out" | head -20
+    echo ""
+    echo "  Fix: git config user.name <handle> and git config user.email <address>,"
+    echo "  or check the GIT_AUTHOR_* / GIT_COMMITTER_* variables."
+    blocked=1
+elif [ "$rc" -ne 0 ]; then
     echo ""
     echo "  ⛔ COMMIT BLOCKED — personal data leak in what is going into the commit"
     echo ""

@@ -522,3 +522,63 @@ def test_an_old_blocklisted_commit_does_not_block_the_next_one(listed):
     sh(repo, "git", "config", "user.name", "handle")
     r = commit(repo, "docs/new.txt", "clean\n", env=env)
     assert r.returncode == 0, r.stdout + r.stderr
+
+
+# ---- git cannot tell who signs: still blocked, and not worded as a leak ----
+
+@pytest.fixture
+def unsigned(listed, tmp_path):
+    """The clone without any e-mail git could use: no local one, no machine config, auto-detection off."""
+    repo, env = listed
+    sh(repo, "git", "config", "--unset", "user.email")
+    sh(repo, "git", "config", "user.useConfigOnly", "true")
+    clean = {"HOME": str(tmp_path), "XDG_CONFIG_HOME": str(tmp_path), "GIT_CONFIG_NOSYSTEM": "1"}
+    return repo, {**env, **clean}
+
+
+AUTHOR = "--author=Ann-handle <ann@example.org>"
+
+
+def test_an_untold_committer_blocks_with_its_own_text_not_the_leak_one(unsigned):
+    repo, env = unsigned
+    before = head(repo)
+    r = commit(repo, "docs/note.txt", "clean\n", AUTHOR, env=env)
+    out = r.stdout + r.stderr
+    assert r.returncode == 1 and head(repo) == before, out
+    assert "COMMIT BLOCKED — git could not tell who signs this commit" in out
+    assert "git could not tell the committer of this commit" in out and "git var GIT_COMMITTER_IDENT" in out
+    assert "GIT_AUTHOR_IDENT" not in out
+    assert "git config user.name <handle>" in out and "git config user.email <address>" in out
+    assert "GIT_AUTHOR_* / GIT_COMMITTER_*" in out
+    assert "personal data leak" not in out and "Take the data out" not in out
+    for secret in ("ann-handle", "ann@example.org", "auto-detection", "fatal"):
+        assert secret not in out.casefold()
+
+
+def test_without_a_private_list_an_untold_committer_is_left_to_git(unsigned):
+    repo, env = unsigned
+    before = head(repo)
+    r = commit(repo, "docs/note.txt", "clean\n", AUTHOR, env={**env, "LEAK_BLOCKLIST": str(repo / "no-list.txt")})
+    out = r.stdout + r.stderr
+    assert r.returncode != 0 and head(repo) == before, out
+    assert "personal data leak" not in out
+    assert "COMMIT BLOCKED" not in out  # the refusal is git's own, not the hook's
+    assert "ann-handle" not in out.casefold() and "ann@example.org" not in out
+
+
+def test_a_file_leak_with_an_untold_committer_keeps_the_leak_text(unsigned):
+    repo, env = unsigned
+    r = commit(repo, "docs/note.txt", f"opened {LEAK}/x\n", AUTHOR, env=env)
+    out = r.stdout + r.stderr
+    assert r.returncode == 1 and "personal data leak" in out and "Take the data out" in out, out
+    assert "could not tell who signs this commit" not in out
+
+
+def test_an_invalid_committer_date_blocks_with_the_same_text(listed):
+    repo, env = listed
+    before = head(repo)
+    r = commit(repo, "docs/note.txt", "clean\n", env={**env, "GIT_COMMITTER_DATE": "nonsense"})
+    out = r.stdout + r.stderr
+    assert r.returncode == 1 and head(repo) == before, out
+    assert "git could not tell who signs this commit" in out and "git var GIT_COMMITTER_IDENT" in out
+    assert "personal data leak" not in out and "test@example.com" not in out

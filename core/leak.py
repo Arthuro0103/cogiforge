@@ -30,10 +30,12 @@ With `--staged` and a private list, the identity of the commit being made is che
 committer name and committer email, as `git var GIT_AUTHOR_IDENT` and `git var GIT_COMMITTER_IDENT` give them (the
 GIT_AUTHOR_* / GIT_COMMITTER_* variables and the config count). Only the private list applies to it, matched like file
 content: every identity has an e-mail, so the generic patterns do not. A match fails the run (rc 1) and names the field,
-never the term nor the identity; it is not counted with the files, and `.leakignore` does not exempt it. If git cannot tell the identity, it is `NOT_VERIFIED`
-(rc 2). Commits that already exist are not checked.
+never the term nor the identity; it is not counted with the files, and `.leakignore` does not exempt it. If git cannot
+tell the author or the committer, the output says which one is `NOT_VERIFIED` and the `git var` command that shows
+why; the other one is still checked. Commits that already exist are not checked.
 
-rc: 0 clean · 1 found a leak · 2 usage/error, unreadable file or identity · 3 private list required and missing
+rc: 0 clean · 1 found a leak · 2 usage/error or unreadable file · 3 private list required and missing
+    4 git could not tell who signs the commit, and nothing else is wrong (with something else wrong, that rc wins)
 """
 import argparse
 import json
@@ -229,16 +231,18 @@ def staged_text(path):
 
 
 def commit_identity():
-    """[(field, value)] of the commit being made, or None when git cannot tell. git's own error message is
-    dropped on purpose: it can quote the identity, and the output of this script never does."""
-    fields = []
+    """(fields, unread) of the commit being made: [(field, value)] of what git told and [(who, variable)] of what
+    it could not tell. git's own error message is dropped on purpose: it can quote the identity, the system user or
+    the host name, and the output of this script never does."""
+    fields, unread = [], []
     for who, var in IDENT_VARS:
         r = subprocess.run(["git", "var", var], capture_output=True)
         m = IDENT_RE.match(r.stdout.decode("utf-8", "replace"))
         if r.returncode != 0 or not m:
-            return None
-        fields += [(f"{who} name", m.group(1)), (f"{who} email", m.group(2))]
-    return fields
+            unread.append((who, var))
+        else:
+            fields += [(f"{who} name", m.group(1)), (f"{who} email", m.group(2))]
+    return fields, unread
 
 
 def identity_matches(fields, terms):
@@ -377,15 +381,13 @@ def main(argv=None):
         print(f"ERROR: could not list the git stage ({e})", file=sys.stderr)
         return 2
 
-    signed, identity_unread = [], False  # printed first: the hook shows only the head of this output
+    signed, unread = [], []  # printed first: the hook shows only the head of this output
     if args.staged and terms:
-        identity = commit_identity()
-        if identity is None:
-            identity_unread = True
-            print("NOT_VERIFIED: git could not tell the author and committer of this commit, so they were not "
-                  "checked. See: git var GIT_AUTHOR_IDENT")
-        else:
-            signed = identity_matches(identity, terms)
+        fields, unread = commit_identity()
+        for who, var in unread:
+            print(f"NOT_VERIFIED: git could not tell the {who} of this commit, so it was not checked. "
+                  f"See: git var {var}")
+        signed = identity_matches(fields, terms)
         for field in signed:
             print(f"identity: {field} matches a blocklist term")
         if signed:
@@ -454,8 +456,8 @@ def main(argv=None):
         print(f"private list: {len(terms)} term(s) checked")
     if signed:
         return 1
-    if identity_unread and not total:
-        return 2
+    if unread and not (total or unreadable or index_failed):
+        return 4  # the identity is the only problem: the hook words this block differently
     return 1 if total else (2 if (unreadable or index_failed) else 0)
 
 

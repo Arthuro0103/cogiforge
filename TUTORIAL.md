@@ -232,6 +232,10 @@ of the terms. The message says which field, never the term:
 Fix it with `git config user.name <handle>` (`user.email <address>` for an e-mail). If the commit already
 exists, run `git commit --amend --reset-author`. Older commits are not checked.
 
+If git cannot tell who signs the commit (no `user.email`, an invalid `GIT_COMMITTER_DATE`), the commit is also
+blocked, because that identity was not checked. The message says `git could not tell who signs this commit` and how
+to fix it.
+
 **f) Check by hand at any time:**
 
 ```sh

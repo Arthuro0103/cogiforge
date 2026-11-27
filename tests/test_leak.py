@@ -702,15 +702,70 @@ def test_a_path_scan_does_not_check_the_identity(tmp_path):
 def test_an_identity_git_cannot_tell_is_not_verified_and_never_clean(tmp_path, var):
     repo, blocklist = signed_repo(tmp_path)
     r = signed_run(repo, blocklist, **{var: ""})  # git refuses an empty name and quotes the e-mail in its error
-    assert r.returncode == 2, said(r)
-    assert "NOT_VERIFIED: git could not tell the author and committer" in r.stdout
-    assert "@example.com" not in said(r) and "-handle" not in said(r)
+    assert r.returncode == 4, said(r)
+    who, ident = ("author", "GIT_AUTHOR_IDENT") if "AUTHOR" in var else ("committer", "GIT_COMMITTER_IDENT")
+    told = [l for l in r.stdout.splitlines() if "could not tell" in l]
+    assert told == [f"NOT_VERIFIED: git could not tell the {who} of this commit, so it was not checked. "
+                    f"See: git var {ident}"]
+    assert "@example.com" not in said(r) and "-handle" not in said(r) and "fatal" not in said(r)
 
 
 def test_a_file_finding_still_wins_over_an_identity_git_cannot_tell(tmp_path):
     repo, blocklist = signed_repo(tmp_path, f"about {TERM}\n")
     r = signed_run(repo, blocklist, GIT_AUTHOR_NAME="")
     assert r.returncode == 1 and "NOT_VERIFIED: git could not tell" in r.stdout
+
+
+@pytest.mark.parametrize("readable,untold", [("AUTHOR", "COMMITTER"), ("COMMITTER", "AUTHOR")])
+def test_the_identity_git_can_tell_is_still_checked(tmp_path, readable, untold):
+    repo, blocklist = signed_repo(tmp_path)
+    r = signed_run(repo, blocklist, **{f"GIT_{readable}_NAME": TERM, f"GIT_{untold}_NAME": ""})
+    assert r.returncode == 1, said(r)
+    assert f"identity: {readable.lower()} name matches" in r.stdout
+    assert f"git could not tell the {untold.lower()} of" in r.stdout
+    assert f"git could not tell the {readable.lower()} of" not in r.stdout
+
+
+def test_both_identities_git_cannot_tell_are_each_named(tmp_path):
+    repo, blocklist = signed_repo(tmp_path)
+    r = signed_run(repo, blocklist, GIT_AUTHOR_NAME="", GIT_COMMITTER_NAME="")
+    assert r.returncode == 4
+    assert "git var GIT_AUTHOR_IDENT" in r.stdout and "git var GIT_COMMITTER_IDENT" in r.stdout
+
+
+@pytest.mark.parametrize("problem", ["unreadable", "index"])
+def test_another_problem_keeps_its_exit_code_over_an_untold_identity(tmp_path, monkeypatch, capsys, problem):
+    repo, blocklist = signed_repo(tmp_path)
+    monkeypatch.chdir(repo)
+    monkeypatch.setenv("LEAK_BLOCKLIST", str(blocklist))
+    monkeypatch.setattr(v, "commit_identity", lambda: ([], [("committer", "GIT_COMMITTER_IDENT")]))
+    assert v.main(["--staged"]) == 4  # control: the identity alone
+    if problem == "unreadable":
+        def broken(path):
+            raise OSError("git show failed")
+        monkeypatch.setattr(v, "staged_text", broken)
+    else:
+        def no_index(roots=None, why=None):
+            why.append("git ls-files failed")
+        monkeypatch.setattr(v, "tracked_settings_local", no_index)
+    assert v.main(["--staged"]) == 2
+    assert "git could not tell the committer" in capsys.readouterr().out
+
+
+# ---- nothing staged: `commit --amend` of the message, `commit --allow-empty` ----
+
+def test_the_identity_is_checked_when_no_file_change_is_staged(tmp_path):
+    repo, blocklist = signed_repo(tmp_path)
+    env = {**os.environ, **IDENTITY, "GIT_CONFIG_NOSYSTEM": "1", "HOME": str(tmp_path)}
+    subprocess.run(["git", "-C", str(repo), "commit", "-q", "--no-verify", "-m", "first"], env=env, check=True)
+    clean = signed_run(repo, blocklist)
+    assert clean.returncode == 0 and "of 0 scanned" in clean.stdout  # control: really nothing staged
+    for var, field in FIELDS.items():
+        value = f"x-{TERM}@example.com" if var.endswith("EMAIL") else TERM
+        r = signed_run(repo, blocklist, **{var: value})
+        assert r.returncode == 1 and f"identity: {field} matches a blocklist term" in r.stdout, said(r)
+        assert "of 0 scanned" in r.stdout
+    assert signed_run(repo, blocklist, GIT_COMMITTER_NAME="").returncode == 4
 
 
 def test_an_empty_email_is_still_an_identity(tmp_path):
@@ -721,6 +776,6 @@ def test_an_empty_email_is_still_an_identity(tmp_path):
 
 
 @pytest.mark.parametrize("rc,out", [(0, b"no brackets here\n"), (0, b""), (128, b"n <e@example.com> 1 +0000\n")])
-def test_an_answer_of_git_var_that_cannot_be_trusted_is_none(monkeypatch, rc, out):
+def test_an_answer_of_git_var_that_cannot_be_trusted_is_unread(monkeypatch, rc, out):
     monkeypatch.setattr(v.subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a, rc, out, b""))
-    assert v.commit_identity() is None
+    assert v.commit_identity() == ([], [("author", "GIT_AUTHOR_IDENT"), ("committer", "GIT_COMMITTER_IDENT")])
