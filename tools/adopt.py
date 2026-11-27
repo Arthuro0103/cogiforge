@@ -30,6 +30,7 @@ the generated `.githooks/pre-commit`) is migrated: the hook is written to `.git/
 `core.hooksPath` in your global or system config would make git skip `.git/hooks`, so it blocks. The hook refuses to
 run (blocks the commit) if `cogiforge.home` is not an absolute path to a folder holding core/ring.py, core/gate.py and
 core/leak.py.
+Adopted vaults get the identity check through core/leak.py, whose own output carries the 'identity:' line and its Fix.
 
 THREAT MODEL (7 lines)
   1. DEFENDS: a vault received from a third party (zip, copy, sync) whose `.git`, `.githooks` or notes are hostile.
